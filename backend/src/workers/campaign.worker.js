@@ -4,6 +4,9 @@ const emailService = require('../services/email.service');
 
 const POLL_INTERVAL_MS = 15 * 1000;
 const BATCH_SIZE = 50;
+const EMAIL_RATE_LIMIT_DELAY_MS = 600; // Resend: 2 req/sec max
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const processPendingCampaignMessages = async () => {
   const result = await db.query(
@@ -66,6 +69,7 @@ const processPendingCampaignMessages = async () => {
         if (emailResult.status === 'failed') {
           throw new Error(emailResult.error || 'Email send failed');
         }
+        await sleep(EMAIL_RATE_LIMIT_DELAY_MS);
       } else {
         if (!msg.phone) {
           await skipMessage(msg.id, msg.campaign_id, 'no_phone');
