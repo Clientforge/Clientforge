@@ -10,15 +10,22 @@ const sendEmail = async ({ tenantId, to, fromName, fromAddress, subject, body })
       const { Resend } = require('resend');
       const resend = new Resend(config.email.resendApiKey);
 
-      const result = await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from,
         to: [to],
         subject,
         html: formatEmailHtml(body, subject),
       });
 
-      console.log(`[EMAIL][LIVE] Sent to ${to}, id: ${result.data?.id}`);
-      return { id: result.data?.id, status: 'sent' };
+      // Resend SDK does NOT throw - it returns { data, error }
+      if (error) {
+        console.error(`[EMAIL][LIVE] Failed to send to ${to}:`, error.message || JSON.stringify(error));
+        return { id: null, status: 'failed', error: error.message };
+      }
+
+      const resendId = data?.id;
+      console.log(`[EMAIL][LIVE] Sent to ${to}, id: ${resendId ?? 'undefined'}`);
+      return { id: resendId, status: 'sent' };
     } catch (err) {
       console.error(`[EMAIL][LIVE] Failed to send to ${to}: ${err.message}`);
       return { id: null, status: 'failed', error: err.message };

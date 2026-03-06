@@ -55,7 +55,7 @@ const processPendingCampaignMessages = async () => {
           continue;
         }
 
-        await emailService.sendEmail({
+        const emailResult = await emailService.sendEmail({
           tenantId: msg.tenant_id,
           to: msg.email,
           fromName: msg.email_from_name,
@@ -63,6 +63,9 @@ const processPendingCampaignMessages = async () => {
           subject: msg.email_subject || 'A message from us',
           body: msg.message_body,
         });
+        if (emailResult.status === 'failed') {
+          throw new Error(emailResult.error || 'Email send failed');
+        }
       } else {
         if (!msg.phone) {
           await skipMessage(msg.id, msg.campaign_id, 'no_phone');
