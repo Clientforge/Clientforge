@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Leadflow AI — A marketing platform and growth agency that helps businesses capture leads, automate follow-ups, and convert more customers.">
+  <title>Leadflow AI — Turn Traffic Into Customers Automatically</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="logo">
+        <span class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="url(#g1)"/>
+            <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+          </svg>
+        </span>
+        Leadflow <span class="logo-ai">AI</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="#features">Platform</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="http://localhost:5173/login" class="btn btn-ghost">Login</a>
+        <a href="http://localhost:5173/register" class="btn btn-primary">Start Free Trial</a>
+      </div>
+      <button class="mobile-toggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container hero-container">
+      <p class="hero-tagline">Marketing automation for growing businesses</p>
+      <h1 class="hero-title">
+        Turn more visitors into<br>
+        <span class="gradient-text">customers — automatically.</span>
+      </h1>
+      <p class="hero-subtitle">
+        We help businesses capture leads, automate follow-ups, track performance, and grow revenue using our marketing platform and growth services.
+      </p>
+      <div class="hero-cta">
+        <a href="http://localhost:5173/register" class="btn btn-primary btn-lg">Start Free Trial</a>
+        <a href="#contact" class="btn btn-outline btn-lg">Book a Strategy Call</a>
+      </div>
+      <p class="hero-note">No credit card required &middot; Setup in minutes</p>
+
+      <!-- DASHBOARD PREVIEW -->
+      <div class="dashboard-preview">
+        <div class="preview-bar">
+          <div class="preview-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <span class="preview-url">app.leadflow.ai/dashboard</span>
+        </div>
+        <div class="preview-body">
+          <div class="preview-header">
+            <div>
+              <h3 class="preview-title">Dashboard</h3>
+              <span class="preview-loading">Live</span>
+            </div>
+          </div>
+          <div class="stat-cards">
+            <div class="stat-card">
+              <div class="stat-top">
+                <span class="stat-label">TOTAL LEADS</span>
+                <span class="stat-icon stat-icon-leads">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/><path d="M22 21v-2a4 4 0 00-3-3.87" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 3.13a4 4 0 010 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </span>
+              </div>
+              <span class="stat-value">1,248</span>
+              <span class="stat-change positive">+12% this week</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-top">
+                <span class="stat-label">QUALIFIED</span>
+                <span class="stat-icon stat-icon-qualified">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </div>
+              <span class="stat-value">847</span>
+              <span class="stat-change positive">68% rate</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-top">
+                <span class="stat-label">CONVERTED</span>
+                <span class="stat-icon stat-icon-booked">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </div>
+              <span class="stat-value">312</span>
+              <span class="stat-change positive">25% conversion</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-top">
+                <span class="stat-label">IN FOLLOW-UP</span>
+                <span class="stat-icon stat-icon-followup">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </span>
+              </div>
+              <span class="stat-value">89</span>
+              <span class="stat-change neutral">Active sequences</span>
+            </div>
+          </div>
+          <div class="preview-bottom">
+            <div class="preview-leads">
+              <h4>Recent Leads</h4>
+              <div class="lead-row"><span class="lead-dot green"></span><span>Sarah Mitchell</span><span class="lead-tag qualified">Qualified</span></div>
+              <div class="lead-row"><span class="lead-dot blue"></span><span>James Cooper</span><span class="lead-tag contacted">Contacted</span></div>
+              <div class="lead-row"><span class="lead-dot purple"></span><span>Emma Rodriguez</span><span class="lead-tag qualifying">Qualifying</span></div>
+            </div>
+            <div class="preview-funnel">
+              <h4>Conversion Funnel</h4>
+              <div class="funnel-item"><span>New Leads</span><span class="funnel-count">1,248</span><div class="funnel-bar"><div class="funnel-fill gray" style="width:100%"></div></div></div>
+              <div class="funnel-item"><span>Contacted</span><span class="funnel-count">1,024</span><div class="funnel-bar"><div class="funnel-fill blue" style="width:82%"></div></div></div>
+              <div class="funnel-item"><span>Qualifying</span><span class="funnel-count">847</span><div class="funnel-bar"><div class="funnel-fill purple" style="width:68%"></div></div></div>
+              <div class="funnel-item"><span>Qualified</span><span class="funnel-count">512</span><div class="funnel-bar"><div class="funnel-fill orange" style="width:41%"></div></div></div>
+              <div class="funnel-item"><span>Converted</span><span class="funnel-count">312</span><div class="funnel-bar"><div class="funnel-fill green" style="width:25%"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGOS -->
+  <section class="logos-section">
+    <div class="container">
+      <p class="logos-label">Trusted by 2,000+ teams worldwide</p>
+      <div class="logos-row">
+        <span class="logo-placeholder">Acme Corp</span>
+        <span class="logo-placeholder">Globex</span>
+        <span class="logo-placeholder">Hooli</span>
+        <span class="logo-placeholder">Initech</span>
+        <span class="logo-placeholder">Umbrella</span>
+        <span class="logo-placeholder">Wonka</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUE PROPOSITION -->
+  <section class="value-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Platform + Services</span>
+        <h2>Everything you need to <span class="gradient-text">grow your business</span></h2>
+        <p>From capturing leads to converting customers, our platform and agency services help businesses manage their entire marketing pipeline.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Platform</span>
+        <h2>Powerful features for <span class="gradient-text">customer growth.</span></h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon purple">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3>Smart Lead Capture</h3>
+          <p>Capture leads from forms, chat, ads, and social media into one unified inbox.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon blue">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0H5a2 2 0 01-2-2v-4m6 6h10a2 2 0 002-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h3>Customer Qualification</h3>
+          <p>Automatically identify high-intent prospects using smart rules and behavior signals.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/></svg>
+          </div>
+          <h3>Automated Follow-Ups</h3>
+          <p>Email and SMS sequences that nurture prospects and turn them into customers.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3>Conversion Tracking</h3>
+          <p>Track where every lead and sale comes from so you know what marketing works.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon pink">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-6.26L4 10l5.91-1.74L12 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3>Campaign Optimization</h3>
+          <p>Improve ad performance with real-time data and automation.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon indigo">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/></svg>
+          </div>
+          <h3>Customer Pipeline</h3>
+          <p>Manage leads, prospects, and customers from one simple dashboard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">How It Works</span>
+        <h2>Three steps to <span class="gradient-text">more customers.</span></h2>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Connect your marketing channels</h3>
+          <p>Link your website, ads, and social accounts.</p>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>Capture and nurture leads automatically</h3>
+          <p>Our platform collects, qualifies, and follows up with prospects.</p>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>Turn leads into customers</h3>
+          <p>Track conversions, optimize campaigns, and grow revenue.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO IT'S FOR -->
+  <section id="who" class="who-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Built For</span>
+        <h2>Built for <span class="gradient-text">growing businesses</span></h2>
+        <p>Our platform works for any business that wants more customers and better marketing performance.</p>
+      </div>
+      <div class="who-grid">
+        <div class="who-card">Restaurants</div>
+        <div class="who-card">E-commerce brands</div>
+        <div class="who-card">Local services</div>
+        <div class="who-card">Agencies</div>
+        <div class="who-card">Consultants</div>
+        <div class="who-card">Retail stores</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services" class="services-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Agency</span>
+        <h2>Growth services for businesses that <span class="gradient-text">want results</span></h2>
+        <p>We built Leadflow AI to run our clients' marketing. Use the platform yourself, or let our team set it up and run it for you.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon purple">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3>Website Creation</h3>
+          <p>High-converting websites and landing pages designed to generate leads and sales.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon blue">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke="currentColor" stroke-width="2"/></svg>
+          </div>
+          <h3>Advertising Management</h3>
+          <p>We build and optimize campaigns on Google, Facebook, and other platforms.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/></svg>
+          </div>
+          <h3>Marketing Automation</h3>
+          <p>Instant follow-ups, smart routing, and automated customer engagement.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3>Performance Tracking</h3>
+          <p>Know exactly which campaigns drive revenue with real-time analytics.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="pricing-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Pricing</span>
+        <h2>Simple, transparent <span class="gradient-text">pricing.</span></h2>
+        <p>Start free. Upgrade when you're ready. No hidden fees, ever.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="pricing-header">
+            <h3>Starter</h3>
+            <p class="pricing-desc">For small teams getting started</p>
+          </div>
+          <div class="pricing-price">
+            <span class="price-amount">$49</span>
+            <span class="price-period">/month</span>
+          </div>
+          <ul class="pricing-features">
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 500 leads/month</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>AI lead scoring</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Email sequences</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>1 calendar integration</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Basic analytics</li>
+          </ul>
+          <a href="http://localhost:5173/register" class="btn btn-outline btn-full">Start Free Trial</a>
+        </div>
+        <div class="pricing-card popular">
+          <div class="popular-badge">Most Popular</div>
+          <div class="pricing-header">
+            <h3>Professional</h3>
+            <p class="pricing-desc">For growing sales teams</p>
+          </div>
+          <div class="pricing-price">
+            <span class="price-amount">$149</span>
+            <span class="price-period">/month</span>
+          </div>
+          <ul class="pricing-features">
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 5,000 leads/month</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Advanced AI qualification</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Email + SMS sequences</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Unlimited calendars</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Conversion funnel analytics</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>CRM integrations</li>
+          </ul>
+          <a href="http://localhost:5173/register" class="btn btn-primary btn-full">Start Free Trial</a>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-header">
+            <h3>Enterprise</h3>
+            <p class="pricing-desc">For large organizations</p>
+          </div>
+          <div class="pricing-price">
+            <span class="price-amount">Custom</span>
+          </div>
+          <ul class="pricing-features">
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Unlimited leads</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Custom AI models</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>White-label options</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>SSO & advanced security</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Dedicated account manager</li>
+            <li><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>SLA & priority support</li>
+          </ul>
+          <a href="#contact" class="btn btn-outline btn-full">Contact Sales</a>
+        </div>
+      </div>
+      <div class="pricing-consultation">
+        <p>Need help setting everything up? Our team can manage your marketing campaigns, website, and automation for you.</p>
+        <a href="#contact" class="btn btn-primary">Book Consultation</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Testimonials</span>
+        <h2>Loved by growing businesses <span class="gradient-text">everywhere.</span></h2>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p>"Leadflow AI cut our lead response time from 4 hours to under 2 minutes. Our conversion rate tripled in the first month."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">SM</div>
+            <div>
+              <strong>Sarah Mitchell</strong>
+              <span>VP Sales, TechCorp</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p>"The AI qualification is eerily accurate. We stopped wasting time on unqualified leads and our close rate went up 40%."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">JC</div>
+            <div>
+              <strong>James Cooper</strong>
+              <span>Head of Growth, ScaleUp</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p>"We replaced 3 tools with Leadflow AI. The conversion funnel alone gives us insights we never had before."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">ER</div>
+            <div>
+              <strong>Emma Rodriguez</strong>
+              <span>CEO, GrowthLab</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT / CTA -->
+  <section id="contact" class="contact-section">
+    <div class="container">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <span class="section-badge">Get In Touch</span>
+          <h2>Ready to turn traffic into <span class="gradient-text">customers?</span></h2>
+          <p>Book a personalized demo or start your free trial today. Our team typically responds within 2 hours.</p>
+          <div class="contact-details">
+            <div class="contact-item">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/></svg>
+              <span>hello@leadflow.ai</span>
+            </div>
+            <div class="contact-item">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2"/></svg>
+              <span>+1 (555) 123-4567</span>
+            </div>
+          </div>
+        </div>
+        <form class="contact-form" onsubmit="return false;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="firstName">First Name</label>
+              <input type="text" id="firstName" placeholder="John">
+            </div>
+            <div class="form-group">
+              <label for="lastName">Last Name</label>
+              <input type="text" id="lastName" placeholder="Doe">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="email">Work Email</label>
+            <input type="email" id="email" placeholder="john@company.com">
+          </div>
+          <div class="form-group">
+            <label for="company">Company</label>
+            <input type="text" id="company" placeholder="Your company name">
+          </div>
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" rows="4" placeholder="Tell us about your needs..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Send Message</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo">
+            <span class="logo-icon">
+              <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#g2)"/><path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="g2" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
+            </span>
+            Leadflow <span class="logo-ai">AI</span>
+          </a>
+          <p>A marketing platform and growth agency that helps businesses capture leads, automate follow-ups, and convert more customers.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Product</h4>
+          <a href="#features">Platform</a>
+          <a href="#services">Services</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Blog</a>
+          <a href="#">Careers</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <div class="footer-links">
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Cookie Policy</a>
+          <a href="#">GDPR</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 Leadflow AI. All rights reserved.</p>
+        <div class="footer-socials">
+          <a href="#" aria-label="Twitter">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#" aria-label="LinkedIn">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="2"/></svg>
+          </a>
+          <a href="#" aria-label="GitHub">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
