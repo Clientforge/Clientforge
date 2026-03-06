@@ -1,8 +1,16 @@
 const config = require('../config');
 
+// Extract email from "Name <email@domain.com>" or return as-is if it's already just an email
+const getEmailFromDefault = (defaultFrom) => {
+  const match = defaultFrom.match(/<([^>]+)>/);
+  return match ? match[1] : defaultFrom;
+};
+
 const sendEmail = async ({ tenantId, to, fromName, fromAddress, subject, body }) => {
-  const from = fromName
-    ? `${fromName} <${fromAddress || config.email.defaultFrom}>`
+  const defaultEmail = getEmailFromDefault(config.email.defaultFrom);
+  const safeName = (fromName || '').replace(/[<>[\]]/g, '').trim();
+  const from = safeName
+    ? `${safeName} <${fromAddress || defaultEmail}>`
     : config.email.defaultFrom;
 
   if (config.email.mode === 'live') {
