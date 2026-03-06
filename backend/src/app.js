@@ -32,7 +32,7 @@ if (config.env !== 'test') {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'leadflow-ai',
+    service: 'clientforge-ai',
     version: '0.1.0',
     timestamp: new Date().toISOString(),
   });

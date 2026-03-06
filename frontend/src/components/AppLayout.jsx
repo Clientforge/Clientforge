@@ -21,7 +21,7 @@ export default function AppLayout() {
               <defs><linearGradient id="sg" x1="0" y1="0" x2="28" y2="28"><stop stopColor="#6366f1"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
             </svg>
           </div>
-          <span>Leadflow <span className="brand-ai">AI</span></span>
+          <span>ClientForge<span className="brand-ai">.ai</span></span>
         </div>
 
         <nav className="sidebar-nav">

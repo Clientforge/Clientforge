@@ -1,10 +1,10 @@
-# Leadflow AI — Deployment Guide
+# ClientForge.ai — Deployment Guide
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│            Leadflow AI                  │
+│            ClientForge.ai               │
 │                                         │
 │  ┌──────────┐    ┌──────────────────┐   │
 │  │  React   │    │  Express API     │   │
@@ -64,7 +64,7 @@ docker-compose down -v          # Stop + delete data
 
 ```bash
 # 1. Clone and install
-cd "Leadflow AI"
+cd "ClientForge AI"
 cd frontend && npm ci && npm run build && cd ..
 cd backend && npm ci --omit=dev && cd ..
 
@@ -91,7 +91,7 @@ For production, use a process manager:
 # Using PM2
 npm install -g pm2
 cd backend
-pm2 start src/index.js --name leadflow-ai
+pm2 start src/index.js --name clientforge-ai
 pm2 save
 pm2 startup
 ```

@@ -1,7 +1,7 @@
 {
-  "name": "leadflow-ai-backend",
+  "name": "clientforge-ai-backend",
   "version": "0.1.0",
-  "description": "Leadflow AI — Multi-tenant SMS-first lead conversion automation API",
+  "description": "ClientForge.ai — Multi-tenant SMS-first lead conversion automation API",
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
@@ -12,13 +12,13 @@
     "test": "echo \"No tests yet\" && exit 0"
   },
   "keywords": [
-    "leadflow",
+    "clientforge",
     "saas",
     "sms",
     "automation",
     "leads"
   ],
-  "author": "Leadflow AI",
+  "author": "ClientForge.ai",
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {

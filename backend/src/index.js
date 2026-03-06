@@ -16,7 +16,7 @@ const startServer = async () => {
   }
 
   app.listen(config.port, () => {
-    console.log(`[SERVER] Leadflow AI API running on port ${config.port}`);
+    console.log(`[SERVER] ClientForge.ai API running on port ${config.port}`);
     console.log(`[SERVER] Environment: ${config.env}`);
     console.log(`[SERVER] SMS mode: ${config.sms.mode}`);
     console.log(`[SERVER] Health check: http://localhost:${config.port}/health`);

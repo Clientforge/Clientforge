@@ -9,7 +9,7 @@ exports.up = async function (knex) {
 
   await knex.raw(`
     INSERT INTO tenants (id, name, industry, plan, active)
-    VALUES ('${platformTenantId}', 'Leadflow AI Platform', 'Platform', 'platform', true)
+    VALUES ('${platformTenantId}', 'ClientForge.ai Platform', 'Platform', 'platform', true)
     ON CONFLICT (id) DO NOTHING
   `);
 
@@ -17,7 +17,7 @@ exports.up = async function (knex) {
 
   await knex.raw(`
     INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, role, active)
-    VALUES ('${platformTenantId}', 'admin@leadflow.ai', '${passwordHash}', 'Platform', 'Admin', 'superadmin', true)
+    VALUES ('${platformTenantId}', 'admin@clientforge.ai', '${passwordHash}', 'Platform', 'Admin', 'superadmin', true)
     ON CONFLICT DO NOTHING
   `);
 };

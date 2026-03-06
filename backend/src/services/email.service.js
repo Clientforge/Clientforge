@@ -80,11 +80,11 @@ const formatEmailHtml = (body, subject) => {
  * Called automatically on registration and manually from admin dashboard.
  */
 const sendWelcomeEmail = async ({ tenantName, toEmail, recipientName }) => {
-  const subject = `Welcome to Leadflow AI — ${tenantName}`;
+  const subject = `Welcome to ClientForge.ai — ${tenantName}`;
   const name = recipientName || 'there';
   const body = `Hi ${name},
 
-Welcome to Leadflow AI! Your account for ${tenantName} is ready.
+Welcome to ClientForge.ai! Your account for ${tenantName} is ready.
 
 Here's how to get started:
 
@@ -96,12 +96,12 @@ Need help? Reply to this email or visit your dashboard Settings for integration 
 
 Let's turn more leads into customers!
 
-— The Leadflow AI Team`;
+— The ClientForge.ai Team`;
 
   return sendEmail({
     tenantId: null,
     to: toEmail,
-    fromName: 'Leadflow AI',
+    fromName: 'ClientForge.ai',
     fromAddress: null,
     subject,
     body,

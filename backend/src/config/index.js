@@ -32,7 +32,7 @@ const config = {
   email: {
     mode: process.env.EMAIL_MODE || 'mock',
     resendApiKey: process.env.RESEND_API_KEY,
-    defaultFrom: process.env.EMAIL_DEFAULT_FROM || 'Leadflow AI <noreply@leadflow.ai>',
+    defaultFrom: process.env.EMAIL_DEFAULT_FROM || 'ClientForge.ai <noreply@clientforge.ai>',
   },
 };
 

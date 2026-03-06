@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
               </linearGradient>
             </defs>
           </svg>
-          <h1>Leadflow <span className="brand-admin">Admin</span></h1>
+          <h1>ClientForge <span className="brand-admin">Admin</span></h1>
         </div>
         <h2>Platform Admin</h2>
         <p className="auth-sub">Sign in to the admin dashboard</p>
@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@leadflow.ai" required />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@clientforge.ai" required />
           </div>
           <div className="field">
             <label>Password</label>

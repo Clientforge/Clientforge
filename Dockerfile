@@ -1,5 +1,5 @@
 # ============================================
-# Leadflow AI — Production Dockerfile
+# ClientForge.ai — Production Dockerfile
 # Multi-stage: build frontend, serve everything from Node
 # ============================================
 

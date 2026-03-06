@@ -18,7 +18,7 @@ export default function AdminLayout() {
               <defs><linearGradient id="asg" x1="0" y1="0" x2="28" y2="28"><stop stopColor="#dc2626"/><stop offset="1" stopColor="#f59e0b"/></linearGradient></defs>
             </svg>
           </div>
-          <span>Leadflow <span className="brand-admin">Admin</span></span>
+          <span>ClientForge <span className="brand-admin">Admin</span></span>
         </div>
 
         <nav className="sidebar-nav">

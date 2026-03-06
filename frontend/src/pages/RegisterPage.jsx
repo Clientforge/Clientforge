@@ -34,7 +34,7 @@ export default function RegisterPage() {
             <path d="M8 14l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             <defs><linearGradient id="rg" x1="0" y1="0" x2="28" y2="28"><stop stopColor="#6366f1"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
           </svg>
-          <h1>Leadflow <span className="brand-ai">AI</span></h1>
+          <h1>ClientForge<span className="brand-ai">.ai</span></h1>
         </div>
         <h2>Create your account</h2>
         <p className="auth-sub">Start converting leads in minutes</p>
