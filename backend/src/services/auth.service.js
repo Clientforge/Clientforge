@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db/connection');
 const config = require('../config');
+const { sendWelcomeEmail } = require('./email.service');
 
 const SALT_ROUNDS = 12;
 
@@ -73,6 +74,16 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
     const user = userResult.rows[0];
 
     await client.query('COMMIT');
+
+    // Send welcome email (non-blocking)
+    const recipientName = user.first_name || user.last_name
+      ? [user.first_name, user.last_name].filter(Boolean).join(' ')
+      : null;
+    sendWelcomeEmail({
+      tenantName: tenant.name,
+      toEmail: user.email,
+      recipientName,
+    }).catch((err) => console.error('[AUTH] Welcome email failed:', err.message));
 
     const tokens = generateTokens(user);
 

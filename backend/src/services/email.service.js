@@ -75,4 +75,37 @@ const formatEmailHtml = (body, subject) => {
 </html>`;
 };
 
-module.exports = { sendEmail };
+/**
+ * Send welcome email to a new tenant's admin user.
+ * Called automatically on registration and manually from admin dashboard.
+ */
+const sendWelcomeEmail = async ({ tenantName, toEmail, recipientName }) => {
+  const subject = `Welcome to Leadflow AI — ${tenantName}`;
+  const name = recipientName || 'there';
+  const body = `Hi ${name},
+
+Welcome to Leadflow AI! Your account for ${tenantName} is ready.
+
+Here's how to get started:
+
+1. **Add your Twilio number** — Go to Settings and add your SMS phone number so leads can receive texts.
+2. **Set up your booking link** — Add your Calendly or scheduling link in Settings.
+3. **Connect your lead sources** — Use your API key to send leads from your website, forms, or ads to our webhook.
+
+Need help? Reply to this email or visit your dashboard Settings for integration details.
+
+Let's turn more leads into customers!
+
+— The Leadflow AI Team`;
+
+  return sendEmail({
+    tenantId: null,
+    to: toEmail,
+    fromName: 'Leadflow AI',
+    fromAddress: null,
+    subject,
+    body,
+  });
+};
+
+module.exports = { sendEmail, sendWelcomeEmail };

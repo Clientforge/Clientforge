@@ -28,4 +28,19 @@ router.get('/tenants/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.patch('/tenants/:id', async (req, res, next) => {
+  try {
+    const { phoneNumber } = req.body;
+    const result = await adminService.updateTenantPhone(req.params.id, phoneNumber);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/tenants/:id/send-welcome-email', async (req, res, next) => {
+  try {
+    const result = await adminService.sendWelcomeEmailToTenant(req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

@@ -39,6 +39,16 @@ a:hover { text-decoration: underline; }
 .btn-primary-full:hover { background: var(--primary-dark); }
 .btn-primary-full:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* Admin login page */
+.auth-page-admin { background: linear-gradient(135deg, #fef2f2 0%, #fffbeb 100%); }
+.auth-card-admin { border-color: rgba(220,38,38,0.2); box-shadow: 0 4px 20px rgba(220,38,38,0.08); }
+.auth-brand-admin h1 { font-size: 20px; }
+.auth-card-admin .field input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }
+.btn-admin { background: linear-gradient(135deg, #dc2626, #f59e0b); }
+.btn-admin:hover { background: linear-gradient(135deg, #b91c1c, #d97706); }
+.auth-card-admin .auth-footer a { color: var(--text-2); }
+.auth-card-admin .auth-footer a:hover { color: #dc2626; }
+
 /* --- APP LAYOUT --- */
 .app-layout { display: flex; min-height: 100vh; }
 
@@ -340,6 +350,12 @@ a:hover { text-decoration: underline; }
 .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .config-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
 .config-value { display: block; font-size: 13px; font-weight: 500; word-break: break-all; }
+.config-value-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.config-edit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.config-edit-input { padding: 6px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; width: 180px; outline: none; }
+.config-edit-input:focus { border-color: var(--primary); }
+.config-edit-btn { font-size: 12px; padding: 4px 10px; }
+.config-edit-error { font-size: 12px; color: var(--red); }
 @media (max-width: 600px) { .config-grid { grid-template-columns: 1fr; } }
 
 /* --- AI FOLLOW-UP GENERATOR --- */
@@ -401,6 +417,8 @@ a:hover { text-decoration: underline; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
 .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.btn-ghost { background: transparent; color: var(--text-2); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--bg); color: var(--text); border-color: var(--border); }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 
 /* Modal */

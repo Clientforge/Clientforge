@@ -15,6 +15,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import PlatformDashboard from './pages/admin/PlatformDashboard';
 import TenantListPage from './pages/admin/TenantListPage';
 import TenantDetailPage from './pages/admin/TenantDetailPage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
           {/* Tenant routes */}

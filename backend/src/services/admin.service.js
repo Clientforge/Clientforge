@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const { sendWelcomeEmail } = require('./email.service');
 
 const PLATFORM_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -167,4 +168,46 @@ const formatTenantRow = (row) => ({
   leadCount: row.lead_count, lastLeadAt: row.last_lead_at,
 });
 
-module.exports = { getPlatformStats, getTenantList, getTenantDetail };
+const updateTenantPhone = async (tenantId, phoneNumber) => {
+  const result = await db.query(
+    'UPDATE tenants SET phone_number = $1, updated_at = NOW() WHERE id = $2 RETURNING id, phone_number',
+    [phoneNumber || null, tenantId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
+  }
+  return { phoneNumber: result.rows[0].phone_number };
+};
+
+const sendWelcomeEmailToTenant = async (tenantId) => {
+  const [tenantRes, userRes] = await Promise.all([
+    db.query('SELECT id, name FROM tenants WHERE id = $1', [tenantId]),
+    db.query(
+      'SELECT email, first_name, last_name FROM users WHERE tenant_id = $1 AND role = $2 ORDER BY created_at ASC LIMIT 1',
+      [tenantId, 'admin'],
+    ),
+  ]);
+
+  if (tenantRes.rows.length === 0) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
+  }
+  if (userRes.rows.length === 0) {
+    throw Object.assign(new Error('No admin user found for this tenant'), { statusCode: 400, isOperational: true });
+  }
+
+  const tenant = tenantRes.rows[0];
+  const user = userRes.rows[0];
+  const recipientName = user.first_name || user.last_name
+    ? [user.first_name, user.last_name].filter(Boolean).join(' ')
+    : null;
+
+  const result = await sendWelcomeEmail({
+    tenantName: tenant.name,
+    toEmail: user.email,
+    recipientName,
+  });
+
+  return { sent: result.status === 'sent', to: user.email };
+};
+
+module.exports = { getPlatformStats, getTenantList, getTenantDetail, updateTenantPhone, sendWelcomeEmailToTenant };
