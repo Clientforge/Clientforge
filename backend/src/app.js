@@ -53,10 +53,17 @@ app.use('/api/v1/contacts',  authenticate, tenantScope, require('./routes/contac
 app.use('/api/v1/campaigns', authenticate, tenantScope, require('./routes/campaigns.routes'));
 app.use('/api/v1/admin',     authenticate, requireSuperAdmin, require('./routes/admin.routes'));
 
-// --------------- STATIC FRONTEND (production) ---------------
+// --------------- STATIC FILES (production) ---------------
 
+// Landing page (marketing site) at /
+const LANDING_DIR = path.join(__dirname, '../../landing');
+app.use(express.static(LANDING_DIR));
+
+// React app assets
 const FRONTEND_DIR = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(FRONTEND_DIR));
+
+// React SPA fallback for /login, /register, /dashboard, etc.
 app.get(/^\/(?!api).*/, (req, res, next) => {
   const fs = require('fs');
   const indexPath = path.join(FRONTEND_DIR, 'index.html');
