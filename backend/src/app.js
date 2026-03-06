@@ -57,6 +57,9 @@ app.use('/api/v1/admin',     authenticate, requireSuperAdmin, require('./routes/
 
 // Landing page (marketing site) at /
 const LANDING_DIR = path.join(__dirname, '../../landing');
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'privacy.html'));
+});
 app.use(express.static(LANDING_DIR));
 
 // React app assets

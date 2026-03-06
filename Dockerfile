@@ -25,7 +25,7 @@ COPY backend/ ./backend/
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 # Copy landing page (marketing site)
-COPY index.html styles.css ./landing/
+COPY landing/ ./landing/
 
 # Non-root user for security
 RUN addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
