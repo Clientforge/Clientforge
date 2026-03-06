@@ -228,16 +228,66 @@ function CampaignDetail({ campaign, formatDate }) {
   );
 }
 
+const START_MODE = { scratch: 'scratch', copy: 'copy', template: 'template' };
+
 function CreateCampaignModal({ onClose, onSuccess }) {
+  const [startMode, setStartMode] = useState(null);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState({ name: '', channel: 'sms', schedule: [], audienceFilter: {} });
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [aiForm, setAiForm] = useState({ promotionDetails: '', audienceDescription: '', waveCount: 4 });
+  const [campaigns, setCampaigns] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [loadingSource, setLoadingSource] = useState(false);
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
 
   const showSms = form.channel === 'sms' || form.channel === 'both';
   const showEmail = form.channel === 'email' || form.channel === 'both';
+
+  const loadCampaigns = async () => {
+    try {
+      const data = await api.get('/campaigns?limit=50');
+      setCampaigns(data.campaigns || []);
+    } catch (err) { console.error(err); }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const data = await api.get('/campaigns/templates');
+      setTemplates(data.templates || []);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCopyFromCampaign = async (campaignId) => {
+    setLoadingSource(true);
+    setError('');
+    try {
+      const c = await api.get(`/campaigns/${campaignId}`);
+      setForm({
+        name: `${c.name} (Copy)`,
+        channel: c.channel || 'sms',
+        schedule: (c.schedule || []).map((w, i) => ({ ...w, step: i + 1 })),
+        audienceFilter: c.audienceFilter || {},
+      });
+      setStartMode(START_MODE.copy);
+      setWizardStep(2);
+    } catch (err) { setError(err.message); }
+    finally { setLoadingSource(false); }
+  };
+
+  const handleUseTemplate = (template) => {
+    setForm({
+      name: template.name,
+      channel: template.channel || 'sms',
+      schedule: (template.schedule || []).map((w, i) => ({ ...w, step: i + 1 })),
+      audienceFilter: template.audienceFilter || {},
+    });
+    setStartMode(START_MODE.template);
+    setWizardStep(2);
+  };
 
   const generateSequence = async () => {
     if (!form.name) { setError('Enter a campaign name first'); return; }
@@ -262,8 +312,19 @@ function CreateCampaignModal({ onClose, onSuccess }) {
     if (form.schedule.length === 0) { setError('Add at least one wave'); return; }
     setSaving(true);
     setError('');
-    try { await api.post('/campaigns', form); onSuccess(); }
-    catch (err) { setError(err.message); }
+    try {
+      await api.post('/campaigns', form);
+      if (saveAsTemplate) {
+        const name = templateName.trim() || form.name;
+        await api.post('/campaigns/templates', {
+          name,
+          channel: form.channel,
+          schedule: form.schedule,
+          audienceFilter: form.audienceFilter,
+        });
+      }
+      onSuccess();
+    } catch (err) { setError(err.message); }
     finally { setSaving(false); }
   };
 
@@ -302,13 +363,61 @@ function CreateCampaignModal({ onClose, onSuccess }) {
           {error && <div className="form-error">{error}</div>}
 
           <div className="wizard-steps">
-            <div className={`wizard-step ${wizardStep >= 1 ? 'active' : ''}`}>1. Details</div>
+            <div className={`wizard-step ${startMode !== null ? 'active' : ''}`}>1. Start</div>
             <div className={`wizard-step ${wizardStep >= 2 ? 'active' : ''}`}>2. Sequence</div>
             <div className={`wizard-step ${wizardStep >= 3 ? 'active' : ''}`}>3. Review</div>
           </div>
 
-          {/* Step 1 */}
-          {wizardStep === 1 && (
+          {/* Step 0: Choose how to start */}
+          {startMode === null && wizardStep === 1 && (
+            <div className="wizard-content">
+              {campaigns.length > 0 || templates.length > 0 ? (
+                <div className="source-list">
+                  <h4>{campaigns.length > 0 ? 'Select a campaign to copy' : 'Select a template'}</h4>
+                  <div className="source-list-items">
+                      {campaigns.length > 0
+                        ? campaigns.map((c) => (
+                            <button key={c.id} type="button" className="source-item" onClick={() => handleCopyFromCampaign(c.id)} disabled={loadingSource}>
+                              <span className="source-item-name">{c.name}</span>
+                              <span className="source-item-meta">{CHANNEL_LABELS[c.channel]} · {(c.schedule || []).length} waves</span>
+                            </button>
+                          ))
+                        : templates.map((t) => (
+                            <button key={t.id} type="button" className="source-item" onClick={() => handleUseTemplate(t)}>
+                              <span className="source-item-name">{t.name}</span>
+                              <span className="source-item-meta">{CHANNEL_LABELS[t.channel]} · {(t.schedule || []).length} waves</span>
+                            </button>
+                          ))}
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setCampaigns([]); setTemplates([]); }}>← Back</button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="start-section-title">How would you like to start?</h3>
+                  <div className="start-options">
+                    <button type="button" className="start-option-card" onClick={() => setStartMode(START_MODE.scratch)}>
+                      <span className="start-option-icon">✏️</span>
+                      <span className="start-option-label">Create from scratch</span>
+                      <span className="start-option-hint">Build a new campaign with AI or write your own</span>
+                    </button>
+                    <button type="button" className="start-option-card" onClick={async () => { setTemplates([]); await loadCampaigns(); }}>
+                      <span className="start-option-icon">📋</span>
+                      <span className="start-option-label">Copy from campaign</span>
+                      <span className="start-option-hint">Reuse a previous campaign and make edits</span>
+                    </button>
+                    <button type="button" className="start-option-card" onClick={async () => { setCampaigns([]); await loadTemplates(); }}>
+                      <span className="start-option-icon">📁</span>
+                      <span className="start-option-label">Use a template</span>
+                      <span className="start-option-hint">Start from a saved template</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step 1: Details (only when Create from scratch) */}
+          {startMode === START_MODE.scratch && wizardStep === 1 && (
             <div className="wizard-content">
               <div className="form-group">
                 <label>Campaign Name *</label>
@@ -453,7 +562,10 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               </div>
 
               <div className="modal-actions">
-                <button className="btn btn-secondary" onClick={() => setWizardStep(1)}>Back</button>
+                <button className="btn btn-secondary" onClick={() => {
+                  if (startMode === START_MODE.scratch) setWizardStep(1);
+                  else { setStartMode(null); setWizardStep(1); setCampaigns([]); setTemplates([]); }
+                }}>Back</button>
                 <button className="btn btn-ai" onClick={() => setWizardStep(1)} disabled={generating}>Regenerate with AI</button>
                 <button className="btn btn-primary" onClick={() => {
                   const hasEmpty = form.schedule.some((w) => {
@@ -509,6 +621,22 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               <div className="review-note">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#6366f1" strokeWidth="2"/><path d="M12 16v-4M12 8h.01" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/></svg>
                 <span>If a contact replies, remaining waves are skipped. Unsubscribed contacts are never messaged.</span>
+              </div>
+
+              <div className="save-as-template-row">
+                <label className="save-template-check">
+                  <input type="checkbox" checked={saveAsTemplate} onChange={(e) => setSaveAsTemplate(e.target.checked)} />
+                  <span>Save as template for future campaigns</span>
+                </label>
+                {saveAsTemplate && (
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Template name (e.g. Monthly Promo)"
+                    className="template-name-input"
+                  />
+                )}
               </div>
 
               <div className="modal-actions">

@@ -60,6 +60,18 @@ const LANDING_DIR = path.join(__dirname, '../../landing');
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'privacy.html'));
 });
+app.get('/services/website-creation', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'services/website-creation.html'));
+});
+app.get('/services/advertising-management', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'services/advertising-management.html'));
+});
+app.get('/services/marketing-automation', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'services/marketing-automation.html'));
+});
+app.get('/services/performance-tracking', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'services/performance-tracking.html'));
+});
 app.use(express.static(LANDING_DIR));
 
 // React app assets

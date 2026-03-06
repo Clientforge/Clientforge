@@ -21,6 +21,38 @@ router.get('/stats', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/templates', async (req, res, next) => {
+  try {
+    const templates = await campaignService.listTemplates(req.tenantId);
+    res.json({ templates });
+  } catch (err) { next(err); }
+});
+
+router.post('/from/:id', async (req, res, next) => {
+  try {
+    const campaign = await campaignService.cloneCampaign(req.tenantId, req.params.id);
+    res.status(201).json(campaign);
+  } catch (err) { next(err); }
+});
+
+router.post('/from-template/:templateId', async (req, res, next) => {
+  try {
+    const campaign = await campaignService.createCampaignFromTemplate(
+      req.tenantId,
+      req.params.templateId,
+      req.body,
+    );
+    res.status(201).json(campaign);
+  } catch (err) { next(err); }
+});
+
+router.post('/templates', async (req, res, next) => {
+  try {
+    const template = await campaignService.createTemplate(req.tenantId, req.body);
+    res.status(201).json(template);
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const campaign = await campaignService.getCampaign(req.tenantId, req.params.id);

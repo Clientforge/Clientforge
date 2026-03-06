@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ClientForge.ai — We help businesses automate lead management, customer engagement, follow-ups, and reputation management.">
+  <title>Marketing Automation — ClientForge.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="logo">
+        <span class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="url(#g1)"/>
+            <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+          </svg>
+        </span>
+        ClientForge<span class="logo-ai">.ai</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/#services">Services</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="/#contact">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="/login" class="btn btn-ghost">Login</a>
+        <a href="#get-in-touch" class="btn btn-primary book-meeting-btn">Book a Meeting</a>
+      </div>
+      <button class="mobile-toggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero service-hero">
+    <div class="container hero-container">
+      <a href="/#services" class="back-link">← All Services</a>
+      <h1 class="hero-title">Marketing Automation <span class="gradient-text">That Works</span></h1>
+      <p class="hero-subtitle">We help businesses automate lead management and customer engagement — nurturing leads, following up with potential customers, and building a strong reputation through reviews.</p>
+      <a href="#get-in-touch" class="btn btn-primary btn-lg book-meeting-btn">Book a Meeting</a>
+    </div>
+  </section>
+
+  <!-- CONTENT -->
+  <section class="service-content-section">
+    <div class="container">
+      <div class="service-content">
+        <h2>Automate Your Marketing, Grow Your Business</h2>
+        <p>Stop losing leads to slow follow-up and manual processes. We help you automate the entire journey from first contact to repeat customer.</p>
+
+        <h3>Lead Nurturing</h3>
+        <p>Automated sequences that stay in touch with leads at the right time. From welcome messages to multi-wave campaigns, we ensure no lead falls through the cracks.</p>
+
+        <h3>Customer Follow-Up</h3>
+        <p>Follow up with potential customers automatically — via SMS, email, or both. Speed-to-lead matters: we help you respond in minutes, not hours or days.</p>
+
+        <h3>Repeat Business</h3>
+        <p>Keep customers engaged and coming back. Automated re-engagement campaigns, birthday offers, and win-back sequences that drive repeat purchases.</p>
+
+        <h3>Reputation Management</h3>
+        <p>We help you consistently collect and improve customer reviews. Automated review requests, monitoring, and response systems that build trust and social proof for your business.</p>
+
+        <p>Ready to put your marketing on autopilot?</p>
+        <a href="#get-in-touch" class="btn btn-primary book-meeting-btn">Book a Meeting</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- GET IN TOUCH -->
+  <section id="get-in-touch" class="contact-section">
+    <div class="container">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <span class="section-badge">Get In Touch</span>
+          <h2>Ready to get started?</h2>
+          <p>Fill out the form below and we'll schedule a meeting to discuss your marketing automation needs. Our team typically responds within 2 hours.</p>
+          <div class="contact-details">
+            <div class="contact-item">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/></svg>
+              <span>hello@clientforge.ai</span>
+            </div>
+            <div class="contact-item">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2"/></svg>
+              <span>+1 (555) 123-4567</span>
+            </div>
+          </div>
+        </div>
+        <form class="contact-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" placeholder="Your name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="you@company.com" required>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+          </div>
+          <div class="form-group">
+            <label for="message">What do you need help with?</label>
+            <textarea id="message" name="message" rows="4" placeholder="Tell us about your automation goals..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Send Message</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+        <p>&copy; 2025 ClientForge.ai. All rights reserved.</p>
+        <div style="display: flex; gap: 1.5rem;">
+          <a href="/">Home</a>
+          <a href="/#services">Services</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="#get-in-touch">Get in Touch</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

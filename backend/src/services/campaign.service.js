@@ -282,4 +282,98 @@ const formatCampaign = (row) => ({
   createdAt: row.created_at,
 });
 
-module.exports = { createCampaign, updateCampaign, getCampaign, listCampaigns, launchCampaign, getCampaignStats };
+/**
+ * Clone an existing campaign as a new draft. Copies name, channel, schedule, audience filter.
+ * Does not copy campaign_messages (sent messages).
+ */
+const cloneCampaign = async (tenantId, sourceCampaignId) => {
+  const source = await getCampaign(tenantId, sourceCampaignId);
+  const newName = `${source.name} (Copy)`;
+  return createCampaign(tenantId, {
+    name: newName,
+    channel: source.channel,
+    schedule: source.schedule || [],
+    audienceFilter: source.audienceFilter || {},
+  });
+};
+
+/**
+ * Create a template from campaign data.
+ */
+const createTemplate = async (tenantId, data) => {
+  const result = await db.query(
+    `INSERT INTO campaign_templates (tenant_id, name, channel, schedule, audience_filter)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [
+      tenantId,
+      data.name,
+      ['sms', 'email', 'both'].includes(data.channel) ? data.channel : 'sms',
+      JSON.stringify(data.schedule || []),
+      JSON.stringify(data.audienceFilter || {}),
+    ],
+  );
+  return formatTemplate(result.rows[0]);
+};
+
+/**
+ * List templates for a tenant.
+ */
+const listTemplates = async (tenantId) => {
+  const result = await db.query(
+    'SELECT * FROM campaign_templates WHERE tenant_id = $1 ORDER BY created_at DESC',
+    [tenantId],
+  );
+  return result.rows.map(formatTemplate);
+};
+
+/**
+ * Get a single template.
+ */
+const getTemplate = async (tenantId, templateId) => {
+  const result = await db.query(
+    'SELECT * FROM campaign_templates WHERE tenant_id = $1 AND id = $2',
+    [tenantId, templateId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Template not found'), { statusCode: 404, isOperational: true });
+  }
+  return formatTemplate(result.rows[0]);
+};
+
+/**
+ * Create a campaign from a template.
+ */
+const createCampaignFromTemplate = async (tenantId, templateId, overrides = {}) => {
+  const template = await getTemplate(tenantId, templateId);
+  return createCampaign(tenantId, {
+    name: overrides.name || template.name,
+    channel: overrides.channel ?? template.channel,
+    schedule: overrides.schedule ?? template.schedule,
+    audienceFilter: overrides.audienceFilter ?? template.audienceFilter,
+  });
+};
+
+const formatTemplate = (row) => ({
+  id: row.id,
+  tenantId: row.tenant_id,
+  name: row.name,
+  channel: row.channel || 'sms',
+  schedule: row.schedule || [],
+  audienceFilter: row.audience_filter || {},
+  createdAt: row.created_at,
+});
+
+module.exports = {
+  createCampaign,
+  updateCampaign,
+  getCampaign,
+  listCampaigns,
+  launchCampaign,
+  getCampaignStats,
+  cloneCampaign,
+  createTemplate,
+  listTemplates,
+  getTemplate,
+  createCampaignFromTemplate,
+};

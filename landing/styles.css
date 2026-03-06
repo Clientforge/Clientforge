@@ -664,6 +664,96 @@ img {
   color: var(--color-text-secondary);
 }
 
+.feature-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.feature-card-link:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+
+.feature-card-cta {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* --- SERVICE PAGES --- */
+.service-hero {
+  padding: 80px 0 60px;
+}
+
+.service-hero .hero-container {
+  text-align: center;
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.back-link:hover {
+  color: var(--color-primary);
+}
+
+.service-hero .hero-title {
+  font-size: clamp(28px, 4vw, 42px);
+  margin-bottom: 16px;
+}
+
+.service-hero .hero-subtitle {
+  font-size: 18px;
+  max-width: 640px;
+  margin: 0 auto 24px;
+}
+
+.service-hero .btn {
+  margin-top: 8px;
+}
+
+.service-content-section {
+  padding: 60px 0 80px;
+}
+
+.service-content {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.service-content h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.service-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.service-content p {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+.service-content .btn {
+  margin-top: 16px;
+}
+
 /* --- HOW IT WORKS --- */
 .how-section {
   padding: 100px 0;
