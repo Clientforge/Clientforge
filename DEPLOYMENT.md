@@ -152,3 +152,24 @@ Body: { "firstName": "...", "phone": "+1...", "source": "..." }
 ```
 
 Generate an API key from the Settings page in the app.
+
+## Calendly Integration
+
+Connect Calendly to automatically create contacts, track appointments, and trigger reminders, confirmations, and post-visit follow-ups.
+
+### Setup
+
+1. In **Settings → Integration**, copy your **Calendly Webhook URL** (e.g. `https://yourdomain.com/api/v1/webhook/calendly/{tenantId}`).
+2. In Calendly: **Integrations → Webhooks → Add webhook subscription**.
+3. Paste the URL and subscribe to **invitee.created** and **invitee.canceled**.
+4. Copy the **Signing key** from Calendly and paste it in Settings → Calendly Webhook Signing Key, then Save.
+
+### Workflows
+
+- **Booking created**: Immediate confirmation SMS + reminder 24h before + post-visit follow-up 24h after.
+- **Booking cancelled**: Cancellation notice + all pending reminders cancelled.
+- **Booking rescheduled**: Reschedule notice + old reminders cancelled + new reminder scheduled.
+
+### Environment
+
+Set `BASE_URL` to your production URL (e.g. `https://api.clientforge.ai`) so the webhook URL shown in Settings is correct.

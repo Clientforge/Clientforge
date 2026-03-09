@@ -5,6 +5,7 @@ const config = require('./config');
 const db = require('./db/connection');
 const followupWorker = require('./workers/followup.worker');
 const campaignWorker = require('./workers/campaign.worker');
+const appointmentWorker = require('./workers/appointment.worker');
 
 const startServer = async () => {
   try {
@@ -23,6 +24,7 @@ const startServer = async () => {
 
     followupWorker.startWorker();
     campaignWorker.startWorker();
+    appointmentWorker.startWorker();
   });
 };
 

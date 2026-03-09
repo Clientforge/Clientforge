@@ -67,7 +67,7 @@ export default function SettingsPage() {
       {tab === 'business' && <BusinessTab settings={settings} onSave={save} saving={saving} />}
       {tab === 'followup' && <FollowupTab settings={settings} onSave={save} saving={saving} />}
       {tab === 'email' && <EmailTab settings={settings} onSave={save} saving={saving} />}
-      {tab === 'integration' && <IntegrationTab settings={settings} onReload={loadSettings} />}
+      {tab === 'integration' && <IntegrationTab settings={settings} onSave={save} onReload={loadSettings} saving={saving} />}
     </div>
   );
 }
@@ -407,11 +407,16 @@ function EmailTab({ settings, onSave, saving }) {
 }
 
 /* ==================== INTEGRATION TAB ==================== */
-function IntegrationTab({ settings, onReload }) {
+function IntegrationTab({ settings, onSave, onReload, saving }) {
   const [copying, setCopying] = useState('');
   const [regenerating, setRegenerating] = useState(false);
+  const [calendlyKey, setCalendlyKey] = useState(settings.integration?.calendlyWebhookSigningKey || '');
+  useEffect(() => {
+    setCalendlyKey(settings.integration?.calendlyWebhookSigningKey || '');
+  }, [settings.integration?.calendlyWebhookSigningKey]);
 
-  const apiKey = settings.integration.apiKey;
+  const apiKey = settings.integration?.apiKey;
+  const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
 
   const copyToClipboard = async (text, label) => {
     await navigator.clipboard.writeText(text);
@@ -430,6 +435,11 @@ function IntegrationTab({ settings, onReload }) {
   };
 
   const webhookUrl = `${window.location.protocol}//${window.location.hostname}:3000/api/v1/webhook/leads`;
+
+  const saveCalendly = (e) => {
+    e.preventDefault();
+    onSave({ integration: { calendlyWebhookSigningKey: calendlyKey || null } });
+  };
 
   return (
     <div className="settings-card">
@@ -460,6 +470,38 @@ function IntegrationTab({ settings, onReload }) {
           </button>
         </div>
       </div>
+
+      <hr className="settings-divider" />
+
+      <h3>Calendly Integration</h3>
+      <p className="settings-desc">Connect Calendly to automatically create contacts, track appointments, and send reminders, confirmations, and post-visit follow-ups.</p>
+      <form onSubmit={saveCalendly} className="integration-block">
+        <div className="field">
+          <label>Calendly Webhook Signing Key</label>
+          <input
+            type="password"
+            value={calendlyKey}
+            onChange={(e) => setCalendlyKey(e.target.value)}
+            placeholder="Paste from Calendly webhook subscription"
+          />
+          <span className="field-hint">Optional. When set, webhook requests are verified for security.</span>
+        </div>
+        {calendlyWebhookUrl && (
+          <div className="integration-block" style={{ marginTop: 12 }}>
+            <label>Calendly Webhook URL</label>
+            <div className="key-row">
+              <code className="key-value" style={{ fontSize: 12 }}>{calendlyWebhookUrl}</code>
+              <button type="button" className="btn-sm" onClick={() => copyToClipboard(calendlyWebhookUrl, 'calendly')}>
+                {copying === 'calendly' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <span className="field-hint">Add this URL in Calendly → Integrations → Webhooks. Subscribe to invitee.created and invitee.canceled.</span>
+          </div>
+        )}
+        <button type="submit" className="btn-primary" style={{ marginTop: 12 }} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Calendly Config'}
+        </button>
+      </form>
 
       <hr className="settings-divider" />
 
