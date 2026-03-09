@@ -140,6 +140,7 @@ pm2 startup
 3. Configure Twilio webhooks in your Twilio console:
    - **Inbound messages URL**: `https://yourdomain.com/api/v1/sms/inbound`
    - **Status callback URL**: `https://yourdomain.com/api/v1/sms/status`
+   - **Voice (A CALL COMES IN)**: `https://yourdomain.com/api/v1/voice/inbound` — for missed-call text-back
 
 ## Webhook Integration
 
@@ -173,3 +174,20 @@ Connect Calendly to automatically create contacts, track appointments, and trigg
 ### Environment
 
 Set `BASE_URL` to your production URL (e.g. `https://api.clientforge.ai`) so the webhook URL shown in Settings is correct.
+
+## Missed Call Text-Back
+
+When a call to the business's number is not answered, they can configure **conditional call forwarding** on their carrier to forward the call to their platform Twilio number. Our system detects the forwarded call and automatically texts the caller back.
+
+### Setup
+
+1. In **Settings → Business**, set your **SMS Phone Number** to your Twilio number (this is the number that receives forwarded calls).
+2. In **Settings → Integration**, copy the **Voice Webhook URL**.
+3. In Twilio Console: **Phone Numbers** → select your number → **Voice** → **A CALL COMES IN** → set Webhook URL to the Voice Webhook URL.
+4. In **Settings → Follow-up Engine**, customize the **Missed Call Message** (default: "Sorry we missed your call! How can we help? Reply to this message.").
+5. Configure **conditional call forwarding** on your business's carrier (Verizon, AT&T, T-Mobile, etc.) to forward unanswered/busy/unreachable calls to your Twilio number.
+
+### Safeguards
+
+- **Opt-out**: Contacts who replied STOP will not receive missed-call texts.
+- **Deduplication**: Same caller won't receive another missed-call text within 30 minutes.

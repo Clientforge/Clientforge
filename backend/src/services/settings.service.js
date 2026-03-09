@@ -34,6 +34,7 @@ const getSettings = async (tenantId) => {
       apiKey: t.api_key,
       calendlyWebhookSigningKey: t.calendly_webhook_signing_key || '',
       calendlyWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/calendly/${tenantId}`,
+      voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
     },
     email: {
       fromName: t.email_from_name || '',
@@ -42,6 +43,7 @@ const getSettings = async (tenantId) => {
     followup: {
       schedule: config.schedule || DEFAULT_SCHEDULE,
       outreachWindow: config.outreach_window || DEFAULT_OUTREACH_WINDOW,
+      missedCallMessage: config.missed_call_message || "Sorry we missed your call! How can we help? Reply to this message.",
     },
     createdAt: t.created_at,
   };
@@ -85,6 +87,7 @@ const updateSettings = async (tenantId, updates) => {
     const newConfig = { ...currentConfig };
     if (followup.schedule) newConfig.schedule = followup.schedule;
     if (followup.outreachWindow) newConfig.outreach_window = followup.outreachWindow;
+    if (followup.missedCallMessage !== undefined) newConfig.missed_call_message = followup.missedCallMessage;
 
     sets.push(`followup_config = $${idx++}`);
     params.push(JSON.stringify(newConfig));

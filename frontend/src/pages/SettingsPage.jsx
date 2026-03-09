@@ -151,6 +151,7 @@ function BusinessTab({ settings, onSave, saving }) {
 /* ==================== FOLLOW-UP TAB ==================== */
 function FollowupTab({ settings, onSave, saving }) {
   const [schedule, setSchedule] = useState(settings.followup.schedule || []);
+  const [missedCallMessage, setMissedCallMessage] = useState(settings.followup.missedCallMessage || "Sorry we missed your call! How can we help? Reply to this message.");
   const [window, setWindow] = useState(settings.followup.outreachWindow || {
     enabled: true, start_hour: 9, end_hour: 19, days: ['mon','tue','wed','thu','fri','sat'],
   });
@@ -181,7 +182,7 @@ function FollowupTab({ settings, onSave, saving }) {
     setWindow({ ...window, days });
   };
 
-  const handleSubmit = (e) => { e.preventDefault(); onSave({ followup: { schedule, outreachWindow: window } }); };
+  const handleSubmit = (e) => { e.preventDefault(); onSave({ followup: { schedule, outreachWindow: window, missedCallMessage } }); };
 
   const formatDelay = (hours) => {
     if (hours < 24) return `${hours}h`;
@@ -217,9 +218,22 @@ function FollowupTab({ settings, onSave, saving }) {
   };
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+  useEffect(() => {
+    setMissedCallMessage(settings.followup?.missedCallMessage || "Sorry we missed your call! How can we help? Reply to this message.");
+  }, [settings.followup?.missedCallMessage]);
 
   return (
     <form className="settings-card" onSubmit={handleSubmit}>
+      <h3>Missed Call Text-Back</h3>
+      <p className="settings-desc">When a call is forwarded to your Twilio number (no answer), we automatically text the caller. Configure conditional call forwarding on your carrier to forward to your platform number.</p>
+      <div className="field">
+        <label>Missed Call Message</label>
+        <textarea rows={2} value={missedCallMessage} onChange={(e) => setMissedCallMessage(e.target.value)} placeholder="Sorry we missed your call! How can we help? Reply to this message." />
+        <span className="field-hint">SMS sent when we detect a forwarded missed call. Keep under 160 characters.</span>
+      </div>
+
+      <hr className="settings-divider" />
+
       <h3>Outreach Window</h3>
       <p className="settings-desc">Messages outside this window are delayed to the next valid slot.</p>
 
@@ -417,6 +431,7 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
   const apiKey = settings.integration?.apiKey;
   const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
+  const voiceWebhookUrl = settings.integration?.voiceWebhookUrl || '';
 
   const copyToClipboard = async (text, label) => {
     await navigator.clipboard.writeText(text);
@@ -502,6 +517,23 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
           {saving ? 'Saving...' : 'Save Calendly Config'}
         </button>
       </form>
+
+      <hr className="settings-divider" />
+
+      <h3>Missed Call Text-Back</h3>
+      <p className="settings-desc">Configure your Twilio number to receive forwarded calls. When a call is forwarded (no answer/busy), we text the caller back automatically.</p>
+      {voiceWebhookUrl && (
+        <div className="integration-block">
+          <label>Voice Webhook URL (Twilio)</label>
+          <div className="key-row">
+            <code className="key-value" style={{ fontSize: 12 }}>{voiceWebhookUrl}</code>
+            <button type="button" className="btn-sm" onClick={() => copyToClipboard(voiceWebhookUrl, 'voice')}>
+              {copying === 'voice' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <span className="field-hint">In Twilio: Phone Numbers → [Your Number] → Voice → A CALL COMES IN → Webhook URL. Set to this URL.</span>
+        </div>
+      )}
 
       <hr className="settings-divider" />
 

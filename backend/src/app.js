@@ -50,6 +50,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth',    require('./routes/auth.routes'));
 app.use('/api/v1/webhook', require('./routes/webhook.routes'));
 app.use('/api/v1/webhook/calendly', require('./routes/calendly.webhook'));
+app.use('/api/v1/voice',   require('./routes/voice.routes'));
 
 // --------------- PROTECTED ROUTES ---------------
 
