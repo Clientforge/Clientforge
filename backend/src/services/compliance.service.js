@@ -36,6 +36,17 @@ const handleOptOut = async (leadId, tenantId) => {
 };
 
 /**
+ * Process an opt-out for a contact (no lead).
+ */
+const handleOptOutContact = async (contactId, tenantId) => {
+  await db.query(
+    `UPDATE contacts SET unsubscribed = true, unsubscribed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [contactId],
+  );
+  console.log(`[COMPLIANCE] Contact ${contactId} opted out — all messaging stopped`);
+};
+
+/**
  * Check if we're allowed to send a message to this lead.
  * Returns true if OK, false if blocked.
  */
@@ -67,6 +78,7 @@ module.exports = {
   STOP_KEYWORDS,
   isOptOut,
   handleOptOut,
+  handleOptOutContact,
   canSendMessage,
   canSendToContact,
 };

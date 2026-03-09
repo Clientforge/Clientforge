@@ -63,13 +63,23 @@ router.post('/inbound', async (req, res, next) => {
     if (compliance.isOptOut(body)) {
       const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid });
       if (inbound) {
-        await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
-        await followupService.cancelFollowUps(inbound.lead.id);
+        if (inbound.participantType === 'lead') {
+          await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
+          await followupService.cancelFollowUps(inbound.lead.id);
+        } else {
+          await compliance.handleOptOutContact(inbound.contact.id, inbound.tenantId);
+        }
       }
       return res.status(200).json({ received: true, action: 'opt_out' });
     }
 
     const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid });
+    if (!inbound) {
+      return res.status(200).json({ received: true, action: 'no_lead_found' });
+    }
+    if (inbound.participantType === 'contact') {
+      return res.status(200).json({ received: true, action: 'reply_logged', contactId: inbound.contact.id });
+    }
     const result = await processInboundLogic(inbound);
 
     res.status(200).json({ received: true, ...result });
@@ -120,13 +130,23 @@ router.post('/simulate', async (req, res, next) => {
     if (compliance.isOptOut(body)) {
       const inbound = await smsService.handleInbound({ from, to: null, body, twilioSid: null });
       if (inbound) {
-        await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
-        await followupService.cancelFollowUps(inbound.lead.id);
+        if (inbound.participantType === 'lead') {
+          await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
+          await followupService.cancelFollowUps(inbound.lead.id);
+        } else {
+          await compliance.handleOptOutContact(inbound.contact.id, inbound.tenantId);
+        }
       }
       return res.json({ received: true, action: 'opt_out' });
     }
 
     const inbound = await smsService.handleInbound({ from, to: null, body, twilioSid: null });
+    if (!inbound) {
+      return res.json({ received: true, action: 'no_lead_found' });
+    }
+    if (inbound.participantType === 'contact') {
+      return res.json({ received: true, action: 'reply_logged', contactId: inbound.contact.id });
+    }
     const result = await processInboundLogic(inbound);
 
     res.json({ received: true, ...result });

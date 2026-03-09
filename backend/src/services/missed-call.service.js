@@ -121,6 +121,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
     await smsService.sendSms({
       tenantId,
       leadId: null,
+      contactId: contact.id,
       to: callerPhone,
       from: tenant.phone_number,
       body: messageBody,

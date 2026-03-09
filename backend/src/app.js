@@ -58,7 +58,8 @@ app.use('/api/v1/leads',     authenticate, tenantScope, require('./routes/leads.
 app.use('/api/v1/sms',       require('./routes/sms.routes'));
 app.use('/api/v1/dashboard', authenticate, tenantScope, require('./routes/dashboard.routes'));
 app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settings.routes'));
-app.use('/api/v1/contacts',  authenticate, tenantScope, require('./routes/contacts.routes'));
+app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));
+app.use('/api/v1/conversations', authenticate, tenantScope, require('./routes/conversations.routes'));
 app.use('/api/v1/campaigns', authenticate, tenantScope, require('./routes/campaigns.routes'));
 app.use('/api/v1/admin',     authenticate, requireSuperAdmin, require('./routes/admin.routes'));
 

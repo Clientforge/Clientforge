@@ -80,6 +80,7 @@ const processPendingCampaignMessages = async () => {
         await smsService.sendSms({
           tenantId: msg.tenant_id,
           leadId: null,
+          contactId: msg.contact_id,
           to: msg.phone,
           from: msg.tenant_phone || undefined,
           body: msg.message_body,

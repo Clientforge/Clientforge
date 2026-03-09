@@ -125,6 +125,7 @@ const sendAppointmentSms = async (tenantId, contactId, to, from, body, messageTy
     await smsService.sendSms({
       tenantId,
       leadId: null,
+      contactId,
       to,
       from,
       body,

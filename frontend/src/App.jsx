@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import LeadsPage from './pages/LeadsPage';
 import LeadDetailPage from './pages/LeadDetailPage';
+import ConversationsPage from './pages/ConversationsPage';
 import SettingsPage from './pages/SettingsPage';
 import ContactsPage from './pages/ContactsPage';
 import CampaignsPage from './pages/CampaignsPage';
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="conversations" element={<ConversationsPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadDetailPage />} />
             <Route path="contacts" element={<ContactsPage />} />

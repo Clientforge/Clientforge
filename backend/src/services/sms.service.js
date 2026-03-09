@@ -8,7 +8,7 @@ const config = require('../config');
  * In mock mode, the message is printed to console.
  * In live mode, it's sent via Twilio.
  */
-const sendSms = async ({ tenantId, leadId, to, from, body, messageType }) => {
+const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageType }) => {
   const fromNumber = from || config.twilio.defaultFrom;
   let twilioSid = null;
   let deliveryStatus = 'sent';
@@ -41,10 +41,10 @@ const sendSms = async ({ tenantId, leadId, to, from, body, messageType }) => {
 
   // Log to messages table regardless of mode
   const result = await db.query(
-    `INSERT INTO messages (tenant_id, lead_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
-     VALUES ($1, $2, 'outbound', $3, $4, $5, $6, $7, $8)
+    `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
+     VALUES ($1, $2, $3, 'outbound', $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [tenantId, leadId, body, fromNumber, to, twilioSid, deliveryStatus, messageType],
+    [tenantId, leadId ?? null, contactId ?? null, body, fromNumber, to, twilioSid, deliveryStatus, messageType],
   );
 
   return result.rows[0];
@@ -99,9 +99,9 @@ const sendInitialContact = async (tenantId, lead) => {
 };
 
 /**
- * Handle an inbound SMS from a lead.
- * Looks up the lead by phone number, logs the message,
- * and returns the lead for further processing (qualification, etc).
+ * Handle an inbound SMS from a lead or contact.
+ * Looks up participant by phone (lead first, then contact), logs the message,
+ * and returns the participant for further processing.
  */
 const handleInbound = async ({ from, to, body, twilioSid }) => {
   // Find the tenant by their phone number
@@ -115,49 +115,68 @@ const handleInbound = async ({ from, to, body, twilioSid }) => {
   if (tenantResult.rows.length > 0) {
     tenantId = tenantResult.rows[0].id;
   } else {
-    // Fallback: find lead by phone number across all tenants
+    // Fallback: find by phone across leads or contacts
     const leadLookup = await db.query(
       'SELECT tenant_id FROM leads WHERE phone = $1 ORDER BY created_at DESC LIMIT 1',
       [from],
     );
-    if (leadLookup.rows.length === 0) {
-      console.warn(`[SMS][INBOUND] No lead found for phone ${from}`);
-      return null;
+    if (leadLookup.rows.length > 0) {
+      tenantId = leadLookup.rows[0].tenant_id;
+    } else {
+      const contactLookup = await db.query(
+        'SELECT tenant_id FROM contacts WHERE phone = $1 ORDER BY created_at DESC LIMIT 1',
+        [from],
+      );
+      if (contactLookup.rows.length === 0) {
+        console.warn(`[SMS][INBOUND] No lead or contact found for phone ${from}`);
+        return null;
+      }
+      tenantId = contactLookup.rows[0].tenant_id;
     }
-    tenantId = leadLookup.rows[0].tenant_id;
   }
 
-  // Find the lead
+  // Find the lead first (leads take precedence)
   const leadResult = await db.query(
     'SELECT * FROM leads WHERE tenant_id = $1 AND phone = $2',
     [tenantId, from],
   );
 
-  if (leadResult.rows.length === 0) {
-    console.warn(`[SMS][INBOUND] No lead found for tenant ${tenantId}, phone ${from}`);
-    return null;
+  if (leadResult.rows.length > 0) {
+    const lead = leadResult.rows[0];
+    await db.query(
+      `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
+       VALUES ($1, $2, NULL, 'inbound', $3, $4, $5, $6, 'received', 'reply')`,
+      [tenantId, lead.id, body, from, to, twilioSid || null],
+    );
+    await db.query(
+      'UPDATE leads SET last_activity_at = NOW(), updated_at = NOW() WHERE id = $1',
+      [lead.id],
+    );
+    return { tenantId, participantType: 'lead', lead, contact: null, messageBody: body };
   }
 
-  const lead = leadResult.rows[0];
-
-  // Log the inbound message
-  await db.query(
-    `INSERT INTO messages (tenant_id, lead_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
-     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, 'received', 'reply')`,
-    [tenantId, lead.id, body, from, to, twilioSid || null],
+  // Find the contact
+  const contactResult = await db.query(
+    'SELECT * FROM contacts WHERE tenant_id = $1 AND phone = $2',
+    [tenantId, from],
   );
 
-  // Update lead activity
-  await db.query(
-    'UPDATE leads SET last_activity_at = NOW(), updated_at = NOW() WHERE id = $1',
-    [lead.id],
-  );
+  if (contactResult.rows.length > 0) {
+    const contact = contactResult.rows[0];
+    await db.query(
+      `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
+       VALUES ($1, NULL, $2, 'inbound', $3, $4, $5, $6, 'received', 'reply')`,
+      [tenantId, contact.id, body, from, to, twilioSid || null],
+    );
+    await db.query(
+      'UPDATE contacts SET updated_at = NOW() WHERE id = $1',
+      [contact.id],
+    );
+    return { tenantId, participantType: 'contact', lead: null, contact, messageBody: body };
+  }
 
-  return {
-    tenantId,
-    lead,
-    messageBody: body,
-  };
+  console.warn(`[SMS][INBOUND] No lead or contact found for tenant ${tenantId}, phone ${from}`);
+  return null;
 };
 
 module.exports = {
