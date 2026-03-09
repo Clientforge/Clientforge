@@ -34,4 +34,4 @@ USER appuser
 EXPOSE 3000
 
 WORKDIR /app/backend
-CMD ["node", "src/index.js"]
+CMD ["sh", "-c", "npx knex migrate:latest --knexfile knexfile.js && node src/index.js"]
