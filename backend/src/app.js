@@ -70,6 +70,9 @@ const LANDING_DIR = path.join(__dirname, '../../landing');
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'privacy.html'));
 });
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'terms.html'));
+});
 app.get('/services/website-creation', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'services/website-creation.html'));
 });
