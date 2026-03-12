@@ -9,32 +9,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    .standalone-header { padding: 32px 24px; text-align: center; border-bottom: 1px solid var(--border-light, #f3f4f6); }
+    .standalone-header .logo { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: inherit; text-decoration: none; }
+    .standalone-header .logo-ai { background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  </style>
 </head>
 <body>
 
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <div class="container nav-container">
-      <a href="/" class="logo">
-        <span class="logo-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <rect width="28" height="28" rx="8" fill="url(#g1)"/>
-            <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs><linearGradient id="g1" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
-          </svg>
-        </span>
-        ClientForge<span class="logo-ai">.ai</span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="/">Home</a></li>
-        <li><a href="/#contact">Contact</a></li>
-      </ul>
-      <div class="nav-actions">
-        <a href="/login" class="btn btn-ghost">Login</a>
-        <a href="/register" class="btn btn-primary">Start Free Trial</a>
-      </div>
-    </div>
-  </nav>
+  <!-- MINIMAL HEADER (no app links) -->
+  <header class="standalone-header">
+    <span class="logo">
+      <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="8" fill="url(#g1)"/>
+        <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+      </svg>
+      ClientForge<span class="logo-ai">.ai</span>
+    </span>
+  </header>
 
   <!-- PRIVACY CONTENT -->
   <section class="contact-section" style="padding: 80px 0 120px;">
@@ -61,27 +54,19 @@
           <h2 style="font-size: 1.25rem; font-weight: 600; margin: 2rem 0 0.75rem;">Contact Us</h2>
           <p>For privacy-related questions, contact us at <a href="mailto:hello@clientforge.ai" style="color: var(--color-primary);">hello@clientforge.ai</a>.</p>
         </div>
-
-        <p style="margin-top: 3rem;">
-          <a href="/" class="btn btn-ghost">← Back to Home</a>
-        </p>
       </div>
     </div>
   </section>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-bottom" style="border-top: none; padding-top: 0;">
-        <p>&copy; 2025 ClientForge.ai. All rights reserved.</p>
-        <div style="display: flex; gap: 1.5rem;">
-          <a href="/">Home</a>
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms and Conditions</a>
-          <a href="/#contact">Contact</a>
-        </div>
-      </div>
-    </div>
+  <!-- MINIMAL FOOTER (no app links) -->
+  <footer style="padding: 24px; text-align: center; color: var(--color-text-secondary, #6b7280); font-size: 13px; border-top: 1px solid var(--border-light, #f3f4f6);">
+    <p style="margin: 0 0 8px;">&copy; 2025 ClientForge.ai</p>
+    <p style="margin: 0;">
+      <a href="/privacy" style="color: var(--color-primary, #6366f1);">Privacy</a> &middot;
+      <a href="/terms" style="color: var(--color-primary, #6366f1);">Terms</a> &middot;
+      <a href="/sms-consent" style="color: var(--color-primary, #6366f1);">SMS Consent</a> &middot;
+      <a href="mailto:hello@clientforge.ai" style="color: var(--color-primary, #6366f1);">Contact</a>
+    </p>
   </footer>
 
 </body>
