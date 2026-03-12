@@ -46,14 +46,36 @@ const processInboundLogic = async (inbound) => {
 };
 
 /**
- * POST /api/v1/sms/inbound — Twilio webhook for incoming SMS.
+ * Extract inbound params from Twilio or Telnyx webhook payload.
+ */
+const parseInboundPayload = (req) => {
+  if (req.body?.data?.event_type === 'message.received') {
+    const p = req.body.data.payload;
+    return {
+      from: p.from?.phone_number,
+      to: p.to?.[0]?.phone_number,
+      body: p.text,
+      messageSid: p.id,
+    };
+  }
+  return {
+    from: req.body.From || req.body.from,
+    to: req.body.To || req.body.to,
+    body: req.body.Body || req.body.body,
+    messageSid: req.body.MessageSid || req.body.messageSid,
+  };
+};
+
+/**
+ * POST /api/v1/sms/inbound — Twilio or Telnyx webhook for incoming SMS.
  */
 router.post('/inbound', async (req, res, next) => {
   try {
-    const from = req.body.From || req.body.from;
-    const to = req.body.To || req.body.to;
-    const body = req.body.Body || req.body.body;
-    const messageSid = req.body.MessageSid || req.body.messageSid;
+    if (req.body?.data?.event_type && req.body.data.event_type !== 'message.received') {
+      return res.status(200).json({ received: true });
+    }
+
+    const { from, to, body, messageSid } = parseInboundPayload(req);
 
     if (!from || !body) {
       return res.status(400).json({ error: 'Missing From and Body fields' });
@@ -61,7 +83,7 @@ router.post('/inbound', async (req, res, next) => {
 
     // Check for opt-out FIRST (compliance)
     if (compliance.isOptOut(body)) {
-      const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid });
+      const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid || undefined });
       if (inbound) {
         if (inbound.participantType === 'lead') {
           await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
@@ -73,7 +95,7 @@ router.post('/inbound', async (req, res, next) => {
       return res.status(200).json({ received: true, action: 'opt_out' });
     }
 
-    const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid });
+    const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid || undefined });
     if (!inbound) {
       return res.status(200).json({ received: true, action: 'no_lead_found' });
     }
@@ -89,12 +111,20 @@ router.post('/inbound', async (req, res, next) => {
 });
 
 /**
- * POST /api/v1/sms/status — Twilio delivery status callback.
+ * POST /api/v1/sms/status — Twilio or Telnyx delivery status callback.
  */
 router.post('/status', async (req, res, next) => {
   try {
-    const sid = req.body.MessageSid || req.body.messageSid;
-    const status = req.body.MessageStatus || req.body.messageStatus;
+    let sid, status;
+
+    if (req.body?.data?.event_type === 'message.finalized') {
+      const p = req.body.data.payload;
+      sid = p.id;
+      status = p.to?.[0]?.status || p.from?.status || 'finalized';
+    } else {
+      sid = req.body.MessageSid || req.body.messageSid;
+      status = req.body.MessageStatus || req.body.messageStatus;
+    }
 
     if (sid && status) {
       await db.query(

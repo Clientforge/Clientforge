@@ -21,12 +21,19 @@ const config = {
 
   sms: {
     mode: process.env.SMS_MODE || 'mock',
+    provider: process.env.SMS_PROVIDER || 'twilio',
   },
 
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
     authToken: process.env.TWILIO_AUTH_TOKEN,
     defaultFrom: process.env.TWILIO_DEFAULT_FROM || '+15551234567',
+  },
+
+  telnyx: {
+    apiKey: process.env.TELNYX_API_KEY,
+    messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID,
+    defaultFrom: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_DEFAULT_FROM,
   },
 
   email: {
@@ -37,7 +44,13 @@ const config = {
 };
 
 if (config.env === 'production') {
-  const required = ['DATABASE_URL', 'JWT_SECRET', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
+  const required = ['DATABASE_URL', 'JWT_SECRET'];
+  const smsProvider = process.env.SMS_PROVIDER || 'twilio';
+  if (smsProvider === 'telnyx') {
+    required.push('TELNYX_API_KEY');
+  } else {
+    required.push('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN');
+  }
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     console.error(`[CONFIG] Missing required env vars: ${missing.join(', ')}`);

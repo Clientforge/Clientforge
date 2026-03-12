@@ -6,31 +6,56 @@ const config = require('../config');
  *
  * Regardless of mode, every message is logged to the messages table.
  * In mock mode, the message is printed to console.
- * In live mode, it's sent via Twilio.
+ * In live mode, it's sent via Twilio or Telnyx (SMS_PROVIDER).
  */
 const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageType }) => {
-  const fromNumber = from || config.twilio.defaultFrom;
-  let twilioSid = null;
+  const provider = config.sms.provider || 'twilio';
+  const fromNumber = from || (provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom);
+  let messageId = null;
   let deliveryStatus = 'sent';
 
   if (config.sms.mode === 'live') {
     try {
-      const twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
-      const message = await twilio.messages.create({
-        body,
-        from: fromNumber,
-        to,
-        statusCallback: `${process.env.BASE_URL || 'http://localhost:3000'}/api/v1/sms/status`,
-      });
-      twilioSid = message.sid;
-      deliveryStatus = message.status;
+      if (provider === 'telnyx') {
+        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        const res = await fetch('https://api.telnyx.com/v2/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.telnyx.apiKey}`,
+          },
+          body: JSON.stringify({
+            from: fromNumber,
+            to,
+            text: body,
+            ...(config.telnyx.messagingProfileId && { messaging_profile_id: config.telnyx.messagingProfileId }),
+            webhook_url: `${baseUrl}/api/v1/sms/status`,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.errors?.[0]?.detail || data.message || 'Telnyx API error');
+        }
+        messageId = data.data?.id;
+        deliveryStatus = data.data?.status || 'queued';
+      } else {
+        const twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
+        const message = await twilio.messages.create({
+          body,
+          from: fromNumber,
+          to,
+          statusCallback: `${process.env.BASE_URL || 'http://localhost:3000'}/api/v1/sms/status`,
+        });
+        messageId = message.sid;
+        deliveryStatus = message.status;
+      }
     } catch (err) {
       console.error(`[SMS][LIVE] Failed to send to ${to}: ${err.message}`);
       deliveryStatus = 'failed';
     }
   } else {
     // Mock mode
-    twilioSid = `MOCK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    messageId = `MOCK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     console.log(`\n[SMS][MOCK] ─────────────────────────────────`);
     console.log(`  To:   ${to}`);
     console.log(`  From: ${fromNumber}`);
@@ -39,12 +64,12 @@ const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageTyp
     console.log(`[SMS][MOCK] ─────────────────────────────────\n`);
   }
 
-  // Log to messages table regardless of mode
+  // Log to messages table regardless of mode (twilio_sid stores provider message id for both Twilio and Telnyx)
   const result = await db.query(
     `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
      VALUES ($1, $2, $3, 'outbound', $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [tenantId, leadId ?? null, contactId ?? null, body, fromNumber, to, twilioSid, deliveryStatus, messageType],
+    [tenantId, leadId ?? null, contactId ?? null, body, fromNumber, to, messageId, deliveryStatus, messageType],
   );
 
   return result.rows[0];
@@ -71,7 +96,7 @@ const sendInitialContact = async (tenantId, lead) => {
     tenantId,
     leadId: lead.id,
     to: lead.phone,
-    from: tenant.phone_number || config.twilio.defaultFrom,
+    from: tenant.phone_number || (config.sms.provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom),
     body,
     messageType: 'initial',
   });

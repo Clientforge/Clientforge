@@ -129,7 +129,9 @@ pm2 startup
 - [ ] SSL/HTTPS configured (use platform TLS or a reverse proxy)
 - [ ] Backup strategy for PostgreSQL data
 
-## Twilio Setup
+## SMS Provider Setup
+
+### Option A: Twilio
 
 1. Get a phone number from [twilio.com/console](https://twilio.com/console)
 2. Set these environment variables:
@@ -137,10 +139,23 @@ pm2 startup
    - `TWILIO_AUTH_TOKEN`
    - `TWILIO_DEFAULT_FROM` (your Twilio phone number)
    - `SMS_MODE=live`
-3. Configure Twilio webhooks in your Twilio console:
+   - `SMS_PROVIDER=twilio` (or omit, twilio is default)
+3. Configure Twilio webhooks:
    - **Inbound messages URL**: `https://yourdomain.com/api/v1/sms/inbound`
    - **Status callback URL**: `https://yourdomain.com/api/v1/sms/status`
    - **Voice (A CALL COMES IN)**: `https://yourdomain.com/api/v1/voice/inbound` — for missed-call text-back
+
+### Option B: Telnyx
+
+1. Get a phone number and create a Messaging Profile at [portal.telnyx.com](https://portal.telnyx.com)
+2. Set these environment variables:
+   - `TELNYX_API_KEY`
+   - `TELNYX_PHONE_NUMBER` (your Telnyx number)
+   - `TELNYX_MESSAGING_PROFILE_ID` (optional, if not using default)
+   - `SMS_MODE=live`
+   - `SMS_PROVIDER=telnyx`
+3. In Telnyx Messaging Profile → Inbound: set **Webhook URL** to `https://yourdomain.com/api/v1/sms/inbound`
+4. In **Settings → Business**, set **SMS Phone Number** to your Telnyx number
 
 ## Webhook Integration
 

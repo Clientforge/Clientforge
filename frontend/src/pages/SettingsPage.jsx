@@ -432,6 +432,7 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
   const apiKey = settings.integration?.apiKey;
   const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
   const voiceWebhookUrl = settings.integration?.voiceWebhookUrl || '';
+  const smsInboundWebhookUrl = settings.integration?.smsInboundWebhookUrl || '';
 
   const copyToClipboard = async (text, label) => {
     await navigator.clipboard.writeText(text);
@@ -520,7 +521,24 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <hr className="settings-divider" />
 
-      <h3>Missed Call Text-Back</h3>
+      <h3>SMS Inbound Webhook (Twilio / Telnyx)</h3>
+      <p className="settings-desc">Configure your SMS provider to receive inbound messages. Set this URL in Twilio or Telnyx messaging profile.</p>
+      {smsInboundWebhookUrl && (
+        <div className="integration-block">
+          <label>SMS Inbound Webhook URL</label>
+          <div className="key-row">
+            <code className="key-value" style={{ fontSize: 12 }}>{smsInboundWebhookUrl}</code>
+            <button type="button" className="btn-sm" onClick={() => copyToClipboard(smsInboundWebhookUrl, 'sms')}>
+              {copying === 'sms' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <span className="field-hint">Telnyx: Messaging Profile → Inbound → Webhook URL. Twilio: Phone Numbers → [Number] → Messaging → A MESSAGE COMES IN.</span>
+        </div>
+      )}
+
+      <hr className="settings-divider" />
+
+      <h3>Missed Call Text-Back (Twilio Voice)</h3>
       <p className="settings-desc">Configure your Twilio number to receive forwarded calls. When a call is forwarded (no answer/busy), we text the caller back automatically.</p>
       {voiceWebhookUrl && (
         <div className="integration-block">
