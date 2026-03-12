@@ -73,6 +73,9 @@ app.get('/privacy', (req, res) => {
 app.get('/terms', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'terms.html'));
 });
+app.get('/sms-consent', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'sms-consent.html'));
+});
 app.get('/services/website-creation', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'services/website-creation.html'));
 });
