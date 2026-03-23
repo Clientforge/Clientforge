@@ -1145,6 +1145,34 @@ img {
   min-height: 100px;
 }
 
+.form-group-optin {
+  margin-bottom: 20px;
+}
+
+.optin-checkbox {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 400 !important;
+  font-size: 13px !important;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.optin-checkbox input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.optin-checkbox span {
+  flex: 1;
+}
+
 /* --- FOOTER --- */
 .footer {
   background: var(--color-text);
