@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ClientForge.ai Contact — Submit an inquiry with SMS consent. Opt in to receive text messages regarding your inquiry and appointments.">
+  <title>Contact — ClientForge.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .consent-header { padding: 32px 24px; text-align: center; border-bottom: 1px solid var(--border-light, #f3f4f6); }
+    .consent-header .logo { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: inherit; text-decoration: none; }
+    .consent-header .logo-ai { background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  </style>
+</head>
+<body>
+
+  <!-- MINIMAL HEADER (no app links) -->
+  <header class="consent-header">
+    <span class="logo">
+      <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="8" fill="url(#g1)"/>
+        <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+      </svg>
+      ClientForge<span class="logo-ai">.ai</span>
+    </span>
+  </header>
+
+  <!-- CONTACT OPT-IN FORM -->
+  <section class="contact-section" style="padding: 80px 0 120px;">
+    <div class="container">
+      <div style="max-width: 560px; margin: 0 auto;">
+        <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Contact Us</h1>
+        <p style="color: var(--color-text-secondary); margin-bottom: 2rem;">Submit your inquiry. By providing your phone number and opting in below, you consent to receive SMS text messages from ClientForge.ai.</p>
+
+        <form class="contact-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" placeholder="Your name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="you@company.com" required>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000" required>
+          </div>
+          <div class="form-group form-group-optin">
+            <label class="optin-checkbox">
+              <input type="checkbox" name="sms_consent" required>
+              <span>I agree to receive SMS text messages from ClientForge.ai regarding my inquiry, appointment scheduling, reminders, and follow-up communications. Message and data rates may apply. Reply STOP to opt out.</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" rows="4" placeholder="Tell us about your needs..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Send Message</button>
+        </form>
+
+        <p style="margin-top: 1.5rem; font-size: 13px; color: var(--color-text-secondary);">
+          <a href="/privacy" style="color: var(--color-primary);">Privacy Policy</a> · 
+          <a href="/terms" style="color: var(--color-primary);">Terms</a> · 
+          <a href="/sms-consent" style="color: var(--color-primary);">SMS Consent</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MINIMAL FOOTER (no app links) -->
+  <footer style="padding: 24px; text-align: center; color: var(--color-text-secondary, #6b7280); font-size: 13px; border-top: 1px solid var(--border-light, #f3f4f6);">
+    <p style="margin: 0 0 8px;">&copy; 2025 ClientForge.ai</p>
+    <p style="margin: 0;">
+      <a href="/privacy" style="color: var(--color-primary, #6366f1);">Privacy</a> &middot;
+      <a href="/terms" style="color: var(--color-primary, #6366f1);">Terms</a> &middot;
+      <a href="/sms-consent" style="color: var(--color-primary, #6366f1);">SMS Consent</a> &middot;
+      <a href="/contact-opt-in" style="color: var(--color-primary, #6366f1);">Contact</a> &middot;
+      <a href="mailto:hello@clientforge.ai" style="color: var(--color-primary, #6366f1);">Email</a>
+    </p>
+  </footer>
+
+</body>
+</html>
