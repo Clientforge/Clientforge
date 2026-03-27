@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const config = require('../config');
+const { normalizePhone } = require('./lead.service');
 
 /**
  * Send an SMS message — mock or live depending on SMS_MODE.
@@ -129,10 +130,19 @@ const sendInitialContact = async (tenantId, lead) => {
  * and returns the participant for further processing.
  */
 const handleInbound = async ({ from, to, body, twilioSid }) => {
-  // Find the tenant by their phone number
+  if (!from) {
+    console.warn('[SMS][INBOUND] Missing From');
+    return null;
+  }
+
+  // Twilio may send E.164 or other shapes; DB stores normalizePhone() output for leads/contacts.
+  const fromNorm = normalizePhone(from);
+  const toNorm = to ? normalizePhone(to) : null;
+
+  // Match tenant by Twilio "To" (our number) — raw or normalized.
   const tenantResult = await db.query(
-    'SELECT id FROM tenants WHERE phone_number = $1',
-    [to],
+    'SELECT id FROM tenants WHERE phone_number = $1 OR ($2::text IS NOT NULL AND phone_number = $2)',
+    [to, toNorm],
   );
 
   let tenantId;
@@ -143,31 +153,47 @@ const handleInbound = async ({ from, to, body, twilioSid }) => {
     // Fallback: find by phone across leads or contacts
     const leadLookup = await db.query(
       'SELECT tenant_id FROM leads WHERE phone = $1 ORDER BY created_at DESC LIMIT 1',
-      [from],
+      [fromNorm],
     );
     if (leadLookup.rows.length > 0) {
       tenantId = leadLookup.rows[0].tenant_id;
     } else {
       const contactLookup = await db.query(
         'SELECT tenant_id FROM contacts WHERE phone = $1 ORDER BY created_at DESC LIMIT 1',
-        [from],
+        [fromNorm],
       );
       if (contactLookup.rows.length === 0) {
-        console.warn(`[SMS][INBOUND] No lead or contact found for phone ${from}`);
+        console.warn(`[SMS][INBOUND] No lead or contact found for phone ${from} (normalized ${fromNorm})`);
         return null;
       }
       tenantId = contactLookup.rows[0].tenant_id;
     }
   }
 
-  // Find the lead first (leads take precedence)
-  const leadResult = await db.query(
-    'SELECT * FROM leads WHERE tenant_id = $1 AND phone = $2',
-    [tenantId, from],
-  );
+  const [leadResult, contactResult] = await Promise.all([
+    db.query('SELECT * FROM leads WHERE tenant_id = $1 AND phone = $2', [tenantId, fromNorm]),
+    db.query('SELECT * FROM contacts WHERE tenant_id = $1 AND phone = $2', [tenantId, fromNorm]),
+  ]);
 
-  if (leadResult.rows.length > 0) {
-    const lead = leadResult.rows[0];
+  const lead = leadResult.rows[0];
+  const contact = contactResult.rows[0];
+
+  // Same phone as lead + contact: store both IDs so lead and contact conversation UIs show the reply.
+  if (lead && contact) {
+    await db.query(
+      `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
+       VALUES ($1, $2, $3, 'inbound', $4, $5, $6, $7, 'received', 'reply')`,
+      [tenantId, lead.id, contact.id, body, from, to, twilioSid || null],
+    );
+    await db.query(
+      'UPDATE leads SET last_activity_at = NOW(), updated_at = NOW() WHERE id = $1',
+      [lead.id],
+    );
+    await db.query('UPDATE contacts SET updated_at = NOW() WHERE id = $1', [contact.id]);
+    return { tenantId, participantType: 'lead', lead, contact, messageBody: body };
+  }
+
+  if (lead) {
     await db.query(
       `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
        VALUES ($1, $2, NULL, 'inbound', $3, $4, $5, $6, 'received', 'reply')`,
@@ -180,27 +206,17 @@ const handleInbound = async ({ from, to, body, twilioSid }) => {
     return { tenantId, participantType: 'lead', lead, contact: null, messageBody: body };
   }
 
-  // Find the contact
-  const contactResult = await db.query(
-    'SELECT * FROM contacts WHERE tenant_id = $1 AND phone = $2',
-    [tenantId, from],
-  );
-
-  if (contactResult.rows.length > 0) {
-    const contact = contactResult.rows[0];
+  if (contact) {
     await db.query(
       `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
        VALUES ($1, NULL, $2, 'inbound', $3, $4, $5, $6, 'received', 'reply')`,
       [tenantId, contact.id, body, from, to, twilioSid || null],
     );
-    await db.query(
-      'UPDATE contacts SET updated_at = NOW() WHERE id = $1',
-      [contact.id],
-    );
+    await db.query('UPDATE contacts SET updated_at = NOW() WHERE id = $1', [contact.id]);
     return { tenantId, participantType: 'contact', lead: null, contact, messageBody: body };
   }
 
-  console.warn(`[SMS][INBOUND] No lead or contact found for tenant ${tenantId}, phone ${from}`);
+  console.warn(`[SMS][INBOUND] No lead or contact found for tenant ${tenantId}, phone ${from} (normalized ${fromNorm})`);
   return null;
 };
 
