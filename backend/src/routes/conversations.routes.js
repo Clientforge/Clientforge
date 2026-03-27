@@ -60,4 +60,31 @@ router.post('/:participantType/:participantId/messages', async (req, res, next) 
   }
 });
 
+/**
+ * PATCH /api/v1/conversations/:participantType/:participantId/ai-reply
+ * Body: { aiAutoReplyOverride: true | false | null } — null = use tenant default
+ */
+router.patch('/:participantType/:participantId/ai-reply', async (req, res, next) => {
+  try {
+    const { participantType, participantId } = req.params;
+    const { aiAutoReplyOverride } = req.body;
+    if (
+      aiAutoReplyOverride !== null
+      && aiAutoReplyOverride !== undefined
+      && typeof aiAutoReplyOverride !== 'boolean'
+    ) {
+      return res.status(400).json({ error: 'aiAutoReplyOverride must be true, false, or null' });
+    }
+    const updated = await conversationService.updateAiReplyOverride(
+      req.tenantId,
+      participantType,
+      participantId,
+      aiAutoReplyOverride === undefined ? null : aiAutoReplyOverride,
+    );
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

@@ -6,7 +6,8 @@ const getSettings = async (tenantId) => {
   const result = await db.query(
     `SELECT id, name, industry, timezone, phone_number, booking_link,
             plan, api_key, followup_config, description, target_audience, tone,
-            email_from_name, email_from_address, calendly_webhook_signing_key, created_at
+            email_from_name, email_from_address, calendly_webhook_signing_key,
+            ai_auto_reply_enabled, created_at
      FROM tenants WHERE id = $1`,
     [tenantId],
   );
@@ -29,6 +30,7 @@ const getSettings = async (tenantId) => {
       description: t.description,
       targetAudience: t.target_audience,
       tone: t.tone || 'friendly',
+      aiAutoReplyEnabled: !!t.ai_auto_reply_enabled,
     },
     integration: {
       apiKey: t.api_key,
@@ -65,6 +67,10 @@ const updateSettings = async (tenantId, updates) => {
     if (business.description !== undefined) { sets.push(`description = $${idx++}`); params.push(business.description); }
     if (business.targetAudience !== undefined) { sets.push(`target_audience = $${idx++}`); params.push(business.targetAudience); }
     if (business.tone !== undefined) { sets.push(`tone = $${idx++}`); params.push(business.tone); }
+    if (business.aiAutoReplyEnabled !== undefined) {
+      sets.push(`ai_auto_reply_enabled = $${idx++}`);
+      params.push(!!business.aiAutoReplyEnabled);
+    }
   }
 
   if (updates.integration) {

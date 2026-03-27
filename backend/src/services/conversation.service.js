@@ -162,7 +162,7 @@ const getConversation = async (tenantId, participantType, participantId) => {
   let participant;
   if (participantType === 'lead') {
     const leadResult = await db.query(
-      'SELECT id, first_name, last_name, phone, email, status FROM leads WHERE id = $1 AND tenant_id = $2',
+      'SELECT id, first_name, last_name, phone, email, status, ai_auto_reply_override FROM leads WHERE id = $1 AND tenant_id = $2',
       [participantId, tenantId],
     );
     if (leadResult.rows.length === 0) {
@@ -178,10 +178,11 @@ const getConversation = async (tenantId, participantType, participantId) => {
       email: row.email,
       status: row.status,
       displayName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.phone,
+      aiAutoReplyOverride: row.ai_auto_reply_override,
     };
   } else {
     const contactResult = await db.query(
-      'SELECT id, first_name, last_name, phone, email FROM contacts WHERE id = $1 AND tenant_id = $2',
+      'SELECT id, first_name, last_name, phone, email, ai_auto_reply_override FROM contacts WHERE id = $1 AND tenant_id = $2',
       [participantId, tenantId],
     );
     if (contactResult.rows.length === 0) {
@@ -197,8 +198,18 @@ const getConversation = async (tenantId, participantType, participantId) => {
       email: row.email,
       status: null,
       displayName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.phone,
+      aiAutoReplyOverride: row.ai_auto_reply_override,
     };
   }
+
+  const tenantAi = await db.query(
+    'SELECT ai_auto_reply_enabled FROM tenants WHERE id = $1',
+    [tenantId],
+  );
+  const tenantDefault = !!tenantAi.rows[0]?.ai_auto_reply_enabled;
+  const override = participant.aiAutoReplyOverride;
+  const effective =
+    override === null || override === undefined ? tenantDefault : !!override;
 
   const messagesResult = await db.query(
     participantType === 'lead'
@@ -218,7 +229,101 @@ const getConversation = async (tenantId, participantType, participantId) => {
     createdAt: row.created_at,
   }));
 
-  return { participant, messages };
+  return {
+    participant,
+    messages,
+    participantType,
+    aiReply: {
+      tenantDefault,
+      override,
+      effective,
+    },
+  };
+};
+
+/**
+ * Update per-thread AI auto-reply override (null = use tenant default).
+ */
+const updateAiReplyOverride = async (tenantId, participantType, participantId, override) => {
+  if (participantType !== 'lead' && participantType !== 'contact') {
+    throw Object.assign(new Error('Invalid participant type'), { statusCode: 400, isOperational: true });
+  }
+  if (override !== null && override !== undefined && typeof override !== 'boolean') {
+    throw Object.assign(new Error('override must be true, false, or null'), { statusCode: 400, isOperational: true });
+  }
+
+  const val = override === undefined ? null : override;
+
+  if (participantType === 'lead') {
+    const r = await db.query(
+      `UPDATE leads SET ai_auto_reply_override = $1, updated_at = NOW()
+       WHERE id = $2 AND tenant_id = $3 RETURNING id`,
+      [val, participantId, tenantId],
+    );
+    if (r.rows.length === 0) {
+      throw Object.assign(new Error('Lead not found'), { statusCode: 404, isOperational: true });
+    }
+  } else {
+    const r = await db.query(
+      `UPDATE contacts SET ai_auto_reply_override = $1, updated_at = NOW()
+       WHERE id = $2 AND tenant_id = $3 RETURNING id`,
+      [val, participantId, tenantId],
+    );
+    if (r.rows.length === 0) {
+      throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
+    }
+  }
+
+  return getConversation(tenantId, participantType, participantId);
+};
+
+/**
+ * Effective AI auto-reply flag for inbound handling (used by SMS webhook).
+ */
+const getEffectiveAiAutoReply = async (tenantId, participantType, participantId) => {
+  const tenantRes = await db.query(
+    'SELECT ai_auto_reply_enabled FROM tenants WHERE id = $1',
+    [tenantId],
+  );
+  const tenantDefault = !!tenantRes.rows[0]?.ai_auto_reply_enabled;
+
+  if (participantType === 'lead') {
+    const r = await db.query(
+      'SELECT ai_auto_reply_override FROM leads WHERE id = $1 AND tenant_id = $2',
+      [participantId, tenantId],
+    );
+    if (r.rows.length === 0) return { effective: false, tenantDefault, override: null };
+    const o = r.rows[0].ai_auto_reply_override;
+    const effective = o === null || o === undefined ? tenantDefault : !!o;
+    return { effective, tenantDefault, override: o };
+  }
+
+  const r = await db.query(
+    'SELECT ai_auto_reply_override FROM contacts WHERE id = $1 AND tenant_id = $2',
+    [participantId, tenantId],
+  );
+  if (r.rows.length === 0) return { effective: false, tenantDefault, override: null };
+  const o = r.rows[0].ai_auto_reply_override;
+  const effective = o === null || o === undefined ? tenantDefault : !!o;
+  return { effective, tenantDefault, override: o };
+};
+
+/**
+ * Recent thread lines for AI context (newest last).
+ */
+const getRecentThreadMessagesForAi = async (tenantId, participantType, participantId, limit = 12) => {
+  const q =
+    participantType === 'lead'
+      ? `SELECT direction, body FROM messages
+         WHERE tenant_id = $1 AND lead_id = $2
+         ORDER BY created_at DESC
+         LIMIT $3`
+      : `SELECT direction, body FROM messages
+         WHERE tenant_id = $1 AND contact_id = $2
+         ORDER BY created_at DESC
+         LIMIT $3`;
+  const result = await db.query(q, [tenantId, participantId, limit]);
+  return result.rows.reverse();
 };
 
 /**
@@ -270,4 +375,7 @@ module.exports = {
   listConversations,
   getConversation,
   sendManualReply,
+  updateAiReplyOverride,
+  getEffectiveAiAutoReply,
+  getRecentThreadMessagesForAi,
 };

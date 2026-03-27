@@ -252,4 +252,74 @@ ${jsonFormat}`;
   }
 };
 
-module.exports = { generateFollowUpSchedule, refineFollowUpMessages, generateCampaignSequence };
+/**
+ * Generate a short SMS reply to an inbound message (requires OPENAI_API_KEY).
+ */
+const generateInboundSmsReply = async (tenantId, {
+  firstName,
+  inboundBody,
+  recentMessages,
+}) => {
+  const result = await db.query(
+    `SELECT name, industry, description, target_audience, tone, booking_link
+     FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
+  }
+
+  const t = result.rows[0];
+  const threadLines = (recentMessages || [])
+    .map((m) => `${m.direction === 'inbound' ? 'Them' : 'Us'}: ${(m.body || '').slice(0, 500)}`)
+    .join('\n');
+
+  const prompt = `You are replying via SMS on behalf of a local business. Write ONE reply to the customer's latest message.
+
+BUSINESS:
+- Name: ${t.name}
+- Industry: ${t.industry || 'services'}
+- Description: ${t.description || 'A customer-focused business'}
+- Audience: ${t.target_audience || 'local customers'}
+- Tone: ${t.tone || 'friendly'}
+- Booking link (use only if naturally relevant): ${t.booking_link || '(not set)'}
+
+FIRST NAME (if known): ${firstName || 'there'}
+
+RECENT THREAD (oldest first):
+${threadLines || '(no prior messages)'}
+
+THEIR LATEST MESSAGE:
+${inboundBody}
+
+RULES:
+- Reply in ${t.tone || 'friendly'} tone; be helpful and concise.
+- Maximum 300 characters (aim for one SMS segment when possible).
+- No markdown, no bullet lists, no emojis unless essential.
+- Do not claim discounts or legal facts unless implied in the business description.
+- If they opted out or said STOP, apologize briefly and do not market (still comply — but normally we block those before calling you).
+
+Respond with ONLY the SMS text, no quotes or labels.`;
+
+  const openai = getClient();
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.65,
+    max_tokens: 220,
+  });
+
+  let text = completion.choices[0].message.content.trim();
+  text = text.replace(/^["']|["']$/g, '').trim();
+  if (text.length > 480) text = text.slice(0, 477) + '...';
+  return text;
+};
+
+module.exports = {
+  generateFollowUpSchedule,
+  refineFollowUpMessages,
+  generateCampaignSequence,
+  generateInboundSmsReply,
+};

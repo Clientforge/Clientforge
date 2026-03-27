@@ -83,6 +83,7 @@ function BusinessTab({ settings, onSave, saving }) {
     description: settings.business.description || '',
     targetAudience: settings.business.targetAudience || '',
     tone: settings.business.tone || 'friendly',
+    aiAutoReplyEnabled: !!settings.business.aiAutoReplyEnabled,
   });
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -127,6 +128,21 @@ function BusinessTab({ settings, onSave, saving }) {
             {TONES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
           </select>
         </div>
+      </div>
+
+      <div className="field field-checkbox">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={form.aiAutoReplyEnabled}
+            onChange={(e) => setForm({ ...form, aiAutoReplyEnabled: e.target.checked })}
+          />
+          <span>AI auto-replies to inbound SMS</span>
+        </label>
+        <span className="field-hint">
+          When enabled, new replies are generated from your business description and tone (requires OPENAI_API_KEY on the server).
+          You can turn this off per conversation in Conversations.
+        </span>
       </div>
 
       <hr className="settings-divider" />

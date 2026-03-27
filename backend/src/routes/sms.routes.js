@@ -4,7 +4,88 @@ const smsService = require('../services/sms.service');
 const compliance = require('../services/compliance.service');
 const bookingService = require('../services/booking.service');
 const followupService = require('../services/followup.service');
+const conversationService = require('../services/conversation.service');
+const aiService = require('../services/ai.service');
 const db = require('../db/connection');
+
+/**
+ * Resolve which participant row drives AI settings (lead preferred when both exist).
+ */
+const resolveAiParticipant = (inbound) => {
+  if (inbound.lead) return { participantType: 'lead', participantId: inbound.lead.id };
+  if (inbound.contact) return { participantType: 'contact', participantId: inbound.contact.id };
+  return null;
+};
+
+/**
+ * When AI auto-reply is enabled, generate and send one SMS. Returns a result object or null.
+ */
+const trySendAiAutoReply = async (inbound, inboundBody) => {
+  if (!process.env.OPENAI_API_KEY) return null;
+
+  const who = resolveAiParticipant(inbound);
+  if (!who) return null;
+
+  const { effective } = await conversationService.getEffectiveAiAutoReply(
+    inbound.tenantId,
+    who.participantType,
+    who.participantId,
+  );
+  if (!effective) return null;
+
+  if (who.participantType === 'lead') {
+    const ok = await compliance.canSendMessage(who.participantId);
+    if (!ok) return null;
+  } else {
+    const ok = await compliance.canSendToContact(who.participantId);
+    if (!ok) return null;
+  }
+
+  const recent = await conversationService.getRecentThreadMessagesForAi(
+    inbound.tenantId,
+    who.participantType,
+    who.participantId,
+    12,
+  );
+
+  const firstName =
+    (inbound.lead && inbound.lead.first_name) ||
+    (inbound.contact && inbound.contact.first_name) ||
+    null;
+
+  let replyText;
+  try {
+    replyText = await aiService.generateInboundSmsReply(inbound.tenantId, {
+      firstName,
+      inboundBody,
+      recentMessages: recent,
+    });
+  } catch (err) {
+    console.error('[SMS][AI] generateInboundSmsReply failed:', err.message);
+    return null;
+  }
+
+  if (!replyText || !replyText.trim()) return null;
+
+  const tenantResult = await db.query('SELECT phone_number FROM tenants WHERE id = $1', [inbound.tenantId]);
+  const fromNumber = tenantResult.rows[0]?.phone_number || null;
+
+  await smsService.sendSms({
+    tenantId: inbound.tenantId,
+    leadId: inbound.lead?.id ?? null,
+    contactId: inbound.contact?.id ?? null,
+    to: inbound.lead?.phone || inbound.contact?.phone,
+    from: fromNumber,
+    body: replyText.trim(),
+    messageType: 'ai_reply',
+  });
+
+  return {
+    action: 'ai_reply_sent',
+    leadId: inbound.lead?.id,
+    contactId: inbound.contact?.id,
+  };
+};
 
 /**
  * Process the business logic after an inbound SMS is logged.
@@ -99,6 +180,12 @@ router.post('/inbound', async (req, res, next) => {
     if (!inbound) {
       return res.status(200).json({ received: true, action: 'no_lead_found' });
     }
+
+    const aiResult = await trySendAiAutoReply(inbound, body);
+    if (aiResult) {
+      return res.status(200).json({ received: true, ...aiResult });
+    }
+
     if (inbound.participantType === 'contact') {
       return res.status(200).json({ received: true, action: 'reply_logged', contactId: inbound.contact.id });
     }
@@ -174,6 +261,12 @@ router.post('/simulate', async (req, res, next) => {
     if (!inbound) {
       return res.json({ received: true, action: 'no_lead_found' });
     }
+
+    const aiResult = await trySendAiAutoReply(inbound, body);
+    if (aiResult) {
+      return res.json({ received: true, ...aiResult });
+    }
+
     if (inbound.participantType === 'contact') {
       return res.json({ received: true, action: 'reply_logged', contactId: inbound.contact.id });
     }

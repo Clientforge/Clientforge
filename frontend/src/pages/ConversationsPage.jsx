@@ -20,6 +20,7 @@ export default function ConversationsPage() {
   const [loading, setLoading] = useState(true);
   const [threadLoading, setThreadLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
   const [search, setSearch] = useState('');
 
   const loadConversations = async (page = 1) => {
@@ -69,6 +70,26 @@ export default function ConversationsPage() {
       alert(err.message || 'Failed to send message');
     } finally {
       setSending(false);
+    }
+  };
+
+  const updateAiOverride = async (value) => {
+    if (!selected) return;
+    let aiAutoReplyOverride = null;
+    if (value === 'on') aiAutoReplyOverride = true;
+    if (value === 'off') aiAutoReplyOverride = false;
+    setAiSaving(true);
+    try {
+      const data = await api.patch(
+        `/conversations/${selected.participantType}/${selected.participantId}/ai-reply`,
+        { aiAutoReplyOverride },
+      );
+      setThread(data);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Failed to update AI setting');
+    } finally {
+      setAiSaving(false);
     }
   };
 
@@ -184,6 +205,30 @@ export default function ConversationsPage() {
                       </Link>
                     )}
                   </div>
+                  {thread.aiReply && (
+                    <div className="inbox-ai-setting">
+                      <label htmlFor="ai-reply-override">AI auto-reply</label>
+                      <select
+                        id="ai-reply-override"
+                        value={
+                          thread.participant.aiAutoReplyOverride === null ||
+                          thread.participant.aiAutoReplyOverride === undefined
+                            ? 'inherit'
+                            : thread.participant.aiAutoReplyOverride
+                              ? 'on'
+                              : 'off'
+                        }
+                        onChange={(e) => updateAiOverride(e.target.value)}
+                        disabled={aiSaving}
+                      >
+                        <option value="inherit">
+                          Default ({thread.aiReply.tenantDefault ? 'on' : 'off'})
+                        </option>
+                        <option value="on">On</option>
+                        <option value="off">Off</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
