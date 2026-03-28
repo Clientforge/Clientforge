@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+
+/** How often to pull new messages while a thread is open (inbound SMS is server-driven; no websocket yet). */
+const THREAD_POLL_MS = 4000;
 
 const STATUS_COLORS = {
   NEW: { bg: '#f3f4f6', color: '#6b7280' },
@@ -22,6 +25,8 @@ export default function ConversationsPage() {
   const [sending, setSending] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const searchRef = useRef(search);
+  searchRef.current = search;
 
   const loadConversations = async (page = 1) => {
     setLoading(true);
@@ -38,7 +43,8 @@ export default function ConversationsPage() {
     }
   };
 
-  const loadThread = async (participantType, participantId) => {
+  /** User opened a thread from the sidebar — show loading state. */
+  const openThread = async (participantType, participantId) => {
     setThreadLoading(true);
     setThread(null);
     setSelected({ participantType, participantId });
@@ -97,6 +103,44 @@ export default function ConversationsPage() {
     loadConversations(1);
   }, [search]);
 
+  // Poll open thread + inbox list so inbound SMS appears without refresh.
+  useEffect(() => {
+    if (!selected) return undefined;
+
+    const { participantType, participantId } = selected;
+    const page = pagination.page || 1;
+
+    const refresh = async () => {
+      try {
+        const listParams = new URLSearchParams({ page: String(page), limit: '25' });
+        const s = searchRef.current;
+        if (s) listParams.set('search', s);
+
+        const [threadData, listData] = await Promise.all([
+          api.get(`/conversations/${participantType}/${participantId}`),
+          api.get(`/conversations?${listParams}`),
+        ]);
+
+        setThread(threadData);
+        setConversations(listData.conversations);
+        setPagination(listData.pagination || {});
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const iv = setInterval(refresh, THREAD_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [selected, pagination.page]);
+
   const formatTime = (d) =>
     d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
@@ -141,7 +185,7 @@ export default function ConversationsPage() {
                     key={`${c.participantType}-${c.participantId}`}
                     type="button"
                     className={`inbox-item ${isSelected ? 'active' : ''}`}
-                    onClick={() => loadThread(c.participantType, c.participantId)}
+                    onClick={() => openThread(c.participantType, c.participantId)}
                   >
                     <div className="inbox-avatar">
                       {(c.participant.firstName?.[0] || c.participant.phone?.[1] || '?')}
