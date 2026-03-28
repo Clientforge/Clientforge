@@ -277,17 +277,18 @@ const generateInboundSmsReply = async (tenantId, {
 
   const prompt = `You are replying via SMS on behalf of a local business. Write ONE reply to the customer's latest message.
 
-BUSINESS:
+AUTHORITATIVE BUSINESS PROFILE (use ONLY this for what the business offers, services, positioning, and current details — it was just updated in their dashboard):
 - Name: ${t.name}
 - Industry: ${t.industry || 'services'}
 - Description: ${t.description || 'A customer-focused business'}
 - Audience: ${t.target_audience || 'local customers'}
 - Tone: ${t.tone || 'friendly'}
-- Booking link (use only if naturally relevant): ${t.booking_link || '(not set)'}
+- Booking link (share only if naturally relevant): ${t.booking_link || '(not set)'}
 
 FIRST NAME (if known): ${firstName || 'there'}
 
-RECENT THREAD (oldest first):
+RECENT SMS THREAD (oldest first) — for conversation flow and what was already said to this person only. Older outbound messages may contain OUTDATED business wording; do NOT repeat or blend stale offers, services, or claims from the thread. If thread and the profile above conflict, always follow the profile.
+
 ${threadLines || '(no prior messages)'}
 
 THEIR LATEST MESSAGE:
@@ -297,7 +298,8 @@ RULES:
 - Reply in ${t.tone || 'friendly'} tone; be helpful and concise.
 - Maximum 300 characters (aim for one SMS segment when possible).
 - No markdown, no bullet lists, no emojis unless essential.
-- Do not claim discounts or legal facts unless implied in the business description.
+- Facts about the business must match the AUTHORITATIVE BUSINESS PROFILE only.
+- Do not claim discounts or legal facts unless implied in the description above.
 - If they opted out or said STOP, apologize briefly and do not market (still comply — but normally we block those before calling you).
 
 Respond with ONLY the SMS text, no quotes or labels.`;
