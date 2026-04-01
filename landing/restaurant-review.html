@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Thank you for dining with us — share your experience and leave a review.">
+  <title>Share Your Experience — Restaurant Name</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf7f2;
+      --paper: #fffdf9;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --accent: #c45c3e;
+      --accent-dark: #9a4628;
+      --gold: #b8860b;
+      --line: #e7e0d6;
+      --radius: 14px;
+      --shadow: 0 18px 40px rgba(28, 25, 23, 0.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+    header {
+      text-align: center;
+      padding: 48px 22px 36px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--paper) 0%, var(--bg) 100%);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 700;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      line-height: 1.15;
+      margin-bottom: 12px;
+      color: var(--ink);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto 20px;
+    }
+    .stars {
+      color: var(--gold);
+      font-size: 1.35rem;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .cta-block {
+      margin-top: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(196, 92, 62, 0.35);
+    }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid var(--line);
+    }
+    section { padding: 44px 0; }
+    section h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .grid { display: grid; gap: 18px; }
+    @media (min-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px 22px 20px;
+      box-shadow: var(--shadow);
+    }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+    .card .who { font-weight: 600; color: var(--ink); margin-top: 12px; font-size: 0.85rem; }
+    .photo-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .ph {
+      aspect-ratio: 4/3;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ddd6cb, #e8e0d4);
+      border: 1px solid var(--line);
+    }
+    .info {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 8px;
+    }
+    .info strong { color: var(--ink); }
+    footer {
+      text-align: center;
+      padding: 32px 22px 48px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+    }
+    .note {
+      margin-top: 28px;
+      padding: 16px 18px;
+      background: rgba(196, 92, 62, 0.08);
+      border-radius: var(--radius);
+      border: 1px dashed rgba(196, 92, 62, 0.35);
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: left;
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .note code { font-size: 0.78rem; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <p class="badge">Thank you for dining with us</p>
+    <h1>Restaurant Name</h1>
+    <p class="sub">We’d love to hear how your visit was. Honest reviews help us welcome more neighbors like you.</p>
+    <div class="stars" aria-hidden="true">★★★★★</div>
+    <p class="info"><strong>Contemporary American</strong> · City, ST</p>
+
+    <div class="cta-block">
+      <a class="btn btn-primary" href="#">Leave us a review</a>
+      <a class="btn btn-ghost" href="tel:+15551234567">Call (555) 123-4567</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>What guests are saying</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <p>“Warm service and the kind of meal you still think about the next day. We’ll be back for date night.”</p>
+          <p class="who">— Guest review</p>
+        </div>
+        <div class="card">
+          <p>“Fresh ingredients, thoughtful wine list, and zero rush. Exactly what we wanted.”</p>
+          <p class="who">— Guest review</p>
+        </div>
+      </div>
+
+      <div class="photo-row" aria-hidden="true">
+        <div class="ph"></div>
+        <div class="ph"></div>
+        <div class="ph"></div>
+      </div>
+      <p class="info" style="margin-top:14px">Swap the blocks above for real photos when you’re ready.</p>
+    </section>
+
+    <section style="padding-top:0">
+      <h2>Visit</h2>
+      <div class="card" style="text-align:center; max-width:480px; margin:0 auto;">
+        <p><strong>123 Main Street</strong><br>Your City, ST 12345</p>
+        <p style="margin-top:14px">
+          <strong>Dinner</strong> · Wed–Sun, 5pm–10pm<br>
+          <strong>Brunch</strong> · Sat &amp; Sun, 10am–2pm
+        </p>
+      </div>
+    </section>
+
+    <p class="note">
+      <strong>Owner:</strong> Edit <code>landing/restaurant-review.html</code> — set your name, Google/Yelp review URL on the primary button, phone, address, hours, and quotes. This page is served at <code>/review</code> on your deployed host (e.g. custom domain + path <code>/review</code>).
+    </p>
+  </main>
+
+  <footer>
+    © <span id="y"></span> Restaurant Name · Made with care
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  </footer>
+
+</body>
+</html>

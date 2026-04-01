@@ -79,6 +79,9 @@ app.get('/sms-consent', (req, res) => {
 app.get('/contact-opt-in', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'contact-opt-in.html'));
 });
+app.get('/review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'restaurant-review.html'));
+});
 app.get('/services/website-creation', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'services/website-creation.html'));
 });
