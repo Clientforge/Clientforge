@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="How was your experience? Rate your visit.">
-  <title>How was your experience? — Restaurant Name</title>
+  <meta name="description" content="GOLDENCROWN KITCHEN in Morrow, GA — Tell us how we did. Rate your order or visit.">
+  <title>Tell us how we did — GOLDENCROWN KITCHEN</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
@@ -139,10 +139,6 @@
       margin-bottom: 18px;
       text-align: center;
     }
-    .grid { display: grid; gap: 18px; }
-    @media (min-width: 640px) {
-      .grid-2 { grid-template-columns: 1fr 1fr; }
-    }
     .card {
       background: var(--paper);
       border: 1px solid var(--line);
@@ -151,19 +147,6 @@
       box-shadow: var(--shadow);
     }
     .card p { color: var(--muted); font-size: 0.95rem; }
-    .card .who { font-weight: 600; color: var(--ink); margin-top: 12px; font-size: 0.85rem; }
-    .photo-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .ph {
-      aspect-ratio: 4/3;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #ddd6cb, #e8e0d4);
-      border: 1px solid var(--line);
-    }
     footer {
       text-align: center;
       padding: 28px 22px 40px;
@@ -176,12 +159,12 @@
 <body>
 
   <header>
-    <p class="badge">Restaurant Name</p>
-    <h1>We’d love to hear how your experience was</h1>
-    <p class="sub">Tap a star to tell us how we did — it only takes a moment.</p>
-    <p class="info"><strong>Contemporary American</strong> · City, ST</p>
+    <p class="badge">GOLDENCROWN KITCHEN</p>
+    <h1>We’d love to hear about your experience</h1>
+    <p class="sub">Tell us how we did—whether you ordered delivery or sat down with us. Tap a star; it only takes a moment.</p>
+    <p class="info"><strong>Delivery &amp; pickup</strong> · <strong>Dine-in</strong> · Morrow, GA</p>
 
-    <p class="star-hint" id="star-label">Rate your visit</p>
+    <p class="star-hint" id="star-label">Rate your order or visit</p>
     <div class="star-row" role="group" aria-labelledby="star-label">
       <a href="/review/feedback?stars=1" aria-label="1 out of 5 stars">★</a>
       <a href="/review/feedback?stars=2" aria-label="2 out of 5 stars">★</a>
@@ -191,44 +174,24 @@
     </div>
 
     <div class="cta-block">
-      <a class="btn btn-ghost" href="tel:+15551234567">Call (555) 123-4567</a>
+      <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&amp;query=6550+Mt+Zion+Blvd%2C+Morrow%2C+GA+30260" target="_blank" rel="noopener noreferrer">Get directions</a>
     </div>
   </header>
 
   <main class="wrap">
     <section>
-      <h2>What guests are saying</h2>
-      <div class="grid grid-2">
-        <div class="card">
-          <p>“Warm service and the kind of meal you still think about the next day.”</p>
-          <p class="who">— Guest review</p>
-        </div>
-        <div class="card">
-          <p>“Fresh ingredients, thoughtful wine list, and zero rush.”</p>
-          <p class="who">— Guest review</p>
-        </div>
-      </div>
-      <div class="photo-row" aria-hidden="true">
-        <div class="ph"></div>
-        <div class="ph"></div>
-        <div class="ph"></div>
-      </div>
-    </section>
-
-    <section style="padding-top:0">
       <h2>Visit</h2>
       <div class="card" style="text-align:center; max-width:480px; margin:0 auto;">
-        <p><strong>123 Main Street</strong><br>Your City, ST 12345</p>
-        <p style="margin-top:14px">
-          <strong>Dinner</strong> · Wed–Sun, 5pm–10pm<br>
-          <strong>Brunch</strong> · Sat &amp; Sun, 10am–2pm
+        <p><strong>6550 Mt Zion Blvd</strong><br>Morrow, GA 30260</p>
+        <p style="margin-top:16px">
+          <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&amp;query=6550+Mt+Zion+Blvd%2C+Morrow%2C+GA+30260" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
         </p>
       </div>
     </section>
   </main>
 
   <footer>
-    © <span id="y"></span> Restaurant Name
+    © <span id="y"></span> GOLDENCROWN KITCHEN
     <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
   </footer>
 
