@@ -82,6 +82,12 @@ app.get('/contact-opt-in', (req, res) => {
 app.get('/review', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'restaurant-review.html'));
 });
+app.get('/review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'restaurant-review-feedback.html'));
+});
+app.get('/review/google', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'restaurant-review-google.html'));
+});
 app.get('/services/website-creation', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'services/website-creation.html'));
 });

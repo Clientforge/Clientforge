@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Thank you — leave us a review on Google.">
+  <title>Thank you! — Restaurant Name</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf7f2;
+      --paper: #fffdf9;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --accent-dark: #9a4628;
+      --gold: #d4a017;
+      --line: #e7e0d6;
+      --radius: 14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 48px;
+    }
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 36px 28px 40px;
+      box-shadow: 0 18px 40px rgba(28, 25, 23, 0.08);
+      text-align: center;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.75rem;
+      margin-bottom: 12px;
+    }
+    .stars-display {
+      color: var(--gold);
+      font-size: clamp(2.5rem, 10vw, 4rem);
+      letter-spacing: 0.15em;
+      margin: 16px 0 20px;
+      line-height: 1;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 28px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 32px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      background: #4285f4;
+      color: #fff;
+      transition: filter 0.15s ease, transform 0.15s ease;
+    }
+    .btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .btn-secondary {
+      display: block;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .btn-secondary a { color: var(--accent-dark); font-weight: 600; }
+    .hint {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 24px;
+      line-height: 1.45;
+      text-align: left;
+    }
+    .hint code { font-size: 0.78rem; background: rgba(0, 0, 0, 0.06); padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>We’re so glad you enjoyed it!</h1>
+    <div class="stars-display" id="stars-display" aria-hidden="true"></div>
+    <p class="lead" id="rating-line"></p>
+    <p class="lead" style="margin-bottom:20px">Would you like to leave feedback for us on <strong>Google</strong>? It helps other guests find us.</p>
+
+    <a class="btn" id="google-btn" href="https://g.page/your-business/review" target="_blank" rel="noopener noreferrer">Leave a Google review</a>
+    <p class="btn-secondary"><a href="/review">← Back to rating</a></p>
+    <p class="hint">
+      Owner: replace <code>GOOGLE_REVIEW_URL</code> in the script with your real Google Business review link (or set the button <code>href</code> above).
+    </p>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var stars = parseInt(params.get('stars'), 10);
+      if (Number.isNaN(stars) || stars < 4) stars = 4;
+      if (stars > 5) stars = 5;
+      document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+      document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
+
+      var GOOGLE_REVIEW_URL = 'https://g.page/your-business/review';
+      var btn = document.getElementById('google-btn');
+      if (GOOGLE_REVIEW_URL.indexOf('your-business') === -1) {
+        btn.href = GOOGLE_REVIEW_URL;
+      } else {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          window.alert('Add your Google review URL in restaurant-review-google.html (GOOGLE_REVIEW_URL and the href on the button).');
+        });
+      }
+    })();
+  </script>
+
+</body>
+</html>
