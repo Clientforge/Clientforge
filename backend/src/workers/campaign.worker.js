@@ -5,6 +5,7 @@ const emailService = require('../services/email.service');
 const POLL_INTERVAL_MS = 15 * 1000;
 const BATCH_SIZE = 50;
 const EMAIL_RATE_LIMIT_DELAY_MS = 600; // Resend: 2 req/sec max
+const TRACK_SMS_HTTP_LINKS = process.env.TRACK_SMS_HTTP_LINKS !== 'false';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -85,6 +86,8 @@ const processPendingCampaignMessages = async () => {
           from: msg.tenant_phone || undefined,
           body: msg.message_body,
           messageType: 'campaign',
+          trackHttpLinks: TRACK_SMS_HTTP_LINKS,
+          campaignMessageId: msg.id,
         });
       }
 

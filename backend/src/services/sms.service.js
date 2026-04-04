@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const config = require('../config');
 const { normalizePhone } = require('./lead.service');
+const trackedLinkService = require('./trackedLink.service');
 
 /**
  * Send an SMS message — mock or live depending on SMS_MODE.
@@ -9,7 +10,26 @@ const { normalizePhone } = require('./lead.service');
  * In mock mode, the message is printed to console.
  * In live mode, it's sent via Twilio or Telnyx (SMS_PROVIDER).
  */
-const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageType }) => {
+const sendSms = async ({
+  tenantId,
+  leadId,
+  contactId,
+  to,
+  from,
+  body,
+  messageType,
+  trackHttpLinks,
+  campaignMessageId,
+}) => {
+  let finalBody = body;
+  if (trackHttpLinks && contactId && body) {
+    finalBody = await trackedLinkService.replaceHttpUrlsWithTracked(body, {
+      tenantId,
+      contactId,
+      campaignMessageId: campaignMessageId ?? null,
+    });
+  }
+
   const provider = config.sms.provider || 'twilio';
   const fromNumber = from || (provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom);
   let messageId = null;
@@ -28,7 +48,7 @@ const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageTyp
           body: JSON.stringify({
             from: fromNumber,
             to,
-            text: body,
+            text: finalBody,
             ...(config.telnyx.messagingProfileId && { messaging_profile_id: config.telnyx.messagingProfileId }),
             webhook_url: `${baseUrl}/api/v1/sms/status`,
           }),
@@ -42,7 +62,7 @@ const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageTyp
       } else {
         const twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
         const message = await twilio.messages.create({
-          body,
+          body: finalBody,
           from: fromNumber,
           to,
           statusCallback: `${process.env.BASE_URL || 'http://localhost:3000'}/api/v1/sms/status`,
@@ -61,7 +81,7 @@ const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageTyp
     console.log(`  To:   ${to}`);
     console.log(`  From: ${fromNumber}`);
     console.log(`  Type: ${messageType}`);
-    console.log(`  Body: ${body}`);
+    console.log(`  Body: ${finalBody}`);
     console.log(`[SMS][MOCK] ─────────────────────────────────\n`);
   }
 
@@ -70,7 +90,7 @@ const sendSms = async ({ tenantId, leadId, contactId, to, from, body, messageTyp
     `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
      VALUES ($1, $2, $3, 'outbound', $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [tenantId, leadId ?? null, contactId ?? null, body, fromNumber, to, messageId, deliveryStatus, messageType],
+    [tenantId, leadId ?? null, contactId ?? null, finalBody, fromNumber, to, messageId, deliveryStatus, messageType],
   );
 
   return result.rows[0];

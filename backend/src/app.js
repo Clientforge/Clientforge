@@ -8,6 +8,7 @@ const authenticate = require('./middleware/auth');
 const tenantScope = require('./middleware/tenantScope');
 const requireSuperAdmin = require('./middleware/superadmin');
 const config = require('./config');
+const trackedLinkService = require('./services/trackedLink.service');
 
 const app = express();
 
@@ -88,6 +89,10 @@ app.get('/review/feedback', (req, res) => {
 app.get('/review/google', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'restaurant-review-google.html'));
 });
+
+/** SMS-friendly tracked redirects — before SPA fallback */
+app.get('/r/:token', trackedLinkService.handleRedirect);
+
 app.get('/services/website-creation', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'services/website-creation.html'));
 });
