@@ -576,6 +576,22 @@ a:hover { text-decoration: underline; }
 
 .campaign-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-2); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
 
+.link-clicks-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.link-clicks-trigger {
+  background: none; border: none; padding: 0; margin: 0; font: inherit; cursor: pointer;
+  color: var(--primary); font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 2px;
+}
+.link-clicks-trigger:hover { color: #4f46e5; }
+.link-clicks-people-label { font-weight: 500; color: var(--text-2); text-decoration: none; }
+.link-clicks-taps-hint { font-size: 11px; line-height: 1.2; }
+.link-clicks-modal { max-width: 560px; }
+.link-clicks-table-wrap { max-height: 360px; overflow: auto; border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
+.link-clicks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.link-clicks-table th,
+.link-clicks-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-light); }
+.link-clicks-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-3); background: var(--bg); position: sticky; top: 0; }
+.link-clicks-table tbody tr:last-child td { border-bottom: none; }
+
 /* Type badge */
 .type-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
 .type-badge.sequence { background: #ede9fe; color: #7c3aed; }

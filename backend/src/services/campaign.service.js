@@ -86,6 +86,21 @@ const getCampaign = async (tenantId, campaignId) => {
   );
 
   campaign.waveStats = waveStats.rows;
+
+  const linkAgg = await db.query(
+    `SELECT
+       COUNT(lc.id)::int AS link_total_clicks,
+       COUNT(DISTINCT tl.contact_id) FILTER (WHERE tl.contact_id IS NOT NULL)::int AS link_unique_clicks
+     FROM link_clicks lc
+     JOIN tracked_links tl ON tl.id = lc.tracked_link_id
+     JOIN campaign_messages cm ON cm.id = tl.campaign_message_id
+     WHERE cm.campaign_id = $1`,
+    [campaignId],
+  );
+  const la = linkAgg.rows[0] || {};
+  campaign.linkTotalClicks = la.link_total_clicks ?? 0;
+  campaign.linkUniqueClicks = la.link_unique_clicks ?? 0;
+
   return campaign;
 };
 
@@ -95,7 +110,22 @@ const listCampaigns = async (tenantId, { page = 1, limit = 20 }) => {
   const [countRes, dataRes] = await Promise.all([
     db.query('SELECT COUNT(*)::int FROM campaigns WHERE tenant_id = $1', [tenantId]),
     db.query(
-      'SELECT * FROM campaigns WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+      `SELECT c.*,
+         COALESCE(lc_agg.link_total_clicks, 0)::int AS link_total_clicks,
+         COALESCE(lc_agg.link_unique_clicks, 0)::int AS link_unique_clicks
+       FROM campaigns c
+       LEFT JOIN (
+         SELECT cm.campaign_id,
+           COUNT(lc.id)::int AS link_total_clicks,
+           COUNT(DISTINCT tl.contact_id) FILTER (WHERE tl.contact_id IS NOT NULL)::int AS link_unique_clicks
+         FROM link_clicks lc
+         JOIN tracked_links tl ON tl.id = lc.tracked_link_id
+         JOIN campaign_messages cm ON cm.id = tl.campaign_message_id
+         GROUP BY cm.campaign_id
+       ) lc_agg ON lc_agg.campaign_id = c.id
+       WHERE c.tenant_id = $1
+       ORDER BY c.created_at DESC
+       LIMIT $2 OFFSET $3`,
       [tenantId, limit, offset],
     ),
   ]);
@@ -280,7 +310,48 @@ const formatCampaign = (row) => ({
   launchedAt: row.launched_at,
   completedAt: row.completed_at,
   createdAt: row.created_at,
+  linkTotalClicks: row.link_total_clicks != null ? Number(row.link_total_clicks) : 0,
+  linkUniqueClicks: row.link_unique_clicks != null ? Number(row.link_unique_clicks) : 0,
 });
+
+const getCampaignLinkClicks = async (tenantId, campaignId) => {
+  const exists = await db.query(
+    'SELECT 1 FROM campaigns WHERE tenant_id = $1 AND id = $2',
+    [tenantId, campaignId],
+  );
+  if (exists.rows.length === 0) {
+    throw Object.assign(new Error('Campaign not found'), { statusCode: 404, isOperational: true });
+  }
+
+  const result = await db.query(
+    `SELECT
+       c.id AS contact_id,
+       c.first_name,
+       c.last_name,
+       c.phone,
+       COUNT(lc.id)::int AS click_count,
+       MIN(lc.clicked_at) AS first_clicked_at,
+       MAX(lc.clicked_at) AS last_clicked_at
+     FROM link_clicks lc
+     JOIN tracked_links tl ON tl.id = lc.tracked_link_id
+     JOIN campaign_messages cm ON cm.id = tl.campaign_message_id
+     JOIN contacts c ON c.id = tl.contact_id
+     WHERE cm.campaign_id = $1 AND cm.tenant_id = $2 AND tl.contact_id IS NOT NULL
+     GROUP BY c.id, c.first_name, c.last_name, c.phone
+     ORDER BY MAX(lc.clicked_at) DESC NULLS LAST`,
+    [campaignId, tenantId],
+  );
+
+  return result.rows.map((r) => ({
+    contactId: r.contact_id,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    phone: r.phone,
+    clickCount: r.click_count,
+    firstClickedAt: r.first_clicked_at,
+    lastClickedAt: r.last_clicked_at,
+  }));
+};
 
 /**
  * Clone an existing campaign as a new draft. Copies name, channel, schedule, audience filter.
@@ -371,6 +442,7 @@ module.exports = {
   listCampaigns,
   launchCampaign,
   getCampaignStats,
+  getCampaignLinkClicks,
   cloneCampaign,
   createTemplate,
   listTemplates,

@@ -53,6 +53,13 @@ router.post('/templates', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:id/link-clicks', async (req, res, next) => {
+  try {
+    const rows = await campaignService.getCampaignLinkClicks(req.tenantId, req.params.id);
+    res.json({ clicks: rows });
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const campaign = await campaignService.getCampaign(req.tenantId, req.params.id);

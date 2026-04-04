@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [linkClicksModal, setLinkClicksModal] = useState(null);
 
   const loadCampaigns = async (page = 1) => {
     setLoading(true);
@@ -72,11 +73,17 @@ export default function CampaignsPage() {
         ) : (
           <table className="leads-table">
             <thead>
-              <tr><th>Campaign</th><th>Channel</th><th>Status</th><th>Recipients</th><th>Sent</th><th>Replies</th><th>Created</th><th></th></tr>
+              <tr><th>Campaign</th><th>Channel</th><th>Status</th><th>Recipients</th><th>Sent</th><th>Replies</th><th>Link clicks</th><th>Created</th><th></th></tr>
             </thead>
             <tbody>
               {campaigns.map((c) => (
-                <CampaignRow key={c.id} campaign={c} formatDate={formatDate} onRefresh={loadCampaigns} />
+                <CampaignRow
+                  key={c.id}
+                  campaign={c}
+                  formatDate={formatDate}
+                  onRefresh={loadCampaigns}
+                  onOpenLinkClicks={(camp) => setLinkClicksModal({ id: camp.id, name: camp.name })}
+                />
               ))}
             </tbody>
           </table>
@@ -92,15 +99,26 @@ export default function CampaignsPage() {
       </div>
 
       {showCreate && <CreateCampaignModal onClose={() => setShowCreate(false)} onSuccess={() => { setShowCreate(false); loadCampaigns(); }} />}
+      {linkClicksModal && (
+        <LinkClicksModal
+          campaignId={linkClicksModal.id}
+          campaignName={linkClicksModal.name}
+          formatDate={formatDate}
+          onClose={() => setLinkClicksModal(null)}
+        />
+      )}
     </div>
   );
 }
 
-function CampaignRow({ campaign, formatDate, onRefresh }) {
+function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
   const [launching, setLaunching] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
   const s = STATUS_STYLES[campaign.status] || STATUS_STYLES.draft;
+
+  const unique = campaign.linkUniqueClicks ?? 0;
+  const total = campaign.linkTotalClicks ?? 0;
 
   const handleExpand = async () => {
     if (!expanded) {
@@ -135,6 +153,31 @@ function CampaignRow({ campaign, formatDate, onRefresh }) {
         <td>{campaign.totalRecipients}</td>
         <td>{campaign.sentCount}</td>
         <td>{campaign.replyCount}</td>
+        <td>
+          <div
+            className="link-clicks-cell"
+            title={total > unique ? `${total} total taps · ${unique} people` : unique > 0 ? `${unique} people clicked` : undefined}
+          >
+            {unique > 0 ? (
+              <button
+                type="button"
+                className="link-clicks-trigger"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenLinkClicks(campaign);
+                }}
+              >
+                {unique}
+                <span className="link-clicks-people-label"> people</span>
+              </button>
+            ) : (
+              <span className="muted">0</span>
+            )}
+            {total > unique && unique > 0 && (
+              <div className="muted link-clicks-taps-hint">{total} taps</div>
+            )}
+          </div>
+        </td>
         <td className="muted">{formatDate(campaign.createdAt)}</td>
         <td>
           {campaign.status === 'draft' && (
@@ -145,7 +188,7 @@ function CampaignRow({ campaign, formatDate, onRefresh }) {
         </td>
       </tr>
       {expanded && (
-        <tr className="campaign-detail-row"><td colSpan="8"><CampaignDetail campaign={detail || campaign} formatDate={formatDate} /></td></tr>
+        <tr className="campaign-detail-row"><td colSpan="9"><CampaignDetail campaign={detail || campaign} formatDate={formatDate} /></td></tr>
       )}
     </>
   );
@@ -222,7 +265,75 @@ function CampaignDetail({ campaign, formatDate }) {
         <span>Sent: {campaign.sentCount}</span>
         <span>Failed: {campaign.failedCount}</span>
         <span>Replies: {campaign.replyCount}</span>
+        {(campaign.linkUniqueClicks > 0 || campaign.linkTotalClicks > 0) && (
+          <span title={campaign.linkTotalClicks > campaign.linkUniqueClicks ? `${campaign.linkTotalClicks} total link taps` : undefined}>
+            Link clicks: {campaign.linkUniqueClicks ?? 0} people
+            {(campaign.linkTotalClicks ?? 0) > (campaign.linkUniqueClicks ?? 0) &&
+              ` (${campaign.linkTotalClicks} taps)`}
+          </span>
+        )}
         <span>Opted out: {campaign.optoutCount}</span>
+      </div>
+    </div>
+  );
+}
+
+function LinkClicksModal({ campaignId, campaignName, formatDate, onClose }) {
+  const [clicks, setClicks] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.get(`/campaigns/${campaignId}/link-clicks`);
+        if (!cancelled) setClicks(data.clicks || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load clicks');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [campaignId]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal link-clicks-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Link clicks · {campaignName}</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
+        </div>
+        <div className="modal-body">
+          {error && <div className="form-error">{error}</div>}
+          {clicks === null && !error && <div className="page-loader">Loading…</div>}
+          {clicks && clicks.length === 0 && <p className="muted">No attributed clicks yet.</p>}
+          {clicks && clicks.length > 0 && (
+            <div className="link-clicks-table-wrap">
+              <table className="link-clicks-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Clicks</th>
+                    <th>Last clicked</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clicks.map((row) => {
+                    const name = [row.firstName, row.lastName].filter(Boolean).join(' ') || '—';
+                    return (
+                      <tr key={row.contactId}>
+                        <td>{name}</td>
+                        <td>{row.phone || '—'}</td>
+                        <td>{row.clickCount}</td>
+                        <td className="muted">{formatDate(row.lastClickedAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
