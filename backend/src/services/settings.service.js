@@ -7,7 +7,8 @@ const getSettings = async (tenantId) => {
     `SELECT id, name, industry, timezone, phone_number, booking_link,
             plan, api_key, followup_config, description, target_audience, tone,
             email_from_name, email_from_address, calendly_webhook_signing_key,
-            ai_auto_reply_enabled, created_at
+            ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
+            sms_keyword_welcome_message, created_at
      FROM tenants WHERE id = $1`,
     [tenantId],
   );
@@ -31,6 +32,11 @@ const getSettings = async (tenantId) => {
       targetAudience: t.target_audience,
       tone: t.tone || 'friendly',
       aiAutoReplyEnabled: !!t.ai_auto_reply_enabled,
+      smsKeywordOptInEnabled: !!t.sms_keyword_opt_in_enabled,
+      smsKeywordOptInPhrases: Array.isArray(t.sms_keyword_opt_in_phrases)
+        ? t.sms_keyword_opt_in_phrases
+        : [],
+      smsKeywordWelcomeMessage: t.sms_keyword_welcome_message || '',
     },
     integration: {
       apiKey: t.api_key,
@@ -70,6 +76,21 @@ const updateSettings = async (tenantId, updates) => {
     if (business.aiAutoReplyEnabled !== undefined) {
       sets.push(`ai_auto_reply_enabled = $${idx++}`);
       params.push(!!business.aiAutoReplyEnabled);
+    }
+    if (business.smsKeywordOptInEnabled !== undefined) {
+      sets.push(`sms_keyword_opt_in_enabled = $${idx++}`);
+      params.push(!!business.smsKeywordOptInEnabled);
+    }
+    if (business.smsKeywordOptInPhrases !== undefined) {
+      const arr = Array.isArray(business.smsKeywordOptInPhrases)
+        ? business.smsKeywordOptInPhrases.map((p) => String(p).trim().toLowerCase()).filter(Boolean)
+        : [];
+      sets.push(`sms_keyword_opt_in_phrases = $${idx++}`);
+      params.push(JSON.stringify(arr));
+    }
+    if (business.smsKeywordWelcomeMessage !== undefined) {
+      sets.push(`sms_keyword_welcome_message = $${idx++}`);
+      params.push(business.smsKeywordWelcomeMessage || '');
     }
   }
 

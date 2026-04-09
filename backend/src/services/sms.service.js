@@ -1,7 +1,96 @@
 const db = require('../db/connection');
 const config = require('../config');
+const compliance = require('./compliance.service');
 const { normalizePhone } = require('./lead.service');
 const trackedLinkService = require('./trackedLink.service');
+
+/**
+ * New sender texts a configured keyword → contact, inbound log, welcome SMS (new contacts only).
+ */
+const trySmsKeywordOptIn = async ({
+  tenantId,
+  fromNorm,
+  fromRaw,
+  toRaw,
+  body,
+  twilioSid,
+}) => {
+  const tenantRes = await db.query(
+    `SELECT id, name, phone_number, sms_keyword_opt_in_enabled,
+            sms_keyword_opt_in_phrases, sms_keyword_welcome_message
+     FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+  const t = tenantRes.rows[0];
+  if (!t || !t.sms_keyword_opt_in_enabled) return null;
+
+  let phrases = t.sms_keyword_opt_in_phrases;
+  if (typeof phrases === 'string') {
+    try {
+      phrases = JSON.parse(phrases);
+    } catch {
+      phrases = [];
+    }
+  }
+  if (!Array.isArray(phrases) || phrases.length === 0) return null;
+
+  const welcomeTemplate = (t.sms_keyword_welcome_message || '').trim();
+  if (!welcomeTemplate) return null;
+
+  const normalized = (body || '').trim().toLowerCase();
+  const firstToken = normalized.split(/\s+/).filter(Boolean)[0] || '';
+  const phraseSet = phrases.map((p) => String(p).trim().toLowerCase()).filter(Boolean);
+  const matched = phraseSet.some((ph) => normalized === ph || firstToken === ph);
+  if (!matched) return null;
+
+  const ins = await db.query(
+    `INSERT INTO contacts (tenant_id, phone, source, tags)
+     VALUES ($1, $2, 'sms_keyword', $3::jsonb)
+     ON CONFLICT (tenant_id, phone) DO NOTHING
+     RETURNING id`,
+    [tenantId, fromNorm, JSON.stringify(['sms-opt-in'])],
+  );
+
+  const isNew = ins.rows.length > 0;
+  let contactId = ins.rows[0]?.id;
+  if (!contactId) {
+    const ex = await db.query(
+      'SELECT id FROM contacts WHERE tenant_id = $1 AND phone = $2',
+      [tenantId, fromNorm],
+    );
+    if (!ex.rows[0]) return null;
+    contactId = ex.rows[0].id;
+  }
+
+  await db.query(
+    `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
+     VALUES ($1, NULL, $2, 'inbound', $3, $4, $5, $6, 'received', 'keyword_opt_in')`,
+    [tenantId, contactId, body, fromRaw, toRaw, twilioSid || null],
+  );
+  await db.query('UPDATE contacts SET updated_at = NOW() WHERE id = $1', [contactId]);
+
+  let welcomeSent = false;
+  if (isNew) {
+    const ok = await compliance.canSendToContact(contactId);
+    if (ok) {
+      const personalized = welcomeTemplate.replace(/\{businessName\}/gi, t.name || '');
+      const fromNumber = t.phone_number
+        || (config.sms.provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom);
+      await sendSms({
+        tenantId,
+        leadId: null,
+        contactId,
+        to: fromRaw,
+        from: fromNumber,
+        body: personalized,
+        messageType: 'keyword_welcome',
+      });
+      welcomeSent = true;
+    }
+  }
+
+  return { contactId, welcomeSent };
+};
 
 /**
  * Send an SMS message — mock or live depending on SMS_MODE.
@@ -234,6 +323,27 @@ const handleInbound = async ({ from, to, body, twilioSid }) => {
     );
     await db.query('UPDATE contacts SET updated_at = NOW() WHERE id = $1', [contact.id]);
     return { tenantId, participantType: 'contact', lead: null, contact, messageBody: body };
+  }
+
+  const keywordResult = await trySmsKeywordOptIn({
+    tenantId,
+    fromNorm,
+    fromRaw: from,
+    toRaw: to,
+    body,
+    twilioSid,
+  });
+  if (keywordResult) {
+    const contactRow = await db.query('SELECT * FROM contacts WHERE id = $1', [keywordResult.contactId]);
+    const contact = contactRow.rows[0];
+    return {
+      tenantId,
+      participantType: 'contact',
+      lead: null,
+      contact,
+      messageBody: body,
+      keywordWelcomeSent: keywordResult.welcomeSent,
+    };
   }
 
   console.warn(`[SMS][INBOUND] No lead or contact found for tenant ${tenantId}, phone ${from} (normalized ${fromNorm})`);

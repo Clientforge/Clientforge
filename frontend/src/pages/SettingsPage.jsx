@@ -84,11 +84,27 @@ function BusinessTab({ settings, onSave, saving }) {
     targetAudience: settings.business.targetAudience || '',
     tone: settings.business.tone || 'friendly',
     aiAutoReplyEnabled: !!settings.business.aiAutoReplyEnabled,
+    smsKeywordOptInEnabled: !!settings.business.smsKeywordOptInEnabled,
+    smsKeywordPhrasesText: (settings.business.smsKeywordOptInPhrases || []).join('\n'),
+    smsKeywordWelcomeMessage: settings.business.smsKeywordWelcomeMessage || '',
   });
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const handleSubmit = (e) => { e.preventDefault(); onSave({ business: form }); };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const phrases = form.smsKeywordPhrasesText
+      .split(/[\n,]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const { smsKeywordPhrasesText, ...rest } = form;
+    onSave({
+      business: {
+        ...rest,
+        smsKeywordOptInPhrases: phrases,
+      },
+    });
+  };
 
   return (
     <form className="settings-card" onSubmit={handleSubmit}>
@@ -142,6 +158,50 @@ function BusinessTab({ settings, onSave, saving }) {
         <span className="field-hint">
           When enabled, new replies are generated from your business description and tone (requires OPENAI_API_KEY on the server).
           You can turn this off per conversation in Conversations.
+        </span>
+      </div>
+
+      <hr className="settings-divider" />
+
+      <h3>SMS keyword opt-in</h3>
+      <p className="settings-desc">
+        When someone texts your business number with a matching word or phrase and they are not already a lead or contact,
+        we create a contact and send your welcome message once. Requires prior consent where applicable (e.g. TCPA).
+      </p>
+      <div className="field field-checkbox">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={form.smsKeywordOptInEnabled}
+            onChange={(e) => setForm({ ...form, smsKeywordOptInEnabled: e.target.checked })}
+          />
+          <span>Enable keyword opt-in</span>
+        </label>
+      </div>
+      <div className="field">
+        <label>Trigger phrases</label>
+        <textarea
+          rows={3}
+          value={form.smsKeywordPhrasesText}
+          onChange={(e) => setForm({ ...form, smsKeywordPhrasesText: e.target.value })}
+          placeholder={'One per line or comma-separated, e.g.\njoin\nmenu\nstart'}
+          disabled={!form.smsKeywordOptInEnabled}
+        />
+        <span className="field-hint">
+          Matching is case-insensitive. We match if the whole message equals the phrase, or the first word does (e.g. &quot;JOIN please&quot;).
+        </span>
+      </div>
+      <div className="field">
+        <label>Welcome SMS</label>
+        <textarea
+          rows={3}
+          value={form.smsKeywordWelcomeMessage}
+          onChange={(e) => setForm({ ...form, smsKeywordWelcomeMessage: e.target.value })}
+          placeholder="Thanks for subscribing! — {businessName}"
+          disabled={!form.smsKeywordOptInEnabled}
+        />
+        <span className="field-hint">
+          Use <code>{'{businessName}'}</code> for your business name. Sent only the first time we create the contact from a keyword.
         </span>
       </div>
 

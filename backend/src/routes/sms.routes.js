@@ -181,13 +181,20 @@ router.post('/inbound', async (req, res, next) => {
       return res.status(200).json({ received: true, action: 'no_lead_found' });
     }
 
-    const aiResult = await trySendAiAutoReply(inbound, body);
-    if (aiResult) {
-      return res.status(200).json({ received: true, ...aiResult });
+    if (!inbound.keywordWelcomeSent) {
+      const aiResult = await trySendAiAutoReply(inbound, body);
+      if (aiResult) {
+        return res.status(200).json({ received: true, ...aiResult });
+      }
     }
 
     if (inbound.participantType === 'contact') {
-      return res.status(200).json({ received: true, action: 'reply_logged', contactId: inbound.contact.id });
+      return res.status(200).json({
+        received: true,
+        action: inbound.keywordWelcomeSent ? 'keyword_welcome' : 'reply_logged',
+        contactId: inbound.contact.id,
+        keywordWelcomeSent: !!inbound.keywordWelcomeSent,
+      });
     }
     const result = await processInboundLogic(inbound);
 
@@ -237,15 +244,17 @@ router.post('/simulate', async (req, res, next) => {
       return res.status(403).json({ error: 'Simulate endpoint only available in mock mode' });
     }
 
-    const { from, body } = req.body;
+    const { from, body, to } = req.body;
 
     if (!from || !body) {
       return res.status(400).json({ error: 'from and body are required' });
     }
 
+    const simulateTo = to || null;
+
     // Check for opt-out
     if (compliance.isOptOut(body)) {
-      const inbound = await smsService.handleInbound({ from, to: null, body, twilioSid: null });
+      const inbound = await smsService.handleInbound({ from, to: simulateTo, body, twilioSid: null });
       if (inbound) {
         if (inbound.participantType === 'lead') {
           await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
@@ -257,18 +266,25 @@ router.post('/simulate', async (req, res, next) => {
       return res.json({ received: true, action: 'opt_out' });
     }
 
-    const inbound = await smsService.handleInbound({ from, to: null, body, twilioSid: null });
+    const inbound = await smsService.handleInbound({ from, to: simulateTo, body, twilioSid: null });
     if (!inbound) {
       return res.json({ received: true, action: 'no_lead_found' });
     }
 
-    const aiResult = await trySendAiAutoReply(inbound, body);
-    if (aiResult) {
-      return res.json({ received: true, ...aiResult });
+    if (!inbound.keywordWelcomeSent) {
+      const aiResult = await trySendAiAutoReply(inbound, body);
+      if (aiResult) {
+        return res.json({ received: true, ...aiResult });
+      }
     }
 
     if (inbound.participantType === 'contact') {
-      return res.json({ received: true, action: 'reply_logged', contactId: inbound.contact.id });
+      return res.json({
+        received: true,
+        action: inbound.keywordWelcomeSent ? 'keyword_welcome' : 'reply_logged',
+        contactId: inbound.contact.id,
+        keywordWelcomeSent: !!inbound.keywordWelcomeSent,
+      });
     }
     const result = await processInboundLogic(inbound);
 
