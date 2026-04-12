@@ -112,8 +112,17 @@ const processMissedCall = async ({ from, to, callSid }) => {
     return { action: 'skipped', reason: 'opt_out', contactId: contact.id };
   }
 
-  // Get message template (from followup_config or default)
   const config = tenant.followup_config || {};
+  if (config.missed_call_text_back_enabled === false) {
+    await db.query(
+      `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+    );
+    return { action: 'skipped', reason: 'feature_disabled', contactId: contact.id };
+  }
+
+  // Get message template (from followup_config or default)
   const messageBody = (config.missed_call_message || '').trim() || DEFAULT_MISSED_CALL_MESSAGE;
 
   // Send SMS

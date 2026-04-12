@@ -227,6 +227,9 @@ function BusinessTab({ settings, onSave, saving }) {
 /* ==================== FOLLOW-UP TAB ==================== */
 function FollowupTab({ settings, onSave, saving }) {
   const [schedule, setSchedule] = useState(settings.followup.schedule || []);
+  const [missedCallTextBackEnabled, setMissedCallTextBackEnabled] = useState(
+    settings.followup.missedCallTextBackEnabled !== false,
+  );
   const [missedCallMessage, setMissedCallMessage] = useState(settings.followup.missedCallMessage || "Sorry we missed your call! How can we help? Reply to this message.");
   const [window, setWindow] = useState(settings.followup.outreachWindow || {
     enabled: true, start_hour: 9, end_hour: 19, days: ['mon','tue','wed','thu','fri','sat'],
@@ -258,7 +261,10 @@ function FollowupTab({ settings, onSave, saving }) {
     setWindow({ ...window, days });
   };
 
-  const handleSubmit = (e) => { e.preventDefault(); onSave({ followup: { schedule, outreachWindow: window, missedCallMessage } }); };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({ followup: { schedule, outreachWindow: window, missedCallMessage, missedCallTextBackEnabled } });
+  };
 
   const formatDelay = (hours) => {
     if (hours < 24) return `${hours}h`;
@@ -295,6 +301,9 @@ function FollowupTab({ settings, onSave, saving }) {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
   useEffect(() => {
+    setMissedCallTextBackEnabled(settings.followup?.missedCallTextBackEnabled !== false);
+  }, [settings.followup?.missedCallTextBackEnabled]);
+  useEffect(() => {
     setMissedCallMessage(settings.followup?.missedCallMessage || "Sorry we missed your call! How can we help? Reply to this message.");
   }, [settings.followup?.missedCallMessage]);
 
@@ -302,9 +311,26 @@ function FollowupTab({ settings, onSave, saving }) {
     <form className="settings-card" onSubmit={handleSubmit}>
       <h3>Missed Call Text-Back</h3>
       <p className="settings-desc">When a call is forwarded to your Twilio number (no answer), we automatically text the caller. Configure conditional call forwarding on your carrier to forward to your platform number.</p>
+      <div className="window-toggle" style={{ marginBottom: 16 }}>
+        <label className="toggle-label">
+          <input
+            type="checkbox"
+            checked={missedCallTextBackEnabled}
+            onChange={(e) => setMissedCallTextBackEnabled(e.target.checked)}
+          />
+          <span className="toggle-slider"></span>
+          Send missed-call text-back SMS
+        </label>
+      </div>
       <div className="field">
         <label>Missed Call Message</label>
-        <textarea rows={2} value={missedCallMessage} onChange={(e) => setMissedCallMessage(e.target.value)} placeholder="Sorry we missed your call! How can we help? Reply to this message." />
+        <textarea
+          rows={2}
+          value={missedCallMessage}
+          onChange={(e) => setMissedCallMessage(e.target.value)}
+          placeholder="Sorry we missed your call! How can we help? Reply to this message."
+          disabled={!missedCallTextBackEnabled}
+        />
         <span className="field-hint">SMS sent when we detect a forwarded missed call. Keep under 160 characters.</span>
       </div>
 

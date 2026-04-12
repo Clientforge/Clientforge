@@ -53,6 +53,7 @@ const getSettings = async (tenantId) => {
       schedule: config.schedule || DEFAULT_SCHEDULE,
       outreachWindow: config.outreach_window || DEFAULT_OUTREACH_WINDOW,
       missedCallMessage: config.missed_call_message || "Sorry we missed your call! How can we help? Reply to this message.",
+      missedCallTextBackEnabled: config.missed_call_text_back_enabled !== false,
     },
     createdAt: t.created_at,
   };
@@ -116,6 +117,9 @@ const updateSettings = async (tenantId, updates) => {
     if (followup.schedule) newConfig.schedule = followup.schedule;
     if (followup.outreachWindow) newConfig.outreach_window = followup.outreachWindow;
     if (followup.missedCallMessage !== undefined) newConfig.missed_call_message = followup.missedCallMessage;
+    if (followup.missedCallTextBackEnabled !== undefined) {
+      newConfig.missed_call_text_back_enabled = !!followup.missedCallTextBackEnabled;
+    }
 
     sets.push(`followup_config = $${idx++}`);
     params.push(JSON.stringify(newConfig));
