@@ -9,7 +9,7 @@ const HERO_BG = '/hero-golden-crown.png';
 const FEATURED_DISH = {
   name: 'Jollof Rice + Chicken',
   desc: 'Smoky party jollof with tender grilled chicken — our #1 seller.',
-  img: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=1200&q=80',
+  img: '/dish-jollof-chicken.jpg',
 };
 
 const OTHER_DISHES = [
