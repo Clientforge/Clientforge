@@ -16,17 +16,17 @@ const OTHER_DISHES = [
   {
     name: 'Egusi + Pounded Yam',
     desc: 'Rich melon-seed soup with smooth pounded yam.',
-    img: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80',
+    img: '/dish-egusi-pounded-yam.webp',
   },
   {
-    name: 'Suya',
-    desc: 'Spiced grilled beef with onions — bold flavor.',
-    img: 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=900&q=80',
+    name: 'Asun Meat',
+    desc: 'Spicy roasted goat with peppers and onions — smoky, tender, and bold.',
+    img: '/dish-asun-meat.webp',
   },
   {
     name: 'Meat Pie',
     desc: 'Buttery pastry filled with seasoned beef.',
-    img: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=900&q=80',
+    img: '/dish-meat-pie.jpg',
   },
 ];
 
