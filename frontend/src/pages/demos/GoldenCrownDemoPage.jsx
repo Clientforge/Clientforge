@@ -146,7 +146,7 @@ export default function GoldenCrownDemoPage() {
   const closeOrder = useCallback(() => setOrderOpen(false), []);
 
   useEffect(() => {
-    document.title = 'Golden Crown Kitchen — Authentic Nigerian Food in Morrow';
+    document.title = 'Golden Crown Kitchen — Authentic African Food in Atlanta';
     return () => {
       document.title = 'ClientForge.ai';
     };
@@ -195,7 +195,7 @@ export default function GoldenCrownDemoPage() {
             <span className="gck-pulse-dot" aria-hidden />
             Open now · Pickup &amp; quick handoff
           </div>
-          <h1>Authentic Nigerian Food in Morrow</h1>
+          <h1>Authentic African Food in Atlanta</h1>
           <p className="gck-sub">Fresh. Flavorful. Made Daily.</p>
           <div className="gck-hero-cta-wrap">
             <button type="button" className="gck-btn-primary" onClick={openOrder}>
