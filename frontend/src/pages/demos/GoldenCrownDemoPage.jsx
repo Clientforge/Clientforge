@@ -3,8 +3,8 @@ import './GoldenCrownDemoPage.css';
 
 const CLOVER_ORDER_URL = import.meta.env.VITE_GCK_CLOVER_ORDER_URL || '';
 
-const HERO_BG =
-  'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=2400&q=80';
+/** Hero background: frontend/public/hero-golden-crown.png (replace file to change art) */
+const HERO_BG = '/hero-golden-crown.png';
 
 const FEATURED_DISH = {
   name: 'Jollof Rice + Chicken',
