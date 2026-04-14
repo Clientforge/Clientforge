@@ -249,14 +249,14 @@ export default function GoldenCrownDemoPage() {
               <div className="gck-stars" aria-hidden>
                 {'\u2605\u2605\u2605\u2605\u2605'}
               </div>
-              <div className="gck-rating-num" aria-label="4.4 out of 5 stars">
-                4.4 <small>/ 5</small>
+              <div className="gck-rating-num" aria-label="4.6 out of 5 stars">
+                4.6 <small>/ 5</small>
               </div>
             </div>
           </div>
           <div className="gck-proof-stats">
             <div className="gck-stat">
-              <div className="gck-stat-val">120+</div>
+              <div className="gck-stat-val">80+</div>
               <div className="gck-stat-label">Reviews</div>
             </div>
             <div className="gck-stat">
