@@ -32,21 +32,23 @@ const OTHER_DISHES = [
 
 const REVIEWS = [
   {
-    initials: 'TK',
-    name: 'Temi K.',
-    quote: 'Best jollof in Atlanta. Period.',
-    stars: '★★★★★',
+    initials: 'AK',
+    name: 'Ashley KernerChristian',
+    quote:
+      'Rice was perfectly cooked everything is really good I wish it was just a little bit spicier. I ordered the egusi jollof rice and bitter leaf. Since I’ve been pregnant I’ve been craving African food and this is the first place I’ve tried since moving to Georgia and I’ll definitely be back.',
+    stars: '\u2605\u2605\u2605\u2605\u2605',
   },
   {
-    initials: 'JR',
-    name: 'James R.',
-    quote: 'Portions are huge — worth every dollar.',
-    stars: '★★★★★',
+    initials: 'ET',
+    name: 'Eyram Tawia',
+    quote:
+      'Ayo!!! If you’re looking for really good amazing authentic freshly made Nigerian dishes this is the spot!!!!! I’ve found another legit African food spot my boi !! 😂😂, and it slick is fighting for the number one spot. Definitely top 2.',
+    stars: '\u2605\u2605\u2605\u2605\u2605',
   },
   {
-    initials: 'AN',
-    name: 'Ada N.',
-    quote: 'Tastes like home. We order every week.',
+    initials: 'MW',
+    name: 'Melodie W',
+    quote: 'very delicious, come here once a week for the spinach and fish dish',
     stars: '\u2605\u2605\u2605\u2605\u2605',
   },
 ];
