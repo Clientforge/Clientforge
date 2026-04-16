@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import './GoldenCrownDemoPage.css';
 
-const CLOVER_ORDER_URL = import.meta.env.VITE_GCK_CLOVER_ORDER_URL || '';
+const CLOVER_DEFAULT_ORDER_URL = 'https://www.clover.com/online-ordering/goldencrown-kitchen-morrow';
+const CLOVER_ORDER_URL =
+  import.meta.env.VITE_GCK_CLOVER_ORDER_URL || CLOVER_DEFAULT_ORDER_URL;
 
 /** Hero background: frontend/public/hero-golden-crown.png (replace file to change art) */
 const HERO_BG = '/hero-golden-crown.png';
