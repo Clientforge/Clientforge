@@ -139,7 +139,6 @@ function IconVerified() {
 
 export default function GoldenCrownDemoPage() {
   const [orderOpen, setOrderOpen] = useState(false);
-  const [iframeBlocked, setIframeBlocked] = useState(false);
   const [navSolid, setNavSolid] = useState(false);
 
   const [proofRef, proofVisible] = useInView(0.1);
@@ -430,34 +429,19 @@ export default function GoldenCrownDemoPage() {
                 ×
               </button>
             </div>
-            <div className="gck-modal-body">
-              {hasOrderUrl && !iframeBlocked ? (
-                <iframe
-                  title="Online ordering"
-                  src={CLOVER_ORDER_URL}
-                  onError={() => setIframeBlocked(true)}
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              ) : null}
-              {hasOrderUrl && iframeBlocked ? (
+            <div className="gck-modal-body gck-modal-body--checkout">
+              {hasOrderUrl ? (
                 <div className="gck-modal-fallback">
                   <p>
-                    This ordering page can&apos;t be embedded here (the provider may block iframes).
-                    Use the button below to order in a new tab.
+                    You&apos;ll finish your order on Clover&apos;s secure checkout in this same window.
+                    Use your browser&apos;s <strong>Back</strong> button anytime to return here.
                   </p>
-                  <a
-                    className="gck-btn-primary"
-                    href={CLOVER_ORDER_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    Open ordering
+                  <a className="gck-btn-primary" href={CLOVER_ORDER_URL} style={{ textDecoration: 'none' }}>
+                    Continue to order
+                    <IconArrowRight />
                   </a>
                 </div>
-              ) : null}
-              {!hasOrderUrl ? (
+              ) : (
                 <div className="gck-modal-fallback">
                   <p>
                     Add your Clover (or other) ordering link: set{' '}
@@ -467,7 +451,7 @@ export default function GoldenCrownDemoPage() {
                     Close
                   </button>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>

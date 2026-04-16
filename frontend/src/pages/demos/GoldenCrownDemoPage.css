@@ -1021,6 +1021,10 @@
   font-size: 0.85em;
 }
 
+.gck-modal-body--checkout .gck-modal-fallback p {
+  max-width: 42ch;
+}
+
 .gck-sticky-cta {
   position: fixed;
   bottom: 0;
