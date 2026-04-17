@@ -98,7 +98,7 @@
     <p class="lead" id="rating-line"></p>
     <p class="lead" style="margin-bottom:20px">Would you like to leave feedback for us on <strong>Google</strong>? It helps other guests find us.</p>
 
-    <a class="btn" id="google-btn" href="https://g.page/your-business/review" target="_blank" rel="noopener noreferrer">Leave a Google review</a>
+    <a class="btn" id="google-btn" href="https://g.page/t/Cd-blSkmiqq2EAE/review">Leave a Google review</a>
     <p class="btn-secondary"><a href="/review">← Back to rating</a></p>
     <p class="hint">
       Owner: replace <code>GOOGLE_REVIEW_URL</code> in the script with your real Google Business review link (or set the button <code>href</code> above).
@@ -114,7 +114,7 @@
       document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
       document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
 
-      var GOOGLE_REVIEW_URL = 'https://g.page/your-business/review';
+      var GOOGLE_REVIEW_URL = 'https://g.page/t/Cd-blSkmiqq2EAE/review';
       var btn = document.getElementById('google-btn');
       if (GOOGLE_REVIEW_URL.indexOf('your-business') === -1) {
         btn.href = GOOGLE_REVIEW_URL;
