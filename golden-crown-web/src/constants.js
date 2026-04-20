@@ -25,6 +25,15 @@ export const GCK_HOURS = [
 
 export const GCK_ADDRESS_LINE = '1230 Lake City Plaza Dr, Morrow, GA 30260';
 
+/** Google Business Profile “write a review” link (place id). */
+export const GCK_GOOGLE_REVIEW_URL =
+  import.meta.env.VITE_GCK_GOOGLE_REVIEW_URL ||
+  'https://search.google.com/local/writereview?placeid=ChIJ3ZKnMNz59IgR35shKSaKqrY&source=g.page.m._&utm_source=gbp&laa=merchant-review-solicitation';
+
+export const GCK_MAPS_SEARCH_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+  GCK_ADDRESS_LINE,
+)}`;
+
 export const GCK_INSTAGRAM_URL =
   'https://www.instagram.com/goldencrownkitchenatl?igsh=MW4wNDl3dmVrdWNicA==';
 
