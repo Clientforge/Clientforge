@@ -390,10 +390,6 @@ export default function GoldenCrownDemoPage() {
         </div>
       </section>
 
-      <p className="gck-footer-note">
-        Demo site for Golden Crown Kitchen — not the final production website.
-      </p>
-
       <div className="gck-sticky-cta">
         <div className="gck-sticky-inner">
           <button type="button" className="gck-btn-primary" onClick={openOrder}>

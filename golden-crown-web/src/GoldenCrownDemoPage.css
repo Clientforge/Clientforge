@@ -899,13 +899,6 @@ a.gck-nav-brand {
   display: block;
 }
 
-.gck-footer-note {
-  text-align: center;
-  padding: 2rem 1.5rem 7rem;
-  font-size: 0.78rem;
-  color: var(--gck-muted-dark);
-}
-
 .gck-demo-note {
   font-size: 0.85em;
   color: var(--gck-muted-dark);
