@@ -537,6 +537,33 @@ a.gck-nav-brand {
   border-radius: 4px;
 }
 
+.gck-social-proof-review-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
+  padding: 0 1rem 0.25rem;
+}
+
+.gck-proof-review-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gck-gold-light);
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.gck-proof-review-link:hover {
+  color: var(--gck-gold);
+  transform: translateX(2px);
+}
+
+.gck-proof-review-link svg {
+  flex-shrink: 0;
+}
+
 .gck-review-card {
   flex: 0 0 min(88vw, 340px);
   scroll-snap-align: center;

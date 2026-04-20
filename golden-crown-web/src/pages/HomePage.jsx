@@ -167,6 +167,13 @@ export default function HomePage() {
             </article>
           ))}
         </div>
+
+        <div className="gck-social-proof-review-cta">
+          <Link to="/review" className="gck-proof-review-link">
+            Leave us a review
+            <IconArrowRight />
+          </Link>
+        </div>
       </section>
 
       <section
