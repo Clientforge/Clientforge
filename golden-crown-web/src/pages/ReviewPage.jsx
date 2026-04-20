@@ -13,7 +13,7 @@ export default function ReviewPage() {
   const { street, rest } = splitAddress(GCK_ADDRESS_LINE);
 
   useEffect(() => {
-    document.title = 'Tell us how we did — Golden Crown Kitchen';
+    document.title = 'Tell us how we did — GoldenCrown Kitchen';
   }, []);
 
   return (

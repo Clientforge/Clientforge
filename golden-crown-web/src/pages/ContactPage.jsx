@@ -12,7 +12,7 @@ import { IconArrowRight, IconInstagram } from '../icons.jsx';
 
 export default function ContactPage() {
   useEffect(() => {
-    document.title = 'Contact — Golden Crown Kitchen';
+    document.title = 'Contact — GoldenCrown Kitchen';
   }, []);
 
   const handleContactSubmit = useCallback(
@@ -26,7 +26,7 @@ export default function ContactPage() {
       const email = String(fd.get('email') || '');
       const phone = String(fd.get('phone') || '');
       const message = String(fd.get('message') || '');
-      const subject = encodeURIComponent(`Golden Crown Kitchen — ${inquiry}`);
+      const subject = encodeURIComponent(`GoldenCrown Kitchen — ${inquiry}`);
       const body = encodeURIComponent(
         `Inquiry type: ${inquiry}\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\n\nMessage:\n${message}`,
       );
@@ -88,7 +88,7 @@ export default function ContactPage() {
           onSubmit={CONTACT_FORM_URL ? undefined : handleContactSubmit}
         >
           {CONTACT_FORM_URL ? (
-            <input type="hidden" name="_subject" value="Golden Crown Kitchen — website inquiry" />
+            <input type="hidden" name="_subject" value="GoldenCrown Kitchen — website inquiry" />
           ) : null}
           <div className="gck-form-row">
             <label className="gck-field" htmlFor="gck-inquiry">

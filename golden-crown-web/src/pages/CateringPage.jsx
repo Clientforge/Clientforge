@@ -4,7 +4,7 @@ import { IconArrowRight, IconCalendar, IconLeaf, IconTruck, IconUsers } from '..
 
 export default function CateringPage() {
   useEffect(() => {
-    document.title = 'Catering — Golden Crown Kitchen';
+    document.title = 'Catering — GoldenCrown Kitchen';
   }, []);
 
   return (

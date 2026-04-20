@@ -16,7 +16,7 @@ export default function ReviewGooglePage() {
   const starsDisplay = '★'.repeat(stars) + '☆'.repeat(5 - stars);
 
   useEffect(() => {
-    document.title = 'Thank you! — Golden Crown Kitchen';
+    document.title = 'Thank you! — GoldenCrown Kitchen';
   }, []);
 
   return (

@@ -30,7 +30,8 @@ export default function HomePage() {
   const [visitRef, visitVisible] = useInView(0.1);
 
   useEffect(() => {
-    document.title = 'Golden Crown Kitchen — Authentic African Food in Atlanta';
+    document.title =
+      'GoldenCrown Kitchen — Bring People Together with One Bite at a Time';
   }, []);
 
   return (
@@ -40,7 +41,7 @@ export default function HomePage() {
         <div className="gck-hero-overlay" />
         <div className="gck-hero-grain" />
         <div className="gck-hero-inner">
-          <h1>Authentic African Food in Atlanta</h1>
+          <h1>Bring People Together with One Bite at a Time</h1>
           <p className="gck-sub">Fresh. Flavorful. Made Daily.</p>
           <div className="gck-hero-cta-wrap">
             <button type="button" className="gck-btn-primary" onClick={openOrder}>

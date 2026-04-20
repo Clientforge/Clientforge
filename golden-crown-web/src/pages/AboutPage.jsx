@@ -3,7 +3,7 @@ import { FEATURED_DISH } from '../constants.js';
 
 export default function AboutPage() {
   useEffect(() => {
-    document.title = 'About — Golden Crown Kitchen';
+    document.title = 'About — GoldenCrown Kitchen';
   }, []);
 
   return (
@@ -12,7 +12,7 @@ export default function AboutPage() {
         <p className="gck-eyebrow">About us</p>
         <h1>Family flavor, Atlanta heart</h1>
         <p className="gck-page-lead">
-          Golden Crown Kitchen brings West African comfort food to South Atlanta — cooked fresh daily, seasoned with
+          GoldenCrown Kitchen brings West African comfort food to South Atlanta — cooked fresh daily, seasoned with
           care, and served with the warmth of home.
         </p>
       </header>
@@ -33,7 +33,7 @@ export default function AboutPage() {
             we&apos;re here to <strong>fill the table with flavor</strong> — one plate at a time.
           </p>
           <p>
-            Golden Crown is <strong>family-owned and community-minded</strong>. We&apos;re proud to serve Morrow,
+            GoldenCrown is <strong>family-owned and community-minded</strong>. We&apos;re proud to serve Morrow,
             Clayton County, and everyone who drives in from across the metro for a taste of home.
           </p>
           <p className="gck-about-tagline">Family-owned · Morrow, GA · Pickup &amp; catering</p>

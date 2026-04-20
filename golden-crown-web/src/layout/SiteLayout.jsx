@@ -24,7 +24,7 @@ export default function SiteLayout() {
     <div className="gck-demo">
       <nav className={`gck-nav ${navSolid ? 'gck-nav--solid' : ''}`} aria-label="Primary">
         <Link to="/" className="gck-nav-brand">
-          Golden <span>Crown</span>
+          Golden<span>Crown</span>
         </Link>
         <div className="gck-nav-right">
           <div className="gck-nav-links">

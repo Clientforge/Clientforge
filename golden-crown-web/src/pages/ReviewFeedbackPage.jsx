@@ -16,7 +16,7 @@ export default function ReviewFeedbackPage() {
   const stars = useMemo(() => clampStars(parseInt(searchParams.get('stars'), 10)), [searchParams]);
 
   useEffect(() => {
-    document.title = 'Your feedback — Golden Crown Kitchen';
+    document.title = 'Your feedback — GoldenCrown Kitchen';
   }, []);
 
   const starsDisplay = '★'.repeat(stars) + '☆'.repeat(5 - stars);
@@ -26,7 +26,7 @@ export default function ReviewFeedbackPage() {
       e.preventDefault();
       const msg = message.trim();
       if (!msg) return;
-      const subject = encodeURIComponent(`GOLDENCROWN KITCHEN feedback (${stars} stars)`);
+      const subject = encodeURIComponent(`GoldenCrown Kitchen feedback (${stars} stars)`);
       const body = encodeURIComponent(`Rating: ${stars} / 5 stars\n\n${msg}`);
       window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
       setSubmitted(true);

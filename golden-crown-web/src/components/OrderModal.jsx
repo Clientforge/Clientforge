@@ -39,7 +39,7 @@ export default function OrderModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="gck-modal-header">
-          <span id="gck-order-title">Order — Golden Crown Kitchen</span>
+          <span id="gck-order-title">Order — GoldenCrown Kitchen</span>
           <button
             type="button"
             className="gck-modal-close"
