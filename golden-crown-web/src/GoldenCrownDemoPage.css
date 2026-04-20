@@ -31,7 +31,6 @@ body {
   font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  scroll-behavior: smooth;
 }
 
 .gck-demo * {
@@ -77,14 +76,13 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
-  transition: background 0.35s ease, backdrop-filter 0.35s ease, border-color 0.35s ease;
+  transition: background 0.35s ease, border-color 0.35s ease;
   border-bottom: 1px solid transparent;
 }
 
+/* Solid bar only (no backdrop-filter) — avoids heavy blur repaints while scrolling */
 .gck-nav.gck-nav--solid {
-  background: rgba(6, 6, 6, 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(6, 6, 6, 0.94);
   border-bottom-color: rgba(212, 175, 55, 0.12);
 }
 

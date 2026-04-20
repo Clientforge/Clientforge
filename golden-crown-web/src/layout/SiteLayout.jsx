@@ -14,10 +14,30 @@ export default function SiteLayout() {
   const [navSolid, setNavSolid] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setNavSolid(window.scrollY > 48);
-    onScroll();
+    let rafId = 0;
+    let lastSolid = null;
+
+    const apply = () => {
+      rafId = 0;
+      const solid = window.scrollY > 48;
+      if (solid !== lastSolid) {
+        lastSolid = solid;
+        setNavSolid(solid);
+      }
+    };
+
+    const onScroll = () => {
+      if (rafId === 0) {
+        rafId = window.requestAnimationFrame(apply);
+      }
+    };
+
+    apply();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId !== 0) window.cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return (
