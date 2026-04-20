@@ -23,7 +23,7 @@ export const GCK_HOURS = [
   { day: 'Saturday', hours: '11 AM–2 AM' },
 ];
 
-export const GCK_ADDRESS_LINE = '1230 Lake City Plaza Dr, Morrow, GA 30260';
+export const GCK_ADDRESS_LINE = '6550 Mt Zion Blvd, Morrow, GA 30260';
 
 /** Google Business Profile “write a review” link (place id). */
 export const GCK_GOOGLE_REVIEW_URL =
@@ -33,6 +33,11 @@ export const GCK_GOOGLE_REVIEW_URL =
 export const GCK_MAPS_SEARCH_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
   GCK_ADDRESS_LINE,
 )}`;
+
+/** Google Maps embed (e.g. homepage iframe), pinned to {@link GCK_ADDRESS_LINE}. */
+export const GCK_MAPS_EMBED_URL = `https://www.google.com/maps?q=${encodeURIComponent(
+  GCK_ADDRESS_LINE,
+)}&output=embed`;
 
 export const GCK_INSTAGRAM_URL =
   'https://www.instagram.com/goldencrownkitchenatl?igsh=MW4wNDl3dmVrdWNicA==';

@@ -192,6 +192,25 @@ a.gck-nav-brand {
   }
 }
 
+/* Touch devices: static hero (Ken Burns + grain filter are costly while scrolling) */
+@media (pointer: coarse) {
+  .gck-hero-bg {
+    animation: none;
+    will-change: auto;
+  }
+
+  .gck-hero-grain {
+    display: none;
+  }
+
+  .gck-hero .gck-btn-primary {
+    animation: none;
+    box-shadow:
+      0 4px 24px var(--gck-glow),
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  }
+}
+
 .gck-hero-overlay {
   position: absolute;
   inset: 0;
@@ -1090,34 +1109,24 @@ a.gck-nav-brand {
   max-width: 440px;
 }
 
+/* Static soft ring — no blur / animation (was heavy during vertical scroll) */
 .gck-sticky-inner::before {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: -2px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--gck-gold), transparent 50%, var(--gck-gold-light));
-  opacity: 0.45;
+  opacity: 0.48;
   z-index: -1;
-  animation: gck-sticky-ring 2.8s ease-in-out infinite;
-  filter: blur(6px);
-}
-
-@keyframes gck-sticky-ring {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.02);
-  }
 }
 
 .gck-sticky-cta .gck-btn-primary {
   width: 100%;
-  animation: gck-cta-glow 3.5s ease-in-out infinite;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: none;
+  box-shadow:
+    0 4px 22px var(--gck-glow),
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
 }
 
 @media (min-width: 768px) {

@@ -5,6 +5,7 @@ import {
   CONTACT_EMAIL,
   FEATURED_DISH,
   GCK_ADDRESS_LINE,
+  GCK_MAPS_EMBED_URL,
   GCK_INSTAGRAM_URL,
   GCK_PHONE_DISPLAY,
   GCK_PHONE_TEL,
@@ -288,10 +289,10 @@ export default function HomePage() {
           </div>
           <div className="gck-map-wrap">
             <iframe
-              title="Map — Morrow, GA"
+              title="Map — GoldenCrown Kitchen, Morrow, GA"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              src="https://www.google.com/maps?q=Morrow%2C%20GA&output=embed"
+              src={GCK_MAPS_EMBED_URL}
             />
           </div>
         </div>

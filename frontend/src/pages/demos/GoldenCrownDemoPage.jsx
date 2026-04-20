@@ -364,7 +364,7 @@ export default function GoldenCrownDemoPage() {
           <div className="gck-info-block">
             <p>
               <strong>Address</strong>
-              1230 Lake City Plaza Dr, Morrow, GA 30260
+              6550 Mt Zion Blvd, Morrow, GA 30260
               <span className="gck-demo-note"> (demo address — replace for go-live)</span>
             </p>
             <p>
