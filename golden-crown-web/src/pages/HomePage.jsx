@@ -5,6 +5,7 @@ import {
   CONTACT_EMAIL,
   FEATURED_DISH,
   GCK_ADDRESS_LINE,
+  GCK_INSTAGRAM_URL,
   GCK_PHONE_DISPLAY,
   GCK_PHONE_TEL,
   HERO_BG,
@@ -15,6 +16,7 @@ import {
   IconArrowRight,
   IconBag,
   IconClock,
+  IconInstagram,
   IconLeaf,
   IconVerified,
 } from '../icons.jsx';
@@ -260,6 +262,19 @@ export default function HomePage() {
               <br />
               <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--gck-gold-light)' }}>
                 {CONTACT_EMAIL}
+              </a>
+            </p>
+            <p>
+              <strong>Instagram</strong>
+              <br />
+              <a
+                href={GCK_INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gck-contact-social-link"
+              >
+                <IconInstagram />
+                <span>@goldencrownkitchenatl</span>
               </a>
             </p>
           </div>

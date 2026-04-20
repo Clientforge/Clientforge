@@ -25,6 +25,9 @@ export const GCK_HOURS = [
 
 export const GCK_ADDRESS_LINE = '1230 Lake City Plaza Dr, Morrow, GA 30260';
 
+export const GCK_INSTAGRAM_URL =
+  'https://www.instagram.com/goldencrownkitchenatl?igsh=MW4wNDl3dmVrdWNicA==';
+
 export const HERO_BG = '/hero-golden-crown.png';
 
 export const FEATURED_DISH = {

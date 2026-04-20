@@ -4,10 +4,11 @@ import {
   CONTACT_EMAIL,
   CONTACT_FORM_URL,
   GCK_ADDRESS_LINE,
+  GCK_INSTAGRAM_URL,
   GCK_PHONE_DISPLAY,
   GCK_PHONE_TEL,
 } from '../constants.js';
-import { IconArrowRight } from '../icons.jsx';
+import { IconArrowRight, IconInstagram } from '../icons.jsx';
 
 export default function ContactPage() {
   useEffect(() => {
@@ -55,6 +56,19 @@ export default function ContactPage() {
             <strong>Email</strong>
             <br />
             <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          </p>
+          <p>
+            <strong>Instagram</strong>
+            <br />
+            <a
+              href={GCK_INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gck-contact-social-link"
+            >
+              <IconInstagram />
+              <span>@goldencrownkitchenatl</span>
+            </a>
           </p>
           <p>
             <strong>Location</strong>

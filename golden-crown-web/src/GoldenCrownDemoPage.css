@@ -1230,18 +1230,6 @@ a.gck-nav-brand {
   font-weight: 600;
 }
 
-.gck-catering-strip {
-  text-align: center;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--gck-gold-light);
-  margin: 0 0 1.5rem;
-  padding: 0.75rem 1rem;
-  background: rgba(212, 175, 55, 0.08);
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.15);
-}
-
 .gck-btn-primary--wide {
   width: 100%;
   justify-content: center;
@@ -1570,6 +1558,26 @@ select.gck-input {
 
 .gck-contact-details a:hover {
   text-decoration: underline;
+}
+
+.gck-contact-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.gck-contact-social-link svg {
+  flex-shrink: 0;
+}
+
+.gck-contact-social-link:hover {
+  text-decoration: underline;
+}
+
+.gck-info-block .gck-contact-social-link {
+  color: var(--gck-gold-light);
+  text-decoration: none;
 }
 
 .gck-hours-table {

@@ -60,7 +60,6 @@ export default function CateringPage() {
             <li>Spice level and any allergies or dietary needs</li>
           </ul>
         </div>
-        <p className="gck-catering-strip">Custom quotes for events, offices, and holidays — no obligation to book.</p>
         <Link to="/contact" className="gck-btn-primary gck-btn-primary--wide gck-btn-primary--link">
           Request catering info
           <IconArrowRight />
