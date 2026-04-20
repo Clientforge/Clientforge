@@ -1,6 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&display=swap');
 
+/* Prevent horizontal bleed and default white gutter next to the dark layout */
+html,
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: #060606;
+}
+
+#root {
+  min-height: 100%;
+  max-width: 100%;
+}
+
 .gck-demo {
+  width: 100%;
+  max-width: 100%;
   --gck-black: #060606;
   --gck-elevated: #0e0e0f;
   --gck-gold: #d4af37;
@@ -199,44 +214,6 @@ a.gck-nav-brand {
   position: relative;
   z-index: 1;
   max-width: 46rem;
-}
-
-.gck-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--gck-gold-light);
-  background: rgba(212, 175, 55, 0.12);
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  margin-bottom: 1.25rem;
-  animation: gck-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
-}
-
-.gck-pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
-  animation: gck-pulse-ring 2.2s ease-out infinite;
-}
-
-@keyframes gck-pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
-  }
 }
 
 .gck-hero h1 {
@@ -545,9 +522,8 @@ a.gck-nav-brand {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   padding: 0.25rem 0 1rem;
-  margin: 0 -0.5rem;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  margin: 0;
+  max-width: 100%;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(212, 175, 55, 0.35) transparent;
@@ -1572,8 +1548,13 @@ select.gck-input {
   color: var(--gck-muted);
 }
 
-.gck-contact-details p:last-child {
-  margin-bottom: 0;
+.gck-contact-details-hours {
+  margin: 0 0 0.25rem;
+}
+
+.gck-contact-details-hours > strong {
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .gck-contact-details strong {
@@ -1589,4 +1570,39 @@ select.gck-input {
 
 .gck-contact-details a:hover {
   text-decoration: underline;
+}
+
+.gck-hours-table {
+  width: 100%;
+  max-width: 320px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--gck-muted);
+}
+
+.gck-hours-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--gck-white);
+  padding: 0.2rem 0.75rem 0.2rem 0;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.gck-hours-table td {
+  padding: 0.2rem 0;
+}
+
+.gck-hours-table--compact {
+  font-size: 0.82rem;
+}
+
+.gck-info-hours {
+  margin-bottom: 1rem;
+}
+
+.gck-info-hours > strong {
+  display: block;
+  margin-bottom: 0.5rem;
 }

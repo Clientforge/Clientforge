@@ -1,6 +1,16 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FEATURED_DISH, HERO_BG, OTHER_DISHES, REVIEWS } from '../constants.js';
+import HoursBlock from '../components/HoursBlock.jsx';
+import {
+  CONTACT_EMAIL,
+  FEATURED_DISH,
+  GCK_ADDRESS_LINE,
+  GCK_PHONE_DISPLAY,
+  GCK_PHONE_TEL,
+  HERO_BG,
+  OTHER_DISHES,
+  REVIEWS,
+} from '../constants.js';
 import {
   IconArrowRight,
   IconBag,
@@ -28,10 +38,6 @@ export default function HomePage() {
         <div className="gck-hero-overlay" />
         <div className="gck-hero-grain" />
         <div className="gck-hero-inner">
-          <div className="gck-hero-badge">
-            <span className="gck-pulse-dot" aria-hidden />
-            Open now · Pickup &amp; quick handoff
-          </div>
           <h1>Authentic African Food in Atlanta</h1>
           <p className="gck-sub">Fresh. Flavorful. Made Daily.</p>
           <div className="gck-hero-cta-wrap">
@@ -235,19 +241,26 @@ export default function HomePage() {
           <div className="gck-info-block">
             <p>
               <strong>Address</strong>
-              1230 Lake City Plaza Dr, Morrow, GA 30260
-              <span className="gck-demo-note"> (demo address — replace for go-live)</span>
+              <br />
+              {GCK_ADDRESS_LINE}
             </p>
-            <p>
+            <div className="gck-info-hours">
               <strong>Hours</strong>
-              Mon–Thu 11am–9pm · Fri–Sat 11am–10pm · Sun 12pm–8pm
-            </p>
+              <HoursBlock className="gck-hours-table--compact" />
+            </div>
             <p>
               <strong>Phone</strong>
-              <a href="tel:+14045550123" style={{ color: 'var(--gck-gold-light)' }}>
-                (404) 555-0123
+              <br />
+              <a href={`tel:${GCK_PHONE_TEL}`} style={{ color: 'var(--gck-gold-light)' }}>
+                {GCK_PHONE_DISPLAY}
               </a>
-              <span className="gck-demo-note"> (demo)</span>
+            </p>
+            <p>
+              <strong>Email</strong>
+              <br />
+              <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--gck-gold-light)' }}>
+                {CONTACT_EMAIL}
+              </a>
             </p>
           </div>
           <div className="gck-map-wrap">

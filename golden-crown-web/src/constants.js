@@ -3,10 +3,27 @@ export const CLOVER_DEFAULT_ORDER_URL =
 export const CLOVER_ORDER_URL =
   import.meta.env.VITE_GCK_CLOVER_ORDER_URL || CLOVER_DEFAULT_ORDER_URL;
 
-/** Formspree / Getform — POST URL. If unset, contact form uses mailto. */
+/** Formspree / Getform — POST URL. If unset, contact form uses mailto to CONTACT_EMAIL. */
 export const CONTACT_FORM_URL = import.meta.env.VITE_CONTACT_FORM_URL || '';
 export const CONTACT_EMAIL =
-  import.meta.env.VITE_CONTACT_EMAIL || 'info@goldencrownkitchen.com';
+  import.meta.env.VITE_CONTACT_EMAIL || 'info@goldencrownsowllc.com';
+
+export const GCK_PHONE_DISPLAY = '(770) 629-7560';
+/** E.164 for tel: links */
+export const GCK_PHONE_TEL = '+17706297560';
+
+/** Weekly hours (display strings). */
+export const GCK_HOURS = [
+  { day: 'Sunday', hours: '2 PM–2 AM' },
+  { day: 'Monday', hours: '11 AM–11 PM' },
+  { day: 'Tuesday', hours: '11 AM–11 PM' },
+  { day: 'Wednesday', hours: '11 AM–11 PM' },
+  { day: 'Thursday', hours: '11 AM–11 PM' },
+  { day: 'Friday', hours: '11 AM–2 AM' },
+  { day: 'Saturday', hours: '11 AM–2 AM' },
+];
+
+export const GCK_ADDRESS_LINE = '1230 Lake City Plaza Dr, Morrow, GA 30260';
 
 export const HERO_BG = '/hero-golden-crown.png';
 

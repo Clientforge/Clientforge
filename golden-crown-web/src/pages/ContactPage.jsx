@@ -1,5 +1,12 @@
 import { useCallback, useEffect } from 'react';
-import { CONTACT_EMAIL, CONTACT_FORM_URL } from '../constants.js';
+import HoursBlock from '../components/HoursBlock.jsx';
+import {
+  CONTACT_EMAIL,
+  CONTACT_FORM_URL,
+  GCK_ADDRESS_LINE,
+  GCK_PHONE_DISPLAY,
+  GCK_PHONE_TEL,
+} from '../constants.js';
 import { IconArrowRight } from '../icons.jsx';
 
 export default function ContactPage() {
@@ -24,7 +31,7 @@ export default function ContactPage() {
       );
       window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
     },
-    [],
+    [CONTACT_EMAIL],
   );
 
   return (
@@ -42,20 +49,22 @@ export default function ContactPage() {
           <p>
             <strong>Phone</strong>
             <br />
-            <a href="tel:+14045550123">(404) 555-0123</a>
-            <span className="gck-demo-note"> (demo)</span>
+            <a href={`tel:${GCK_PHONE_TEL}`}>{GCK_PHONE_DISPLAY}</a>
+          </p>
+          <p>
+            <strong>Email</strong>
+            <br />
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
           </p>
           <p>
             <strong>Location</strong>
             <br />
-            1230 Lake City Plaza Dr, Morrow, GA 30260
-            <span className="gck-demo-note"> (demo)</span>
+            {GCK_ADDRESS_LINE}
           </p>
-          <p>
+          <div className="gck-contact-details-hours">
             <strong>Hours</strong>
-            <br />
-            Mon–Thu 11am–9pm · Fri–Sat 11am–10pm · Sun 12pm–8pm
-          </p>
+            <HoursBlock />
+          </div>
         </div>
 
         <form
