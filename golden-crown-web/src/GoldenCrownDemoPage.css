@@ -85,13 +85,13 @@
   color: var(--gck-gold);
 }
 
-.gck-nav-brand--btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  padding: 0;
-  text-align: left;
+a.gck-nav-brand {
+  text-decoration: none;
+  color: inherit;
+}
+
+.gck-nav-link--active {
+  color: var(--gck-gold-light) !important;
 }
 
 .gck-nav-right {
@@ -1149,12 +1149,6 @@
   }
 }
 
-#about,
-#catering,
-#contact {
-  scroll-margin-top: 5.5rem;
-}
-
 .gck-section-head--tight .gck-lead {
   max-width: 40rem;
 }
@@ -1378,5 +1372,221 @@ select.gck-input {
 }
 
 .gck-contact-alt a:hover {
+  text-decoration: underline;
+}
+
+/* Home teasers */
+.gck-section--teasers {
+  padding-top: 2.5rem;
+}
+
+.gck-teasers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 1.25rem 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .gck-teasers-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+.gck-teaser-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.35rem 1.25rem;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: linear-gradient(165deg, rgba(18, 18, 20, 0.95) 0%, rgba(8, 8, 9, 0.98) 100%);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.gck-teaser-card:hover {
+  border-color: rgba(212, 175, 55, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.gck-teaser-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gck-gold);
+}
+
+.gck-teaser-card h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--gck-white);
+}
+
+.gck-teaser-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--gck-muted);
+  flex: 1;
+}
+
+.gck-teaser-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--gck-gold-light);
+}
+
+/* Inner pages */
+.gck-page {
+  padding-top: 5.25rem;
+  padding-bottom: 2rem;
+  min-height: 100vh;
+}
+
+.gck-page--contact {
+  padding-bottom: 6rem;
+}
+
+@media (min-width: 768px) {
+  .gck-page--contact {
+    padding-bottom: 5rem;
+  }
+}
+
+.gck-page-header {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 1.5rem;
+  text-align: center;
+}
+
+.gck-page-header h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0.35rem 0 0.75rem;
+  line-height: 1.15;
+}
+
+.gck-page-lead {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--gck-muted);
+}
+
+.gck-about-grid--page {
+  padding-bottom: 3rem;
+}
+
+.gck-catering-card--page {
+  max-width: 720px;
+  margin: 0 auto 3rem;
+}
+
+.gck-catering-intro {
+  margin: 0 0 1.25rem;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--gck-muted);
+}
+
+.gck-catering-intro strong {
+  color: var(--gck-white);
+}
+
+.gck-catering-detail {
+  margin: 1.75rem 0 0;
+  padding: 1.25rem 1.15rem;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gck-catering-subhead {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  color: var(--gck-white);
+}
+
+.gck-catering-checklist {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--gck-muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.gck-catering-checklist li {
+  margin-bottom: 0.35rem;
+}
+
+.gck-btn-primary--link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--gck-black);
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.gck-contact-panel--page {
+  max-width: 560px;
+  padding: 0 1.25rem 2rem;
+}
+
+.gck-contact-details {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  background: rgba(14, 14, 15, 0.6);
+}
+
+.gck-contact-details p {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--gck-muted);
+}
+
+.gck-contact-details p:last-child {
+  margin-bottom: 0;
+}
+
+.gck-contact-details strong {
+  color: var(--gck-white);
+  display: inline-block;
+  margin-bottom: 0.2rem;
+}
+
+.gck-contact-details a {
+  color: var(--gck-gold-light);
+  text-decoration: none;
+}
+
+.gck-contact-details a:hover {
   text-decoration: underline;
 }
