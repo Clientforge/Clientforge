@@ -5,6 +5,11 @@ const CLOVER_DEFAULT_ORDER_URL = 'https://www.clover.com/online-ordering/goldenc
 const CLOVER_ORDER_URL =
   import.meta.env.VITE_GCK_CLOVER_ORDER_URL || CLOVER_DEFAULT_ORDER_URL;
 
+/** Formspree / Getform / similar — POST URL. If unset, contact form uses mailto. */
+const CONTACT_FORM_URL = import.meta.env.VITE_CONTACT_FORM_URL || '';
+const CONTACT_EMAIL =
+  import.meta.env.VITE_CONTACT_EMAIL || 'info@goldencrownkitchen.com';
+
 /** Hero background: public/hero-golden-crown.png */
 const HERO_BG = '/hero-golden-crown.png';
 
@@ -137,16 +142,80 @@ function IconVerified() {
   );
 }
 
+function IconUsers() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconCalendar() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTruck() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM18.5 21a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function GoldenCrownDemoPage() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [navSolid, setNavSolid] = useState(false);
 
+  const [aboutRef, aboutVisible] = useInView(0.08);
   const [proofRef, proofVisible] = useInView(0.1);
   const [dishesRef, dishesVisible] = useInView(0.08);
   const [visitRef, visitVisible] = useInView(0.1);
+  const [cateringRef, cateringVisible] = useInView(0.08);
+  const [contactRef, contactVisible] = useInView(0.06);
 
   const openOrder = useCallback(() => setOrderOpen(true), []);
   const closeOrder = useCallback(() => setOrderOpen(false), []);
+
+  const scrollToId = useCallback((id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const handleContactSubmit = useCallback(
+    (e) => {
+      if (CONTACT_FORM_URL) return;
+      e.preventDefault();
+      const form = e.currentTarget;
+      const fd = new FormData(form);
+      const inquiry = String(fd.get('inquiry') || 'General');
+      const name = String(fd.get('name') || '');
+      const email = String(fd.get('email') || '');
+      const phone = String(fd.get('phone') || '');
+      const message = String(fd.get('message') || '');
+      const subject = encodeURIComponent(`Golden Crown Kitchen — ${inquiry}`);
+      const body = encodeURIComponent(
+        `Inquiry type: ${inquiry}\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\n\nMessage:\n${message}`,
+      );
+      window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    },
+    [],
+  );
 
   useEffect(() => {
     document.title = 'Golden Crown Kitchen — Authentic African Food in Atlanta';
@@ -181,15 +250,28 @@ export default function GoldenCrownDemoPage() {
   return (
     <div className="gck-demo">
       <nav className={`gck-nav ${navSolid ? 'gck-nav--solid' : ''}`} aria-label="Primary">
-        <div className="gck-nav-brand">
+        <button type="button" className="gck-nav-brand gck-nav-brand--btn" onClick={() => scrollToId('top')}>
           Golden <span>Crown</span>
-        </div>
-        <button type="button" className="gck-nav-cta" onClick={openOrder}>
-          Order
         </button>
+        <div className="gck-nav-right">
+          <div className="gck-nav-links">
+            <button type="button" className="gck-nav-link" onClick={() => scrollToId('about')}>
+              About
+            </button>
+            <button type="button" className="gck-nav-link" onClick={() => scrollToId('catering')}>
+              Catering
+            </button>
+            <button type="button" className="gck-nav-link" onClick={() => scrollToId('contact')}>
+              Contact
+            </button>
+          </div>
+          <button type="button" className="gck-nav-cta" onClick={openOrder}>
+            Order
+          </button>
+        </div>
       </nav>
 
-      <section className="gck-hero" aria-label="Hero">
+      <section id="top" className="gck-hero" aria-label="Hero">
         <div className="gck-hero-bg" style={{ backgroundImage: `url(${HERO_BG})` }} />
         <div className="gck-hero-overlay" />
         <div className="gck-hero-grain" />
@@ -220,6 +302,40 @@ export default function GoldenCrownDemoPage() {
               <IconBag />
               Secure checkout
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="about"
+        ref={aboutRef}
+        className={`gck-section gck-section--about gck-reveal ${aboutVisible ? 'gck-reveal--visible' : ''}`}
+        aria-labelledby="about-heading"
+      >
+        <div className="gck-section-head">
+          <p className="gck-eyebrow">About us</p>
+          <h2 id="about-heading">Family flavor, Atlanta heart</h2>
+          <p className="gck-lead">
+            Golden Crown Kitchen brings West African comfort food to South Atlanta — cooked fresh daily, seasoned
+            with care, and served with the warmth of home.
+          </p>
+          <div className="gck-divider" />
+        </div>
+        <div className="gck-about-grid">
+          <div className="gck-about-copy">
+            <p>
+              We started with a simple idea: neighbors deserve{' '}
+              <strong>real, scratch-made dishes</strong> without compromise — from smoky jollof to rich egusi and
+              hearty sides you can taste in every bite.
+            </p>
+            <p>
+              Whether you&apos;re grabbing a quick pickup between errands or feeding the crew after a long week,
+              we&apos;re here to <strong>fill the table with flavor</strong> — one plate at a time.
+            </p>
+            <p className="gck-about-tagline">Family-owned · Morrow, GA · Pickup &amp; catering</p>
+          </div>
+          <div className="gck-about-visual">
+            <img src={FEATURED_DISH.img} alt="" loading="lazy" width="800" height="600" />
           </div>
         </div>
       </section>
@@ -387,6 +503,136 @@ export default function GoldenCrownDemoPage() {
               src="https://www.google.com/maps?q=Morrow%2C%20GA&output=embed"
             />
           </div>
+        </div>
+      </section>
+
+      <section
+        id="catering"
+        ref={cateringRef}
+        className={`gck-section gck-section--catering gck-reveal ${cateringVisible ? 'gck-reveal--visible' : ''}`}
+        aria-labelledby="catering-heading"
+      >
+        <div className="gck-catering-card">
+          <div className="gck-section-head gck-section-head--tight">
+            <p className="gck-eyebrow">Catering</p>
+            <h2 id="catering-heading">Feed your event — without the stress</h2>
+            <p className="gck-lead">
+              Office lunches, celebrations, church functions, and family gatherings. We build trays and menus around
+              your headcount, budget, and spice level.
+            </p>
+            <div className="gck-divider" />
+          </div>
+          <ul className="gck-catering-points">
+            <li>
+              <IconUsers />
+              <span>
+                <strong>Flexible headcount</strong> — from small teams to full spreads
+              </span>
+            </li>
+            <li>
+              <IconLeaf />
+              <span>
+                <strong>Signature dishes</strong> — jollof, egusi, proteins, sides, and more
+              </span>
+            </li>
+            <li>
+              <IconCalendar />
+              <span>
+                <strong>Lead time</strong> — tell us your date; we&apos;ll confirm availability
+              </span>
+            </li>
+            <li>
+              <IconTruck />
+              <span>
+                <strong>Pickup in Morrow</strong> — ask about delivery options when you inquire
+              </span>
+            </li>
+          </ul>
+          <p className="gck-catering-strip">Custom quotes for events, offices, and holidays.</p>
+          <button type="button" className="gck-btn-primary gck-btn-primary--wide" onClick={() => scrollToId('contact')}>
+            Request catering info
+            <IconArrowRight />
+          </button>
+        </div>
+      </section>
+
+      <section
+        id="contact"
+        ref={contactRef}
+        className={`gck-section gck-section--contact gck-reveal ${contactVisible ? 'gck-reveal--visible' : ''}`}
+        aria-labelledby="contact-heading"
+      >
+        <div className="gck-contact-panel">
+          <div className="gck-section-head gck-section-head--tight">
+            <p className="gck-eyebrow">Contact</p>
+            <h2 id="contact-heading">Contact us</h2>
+            <p className="gck-lead">
+              Questions, catering, or a custom order? Send a note — we&apos;ll get back as soon as we can.
+            </p>
+            <div className="gck-divider" />
+          </div>
+          <form
+            className="gck-contact-form"
+            method="POST"
+            action={CONTACT_FORM_URL || undefined}
+            onSubmit={CONTACT_FORM_URL ? undefined : handleContactSubmit}
+          >
+            {CONTACT_FORM_URL ? (
+              <input type="hidden" name="_subject" value="Golden Crown Kitchen — website inquiry" />
+            ) : null}
+            <div className="gck-form-row">
+              <label className="gck-field" htmlFor="gck-inquiry">
+                Inquiry type
+              </label>
+              <select id="gck-inquiry" name="inquiry" className="gck-input" defaultValue="General" required>
+                <option value="General">General question</option>
+                <option value="Catering">Catering / event</option>
+                <option value="Order">Order help</option>
+              </select>
+            </div>
+            <div className="gck-form-row gck-form-row--split">
+              <div>
+                <label className="gck-field" htmlFor="gck-name">
+                  Name
+                </label>
+                <input id="gck-name" name="name" type="text" className="gck-input" autoComplete="name" required />
+              </div>
+              <div>
+                <label className="gck-field" htmlFor="gck-phone">
+                  Phone
+                </label>
+                <input id="gck-phone" name="phone" type="tel" className="gck-input" autoComplete="tel" />
+              </div>
+            </div>
+            <div className="gck-form-row">
+              <label className="gck-field" htmlFor="gck-email">
+                Email
+              </label>
+              <input id="gck-email" name="email" type="email" className="gck-input" autoComplete="email" required />
+            </div>
+            <div className="gck-form-row">
+              <label className="gck-field" htmlFor="gck-message">
+                Message
+              </label>
+              <textarea
+                id="gck-message"
+                name="message"
+                className="gck-input gck-input--textarea"
+                rows={4}
+                placeholder="Tell us about your event, preferred date, or how we can help."
+                required
+              />
+            </div>
+            <button type="submit" className="gck-btn-primary gck-btn-primary--wide">
+              Send message
+              <IconArrowRight />
+            </button>
+            <p className="gck-contact-alt">
+              Prefer the phone?{' '}
+              <a href="tel:+14045550123">(404) 555-0123</a>
+              <span className="gck-demo-note"> (demo)</span>
+            </p>
+          </form>
         </div>
       </section>
 
