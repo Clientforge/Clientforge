@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -45,6 +46,9 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Public, unauthenticated helpers (CORS-friendly for static demo sites)
+app.use('/api/v1/public', require('./routes/public.routes'));
 
 // --------------- PUBLIC ROUTES ---------------
 
@@ -107,13 +111,29 @@ app.get('/services/performance-tracking', (req, res) => {
 });
 app.use(express.static(LANDING_DIR));
 
-// React app assets
+// Grace to Grace demo SPA — https://<host>/grace-to-grace/
+const G2G_DIR = path.join(__dirname, '../../grace-to-grace-web/dist');
+app.use('/grace-to-grace', express.static(G2G_DIR));
+app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
+  const rel = req.path.replace(/^\/grace-to-grace\/?/, '');
+  const lastSeg = rel.split('/').filter(Boolean).pop() || '';
+  if (lastSeg.includes('.')) {
+    return res.status(404).type('text').send('Not found');
+  }
+  const g2gIndex = path.join(G2G_DIR, 'index.html');
+  if (!fs.existsSync(g2gIndex)) return next();
+  return res.sendFile(g2gIndex);
+});
+
+// React app assets (main ClientForge dashboard SPA)
 const FRONTEND_DIR = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(FRONTEND_DIR));
 
-// React SPA fallback for /login, /register, /dashboard, etc.
+// React SPA fallback for /login, /register, /dashboard, etc. (not /grace-to-grace)
 app.get(/^\/(?!api).*/, (req, res, next) => {
-  const fs = require('fs');
+  if (req.path === '/grace-to-grace' || req.path.startsWith('/grace-to-grace/')) {
+    return next();
+  }
   const indexPath = path.join(FRONTEND_DIR, 'index.html');
   if (fs.existsSync(indexPath)) {
     return res.sendFile(indexPath);
