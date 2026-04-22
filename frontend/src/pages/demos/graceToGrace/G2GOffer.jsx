@@ -324,15 +324,25 @@ export default function G2GOffer() {
             {result.meta.marketCompsProxy != null ? (
               <>
                 {' '}
-                · Market proxy: {result.meta.marketCompsProxy} · Scrap index: {result.meta.scrapRegionalIndex} · Title:{' '}
-                {result.meta.titleFactor}
+                · Market proxy: {result.meta.marketCompsProxy} · ZIP scrap: {result.meta.scrapRegionalIndex}
+                {result.meta.metalCommodityBlend != null ? (
+                  <> · Metal ETF blend: {result.meta.metalCommodityBlend}</>
+                ) : null}
+                {result.meta.scrapCombinedIndex != null ? (
+                  <> · Combined scrap: {result.meta.scrapCombinedIndex}</>
+                ) : null}
+                {result.meta.alphaVantage?.status != null ? (
+                  <> · Alpha Vantage: {result.meta.alphaVantage.status}</>
+                ) : null}
+                {' · '}
+                Title: {result.meta.titleFactor}
               </>
             ) : null}
           </p>
           <p className="g2g-disclaimer">
-            Estimates use server v1: seller-reported title, a ZIP-based regional scrap index, and a wholesale-style
-            market proxy from class and location. Live auction feeds, verified title pulls, and pickup routing are not
-            included yet. Not a guaranteed purchase price.
+            Estimates use server v1: seller-reported title, ZIP regional scrap, optional Alpha Vantage ETF metal proxies
+            (SLX / DBB / CPER — not spot $/lb), and a wholesale-style market proxy. Live auction feeds, verified title
+            pulls, and pickup routing are not included yet. Not a guaranteed purchase price.
           </p>
         </div>
       ) : null}

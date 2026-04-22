@@ -23,11 +23,11 @@ router.get('/vin-decode/:vin', async (req, res) => {
   }
 });
 
-/** Grace to Grace v1 estimate (title + regional scrap + market proxy). Public, no auth. */
-router.post('/grace-estimate', (req, res) => {
+/** Grace to Grace v1 estimate (title + scrap + optional Alpha Vantage metal ETFs + market proxy). Public, no auth. */
+router.post('/grace-estimate', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   try {
-    const out = computeGraceEstimate(req.body);
+    const out = await computeGraceEstimate(req.body);
     return res.json(out);
   } catch (err) {
     const msg = err.message || 'Estimate failed.';

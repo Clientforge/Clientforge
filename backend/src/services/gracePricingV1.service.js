@@ -1,11 +1,14 @@
 /**
  * Grace to Grace — v1 pricing (server source of truth).
  *
- * Models (deterministic v1 — swap for live feeds later):
+ * Models:
  * - Title status: seller-reported category multipliers.
- * - Regional scrap: ZIP-derived index (simulates local crush/export economics).
- * - Market proxy: class + ZIP3 + model-year blend (simulates wholesale/listing demand).
+ * - Regional scrap: ZIP-derived index (local crush/export density proxy).
+ * - Metal ETF blend (optional): Alpha Vantage daily series for SLX / DBB / CPER → trend vs 20d mean.
+ * - Market proxy: class + ZIP3 + model-year blend (wholesale-style proxy until a vehicle value API is wired).
  */
+
+const { getMetalCommodityBlend } = require('./alphaVantage.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -151,11 +154,16 @@ function computeOfferRangeInternal(input) {
   }
 
   const scrapIdx = scrapRegionalIndex(input.zip);
+  const metalB =
+    typeof input.metalCommodityBlend === 'number' && input.metalCommodityBlend > 0
+      ? input.metalCommodityBlend
+      : 1;
+  const scrapCombined = scrapIdx * metalB;
   const marketPx = marketCompsProxy(input.year, cls, input.zip);
   const titleFx = deriveTitleFactor(input.titleStatus);
 
   base *= marketPx;
-  base *= scrapIdx;
+  base *= scrapCombined;
   base *= titleFx;
 
   const conditionFactor =
@@ -165,7 +173,7 @@ function computeOfferRangeInternal(input) {
 
   const adjusted = base * conditionFactor;
   let scrapFloor = SCRAP_FLOOR_BY_CLASS[cls] ?? SCRAP_FLOOR_BY_CLASS.default;
-  scrapFloor *= scrapIdx;
+  scrapFloor *= scrapCombined;
 
   const low = Math.max(Math.round(scrapFloor), Math.round(adjusted * 0.72));
   const high = Math.max(low + 75, Math.round(adjusted * 1.12));
@@ -182,8 +190,11 @@ function computeOfferRangeInternal(input) {
       modelVersion: 'v1',
       marketCompsProxy: Number(marketPx.toFixed(4)),
       scrapRegionalIndex: Number(scrapIdx.toFixed(4)),
+      metalCommodityBlend: Number(metalB.toFixed(4)),
+      scrapCombinedIndex: Number(scrapCombined.toFixed(4)),
       titleFactor: Number(titleFx.toFixed(4)),
       titleStatus: String(input.titleStatus || 'clean'),
+      alphaVantage: input.metalMeta || null,
     },
   };
 }
@@ -220,8 +231,20 @@ function validateEstimateBody(body) {
   };
 }
 
-function computeGraceEstimate(body) {
-  return computeOfferRangeInternal(validateEstimateBody(body));
+async function computeGraceEstimate(body) {
+  const validated = validateEstimateBody(body);
+  const metal = await getMetalCommodityBlend();
+  const metalMeta = {
+    status: metal.status,
+    fetchedAt: metal.fetchedAt,
+    detail: metal.detail,
+    symbols: metal.symbols,
+  };
+  return computeOfferRangeInternal({
+    ...validated,
+    metalCommodityBlend: metal.blendMultiplier,
+    metalMeta,
+  });
 }
 
 module.exports = {
