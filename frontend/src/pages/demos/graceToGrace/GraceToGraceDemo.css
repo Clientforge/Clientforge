@@ -227,6 +227,120 @@ a.g2g-logo:hover {
   max-width: 36rem;
 }
 
+.g2g-form--offer {
+  max-width: 42rem;
+}
+
+.g2g-form-section {
+  margin-top: 0.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--g2g-border);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.g2g-form-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--g2g-text);
+  letter-spacing: -0.01em;
+}
+
+.g2g-form-section-hint {
+  margin: -0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  line-height: 1.45;
+}
+
+.g2g-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.g2g-toggle-label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--g2g-text);
+  flex: 1;
+  min-width: 12rem;
+}
+
+.g2g-segment {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid rgba(129, 185, 255, 0.42);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(129, 185, 255, 0.06);
+}
+
+.g2g-segment--wide button {
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+  font-size: 0.82rem;
+}
+
+.g2g-segment button {
+  margin: 0;
+  padding: 0.5rem 1.1rem;
+  border: none;
+  background: transparent;
+  color: var(--g2g-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.g2g-segment button + button {
+  border-left: 1px solid rgba(129, 185, 255, 0.35);
+}
+
+.g2g-segment button:hover {
+  color: var(--g2g-text);
+  background: rgba(129, 185, 255, 0.1);
+}
+
+.g2g-segment button.g2g-segment--active {
+  background: rgba(93, 156, 139, 0.28);
+  color: var(--g2g-text);
+  font-weight: 600;
+}
+
+.g2g-damage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.g2g-damage-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.g2g-damage-row:last-child {
+  border-bottom: none;
+}
+
+.g2g-damage-label {
+  font-size: 0.9rem;
+  color: var(--g2g-text);
+  flex: 1;
+  min-width: 6.5rem;
+}
+
 .g2g-field label {
   display: block;
   font-size: 0.82rem;

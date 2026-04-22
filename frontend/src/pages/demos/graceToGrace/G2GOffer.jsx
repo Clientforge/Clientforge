@@ -1,6 +1,66 @@
 import { useEffect, useState } from 'react';
-import { computeOfferRange, CONDITION_OPTIONS } from './pricingEngine';
+import {
+  computeOfferRange,
+  MILEAGE_SELECT_OPTIONS,
+  BODY_PANEL_KEYS,
+  BODY_PANEL_LABELS,
+} from './pricingEngine';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
+
+function YesNoRow({ label, value, onChange, groupId }) {
+  return (
+    <div className="g2g-toggle-row">
+      <span className="g2g-toggle-label" id={`${groupId}-label`}>
+        {label}
+      </span>
+      <div className="g2g-segment" role="group" aria-labelledby={`${groupId}-label`}>
+        <button
+          type="button"
+          className={value === 'yes' ? 'g2g-segment--active' : ''}
+          onClick={() => onChange('yes')}
+        >
+          Yes
+        </button>
+        <button
+          type="button"
+          className={value === 'no' ? 'g2g-segment--active' : ''}
+          onClick={() => onChange('no')}
+        >
+          No
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DamageRow({ label, value, onChange, groupId }) {
+  return (
+    <div className="g2g-damage-row">
+      <span className="g2g-damage-label" id={`${groupId}-label`}>
+        {label}
+      </span>
+      <div className="g2g-segment g2g-segment--wide" role="group" aria-labelledby={`${groupId}-label`}>
+        <button
+          type="button"
+          className={value === 'none' ? 'g2g-segment--active' : ''}
+          onClick={() => onChange('none')}
+        >
+          No damage
+        </button>
+        <button
+          type="button"
+          className={value === 'some' ? 'g2g-segment--active' : ''}
+          onClick={() => onChange('some')}
+        >
+          Some damage
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const initialBody = () =>
+  Object.fromEntries(BODY_PANEL_KEYS.map((k) => [k, 'none']));
 
 export default function G2GOffer() {
   useEffect(() => {
@@ -17,9 +77,13 @@ export default function G2GOffer() {
   const [bodyClass, setBodyClass] = useState('');
   const [engineNote, setEngineNote] = useState('');
 
-  const [mileage, setMileage] = useState('');
+  const [mileageBracket, setMileageBracket] = useState('');
   const [zip, setZip] = useState('');
-  const [conditionId, setConditionId] = useState(CONDITION_OPTIONS[0].id);
+
+  const [drives, setDrives] = useState('yes');
+  const [tiresInflated, setTiresInflated] = useState('yes');
+  const [tiresAttached, setTiresAttached] = useState('yes');
+  const [bodyDamage, setBodyDamage] = useState(initialBody);
 
   const [result, setResult] = useState(null);
   const [formError, setFormError] = useState('');
@@ -27,6 +91,9 @@ export default function G2GOffer() {
   const handleDecode = async () => {
     setDecodeError('');
     const v = normalizeVin(vin);
+    if (!v) {
+      return;
+    }
     if (!isValidVinFormat(v)) {
       setDecodeError('Enter a valid 17-character VIN (letters and numbers only; no I, O, or Q).');
       return;
@@ -54,6 +121,10 @@ export default function G2GOffer() {
       setFormError('Year, make, and model are required (use VIN decode or enter manually).');
       return;
     }
+    if (!mileageBracket) {
+      setFormError('Select a mileage range.');
+      return;
+    }
     if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
       setFormError('Enter a 5-digit ZIP code.');
       return;
@@ -61,31 +132,40 @@ export default function G2GOffer() {
     const range = computeOfferRange({
       year: year.trim(),
       bodyClass,
-      conditionId,
       zip: zip.trim(),
-      mileage: mileage.trim(),
+      mileageMidpoint: mileageBracket,
+      assessment: {
+        drives,
+        tiresInflated,
+        tiresAttached,
+        body: bodyDamage,
+      },
     });
     setResult(range);
+  };
+
+  const setPanel = (key, val) => {
+    setBodyDamage((prev) => ({ ...prev, [key]: val }));
   };
 
   return (
     <>
       <h1 className="g2g-page-title">Get your estimate</h1>
       <p className="g2g-page-lead">
-        Decode your VIN with NHTSA data, confirm vehicle details, and choose a condition. You&apos;ll get a dollar
-        range from our internal v1 pricing engine (demo — not a binding offer).
+        Optionally decode your VIN with NHTSA data, confirm vehicle details, then answer a few questions about mileage
+        and condition. You&apos;ll get a dollar range from our demo pricing engine — not a binding offer.
       </p>
 
-      <form className="g2g-form" onSubmit={handleEstimate}>
+      <form className="g2g-form g2g-form--offer" onSubmit={handleEstimate}>
         <div className="g2g-field">
-          <label htmlFor="g2g-vin">VIN (optional but recommended)</label>
+          <label htmlFor="g2g-vin">VIN (optional)</label>
           <div className="g2g-row">
             <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
               <input
                 id="g2g-vin"
                 name="vin"
                 autoComplete="off"
-                placeholder="17-character VIN"
+                placeholder="17-character VIN if you have it"
                 value={vin}
                 maxLength={17}
                 onChange={(ev) => setVin(ev.target.value.toUpperCase())}
@@ -125,18 +205,6 @@ export default function G2GOffer() {
         ) : null}
 
         <div className="g2g-field">
-          <label htmlFor="g2g-mileage">Mileage (optional)</label>
-          <input
-            id="g2g-mileage"
-            name="mileage"
-            inputMode="numeric"
-            placeholder="e.g. 145000"
-            value={mileage}
-            onChange={(e) => setMileage(e.target.value)}
-          />
-        </div>
-
-        <div className="g2g-field">
           <label htmlFor="g2g-zip">ZIP code</label>
           <input
             id="g2g-zip"
@@ -150,21 +218,59 @@ export default function G2GOffer() {
           />
         </div>
 
-        <div className="g2g-field">
-          <label htmlFor="g2g-condition">Condition</label>
-          <select
-            id="g2g-condition"
-            name="condition"
-            value={conditionId}
-            onChange={(e) => setConditionId(e.target.value)}
-          >
-            {CONDITION_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
+        <section className="g2g-form-section" aria-labelledby="g2g-car-conditions-heading">
+          <h2 id="g2g-car-conditions-heading" className="g2g-form-section-title">
+            Car conditions
+          </h2>
+
+          <div className="g2g-field">
+            <label htmlFor="g2g-mileage-select">What is the mileage on the car?</label>
+            <select
+              id="g2g-mileage-select"
+              name="mileageBracket"
+              value={mileageBracket}
+              onChange={(e) => setMileageBracket(e.target.value)}
+            >
+              {MILEAGE_SELECT_OPTIONS.map((o) => (
+                <option key={o.label} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <YesNoRow label="Does the car drive?" value={drives} onChange={setDrives} groupId="g2g-drives" />
+          <YesNoRow
+            label="Are all tires inflated with air?"
+            value={tiresInflated}
+            onChange={setTiresInflated}
+            groupId="g2g-tires-air"
+          />
+          <YesNoRow
+            label="Are all the tires attached to the car?"
+            value={tiresAttached}
+            onChange={setTiresAttached}
+            groupId="g2g-tires-attached"
+          />
+        </section>
+
+        <section className="g2g-form-section" aria-labelledby="g2g-body-heading">
+          <h2 id="g2g-body-heading" className="g2g-form-section-title">
+            Body condition
+          </h2>
+          <p className="g2g-form-section-hint">For each area, choose whether there is no damage or some damage.</p>
+          <div className="g2g-damage-list">
+            {BODY_PANEL_KEYS.map((key) => (
+              <DamageRow
+                key={key}
+                label={BODY_PANEL_LABELS[key]}
+                value={bodyDamage[key]}
+                onChange={(v) => setPanel(key, v)}
+                groupId={`g2g-body-${key}`}
+              />
             ))}
-          </select>
-        </div>
+          </div>
+        </section>
 
         {formError ? <div className="g2g-alert g2g-alert--error">{formError}</div> : null}
 
@@ -181,7 +287,7 @@ export default function G2GOffer() {
           </p>
           <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
             Internal base (before condition): ~${result.meta.baseBeforeCondition.toLocaleString()} · Condition factor:{' '}
-            {result.meta.conditionFactor} · Class: {result.meta.vehicleClass} · Scrap floor: $
+            {Number(result.meta.conditionFactor.toFixed(3))} · Class: {result.meta.vehicleClass} · Scrap floor: $
             {result.meta.scrapFloor}
           </p>
           <p className="g2g-disclaimer">

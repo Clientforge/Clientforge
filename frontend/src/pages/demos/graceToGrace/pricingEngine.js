@@ -8,6 +8,72 @@ export const CONDITION_OPTIONS = [
 
 const FACTOR_BY_ID = Object.fromEntries(CONDITION_OPTIONS.map((o) => [o.id, o.factor]));
 
+/** Select values = odometer midpoint for depreciation */
+export const MILEAGE_SELECT_OPTIONS = [
+  { value: '', label: 'Select mileage' },
+  { value: '35000', label: 'Under 50,000' },
+  { value: '75000', label: '50,000 – 100,000' },
+  { value: '125000', label: '100,000 – 150,000' },
+  { value: '175000', label: '150,000 – 200,000' },
+  { value: '225000', label: '200,000+' },
+];
+
+export const BODY_PANEL_KEYS = [
+  'front',
+  'rear',
+  'left',
+  'right',
+  'engine',
+  'flood',
+  'fire',
+  'glass',
+  'airbag',
+];
+
+export const BODY_PANEL_LABELS = {
+  front: 'Front',
+  rear: 'Rear',
+  left: 'Left side',
+  right: 'Right side',
+  engine: 'Engine',
+  flood: 'Flood',
+  fire: 'Fire',
+  glass: 'Glass',
+  airbag: 'Airbag',
+};
+
+/**
+ * Car Conditions + Body Condition → single multiplier (demo v1).
+ * @param {object} [assessment]
+ * @param {'yes'|'no'} [assessment.drives]
+ * @param {'yes'|'no'} [assessment.tiresInflated]
+ * @param {'yes'|'no'} [assessment.tiresAttached]
+ * @param {Record<string, 'none'|'some'>} [assessment.body]
+ */
+export function deriveConditionFactor(assessment) {
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  const drives = a.drives === 'no' ? 'no' : 'yes';
+  const tiresInflated = a.tiresInflated === 'no' ? 'no' : 'yes';
+  const tiresAttached = a.tiresAttached === 'no' ? 'no' : 'yes';
+  const body = a.body && typeof a.body === 'object' ? a.body : {};
+
+  let f = 1;
+  if (drives === 'no') f *= 0.36;
+  if (tiresInflated === 'no') f *= 0.88;
+  if (tiresAttached === 'no') f *= 0.82;
+
+  for (const k of ['front', 'rear', 'left', 'right']) {
+    if (body[k] === 'some') f *= 0.94;
+  }
+  if (body.engine === 'some') f *= 0.72;
+  if (body.flood === 'some') f *= 0.42;
+  if (body.fire === 'some') f *= 0.38;
+  if (body.glass === 'some') f *= 0.9;
+  if (body.airbag === 'some') f *= 0.86;
+
+  return Math.max(0.12, Math.min(1, f));
+}
+
 const CLASS_BASE_USD = {
   pickup: 4200,
   suv: 3800,
@@ -51,13 +117,18 @@ export function computeOfferRange(input) {
   base *= ageFactor(input.year);
   base *= zipVariance(input.zip);
 
-  const mileage = parseInt(String(input.mileage || '').replace(/\D/g, ''), 10);
+  const mid = parseInt(String(input.mileageMidpoint ?? ''), 10);
+  const fromFree = parseInt(String(input.mileage || '').replace(/\D/g, ''), 10);
+  const mileage = !Number.isNaN(mid) && mid > 0 ? mid : fromFree;
   if (!Number.isNaN(mileage) && mileage > 0) {
     const milesFactor = Math.max(0.65, 1 - Math.min(mileage, 250000) / 500000);
     base *= milesFactor;
   }
 
-  const conditionFactor = FACTOR_BY_ID[input.conditionId] ?? 0.5;
+  const conditionFactor =
+    input.assessment != null
+      ? deriveConditionFactor(input.assessment)
+      : FACTOR_BY_ID[input.conditionId] ?? 0.5;
   const adjusted = base * conditionFactor;
   const scrapFloor = SCRAP_FLOOR_BY_CLASS[cls] ?? SCRAP_FLOOR_BY_CLASS.default;
 
