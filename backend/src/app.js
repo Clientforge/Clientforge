@@ -121,7 +121,13 @@ app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
     return res.status(404).type('text').send('Not found');
   }
   const g2gIndex = path.join(G2G_DIR, 'index.html');
-  if (!fs.existsSync(g2gIndex)) return next();
+  if (!fs.existsSync(g2gIndex)) {
+    return res.status(503).json({
+      error: 'Grace to Grace not built',
+      message:
+        'grace-to-grace-web/dist is missing. On the server run: cd backend && npm run build (or npm run build:grace-to-grace). Ensure Render/rootDir is backend and the repo includes grace-to-grace-web.',
+    });
+  }
   return res.sendFile(g2gIndex);
 });
 

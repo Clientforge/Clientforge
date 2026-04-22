@@ -1,0 +1,15 @@
+# Example Render Blueprint — do not enable Blue.yaml sync unless you want a new service.
+# For an EXISTING Web Service, set:
+#   Root Directory: backend
+#   Build Command:  npm install && npm run build
+#   Start Command:  npm start
+# `npm run build` builds grace-to-grace-web/dist and frontend/dist before the server runs.
+
+services:
+  - type: web
+    name: clientforge-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
