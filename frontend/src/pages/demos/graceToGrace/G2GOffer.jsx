@@ -312,54 +312,74 @@ export default function G2GOffer() {
         </button>
       </form>
 
-      {result ? (
+      {result && result.low != null && result.high != null ? (
         <div className="g2g-result">
           <h2>Your estimated range</h2>
-          {result.pointOffer != null ? (
+          {result.pointOffer != null && Number.isFinite(Number(result.pointOffer)) ? (
             <p className="g2g-offer-typical" style={{ margin: '0.35rem 0 0.25rem', fontSize: '1.1rem' }}>
-              Typical offer: <strong>${result.pointOffer.toLocaleString()}</strong>
-              <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
-                {' '}
-                (60% of the way from min to max in the rule band)
-              </span>
+              Typical offer: <strong>${Number(result.pointOffer).toLocaleString()}</strong>
+              {result.meta?.estimator === 'camry_rule_table' ? (
+                <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
+                  {' '}
+                  (60% of the way from min to max in the rule band)
+                </span>
+              ) : null}
             </p>
           ) : null}
           <p className="g2g-offer-range">
-            ${result.low.toLocaleString()} — ${result.high.toLocaleString()}
+            ${Number(result.low).toLocaleString()} — ${Number(result.high).toLocaleString()}
           </p>
-          <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-            {result.meta?.estimator === 'camry_rule_table' ? (
-              <>
-                Rule: {result.meta.yearBand} · Condition band: {result.meta.ruleCondition} · Point formula weight:{' '}
-                {result.meta.conditionFactor} · Class: {result.meta.vehicleClass} · Min (table): $
-                {result.meta.priceLow?.toLocaleString?.() ?? result.meta.scrapFloor} · Max (table): $
-                {result.meta.priceHigh?.toLocaleString?.() ?? result.high}
-              </>
-            ) : (
-              <>
-                Base before condition: ~${result.meta.baseBeforeCondition.toLocaleString()} · Condition:{' '}
-                {Number(result.meta.conditionFactor.toFixed(3))} · Class: {result.meta.vehicleClass} · Scrap floor: $
-                {result.meta.scrapFloor}
-                {result.meta.marketCompsProxy != null ? (
-                  <>
-                    {' '}
-                    · Market proxy: {result.meta.marketCompsProxy} · ZIP scrap: {result.meta.scrapRegionalIndex}
-                    {result.meta.metalCommodityBlend != null ? (
-                      <> · Metal ETF blend: {result.meta.metalCommodityBlend}</>
-                    ) : null}
-                    {result.meta.scrapCombinedIndex != null ? (
-                      <> · Combined scrap: {result.meta.scrapCombinedIndex}</>
-                    ) : null}
-                    {result.meta.alphaVantage?.status != null ? (
-                      <> · Alpha Vantage: {result.meta.alphaVantage.status}</>
-                    ) : null}
-                    {' · '}
-                    Title: {result.meta.titleFactor}
-                  </>
-                ) : null}
-              </>
-            )}
-          </p>
+          {result.meta?.estimator === 'camry_rule_table' ? (
+            <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
+              Rule: {result.meta?.yearBand ?? '—'} · Condition band: {result.meta?.ruleCondition ?? '—'} · Point formula
+              weight: {result.meta?.conditionFactor ?? '—'} · Class: {result.meta?.vehicleClass ?? '—'} · Min (table): $
+              {result.meta?.priceLow != null
+                ? Number(result.meta.priceLow).toLocaleString()
+                : (result.meta?.scrapFloor ?? '—')}{' '}
+              · Max (table): $
+              {result.meta?.priceHigh != null
+                ? Number(result.meta.priceHigh).toLocaleString()
+                : Number(result.high).toLocaleString()}
+            </p>
+          ) : result.meta && typeof result.meta === 'object' ? (
+            <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
+              Base before condition: ~$
+              {result.meta.baseBeforeCondition != null
+                ? Number(result.meta.baseBeforeCondition).toLocaleString()
+                : '—'}{' '}
+              · Condition:{' '}
+              {result.meta.conditionFactor != null && Number.isFinite(Number(result.meta.conditionFactor))
+                ? Number(result.meta.conditionFactor).toFixed(3)
+                : '—'}{' '}
+              · Class: {result.meta.vehicleClass ?? '—'} · Scrap floor: $
+              {result.meta.scrapFloor != null ? Number(result.meta.scrapFloor).toLocaleString() : '—'}
+              {result.meta.marketCompsProxy != null ? (
+                <>
+                  {' '}
+                  · Market proxy: {result.meta.marketCompsProxy} · ZIP scrap: {result.meta.scrapRegionalIndex}
+                  {result.meta.metalCommodityBlend != null ? (
+                    <> · Metal ETF blend: {result.meta.metalCommodityBlend}</>
+                  ) : null}
+                  {result.meta.scrapCombinedIndex != null ? (
+                    <> · Combined scrap: {result.meta.scrapCombinedIndex}</>
+                  ) : null}
+                  {result.meta.alphaVantage?.status != null ? (
+                    <> · Alpha Vantage: {result.meta.alphaVantage.status}</>
+                  ) : null}
+                  {result.meta.titleFactor != null ? (
+                    <>
+                      {' · '}
+                      Title: {result.meta.titleFactor}
+                    </>
+                  ) : null}
+                </>
+              ) : null}
+            </p>
+          ) : (
+            <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
+              Estimated range is shown above. Detail metadata was not available for this response.
+            </p>
+          )}
           <p className="g2g-disclaimer">
             {result.meta?.estimator === 'camry_rule_table'
               ? 'This 2005–2017 Toyota Camry estimate uses a fixed internal rule table and a deterministic point offer (60% from min to max in the band). It is not a market valuation. Title verification, local scrap, and pickup are not included. Not a guaranteed purchase price.'
