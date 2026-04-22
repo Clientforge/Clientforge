@@ -142,6 +142,7 @@ export default function G2GOffer() {
         zip: zip.trim().replace(/\D/g, '').slice(0, 5),
         mileageMidpoint: mileageBracket,
         titleStatus,
+        vin: normalizeVin(vin) || undefined,
         assessment: {
           drives,
           tiresInflated,
@@ -314,35 +315,55 @@ export default function G2GOffer() {
       {result ? (
         <div className="g2g-result">
           <h2>Your estimated range</h2>
+          {result.pointOffer != null ? (
+            <p className="g2g-offer-typical" style={{ margin: '0.35rem 0 0.25rem', fontSize: '1.1rem' }}>
+              Typical offer: <strong>${result.pointOffer.toLocaleString()}</strong>
+              <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
+                {' '}
+                (60% of the way from min to max in the rule band)
+              </span>
+            </p>
+          ) : null}
           <p className="g2g-offer-range">
             ${result.low.toLocaleString()} — ${result.high.toLocaleString()}
           </p>
           <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-            Base before condition: ~${result.meta.baseBeforeCondition.toLocaleString()} · Condition:{' '}
-            {Number(result.meta.conditionFactor.toFixed(3))} · Class: {result.meta.vehicleClass} · Scrap floor: $
-            {result.meta.scrapFloor}
-            {result.meta.marketCompsProxy != null ? (
+            {result.meta?.estimator === 'camry_rule_table' ? (
               <>
-                {' '}
-                · Market proxy: {result.meta.marketCompsProxy} · ZIP scrap: {result.meta.scrapRegionalIndex}
-                {result.meta.metalCommodityBlend != null ? (
-                  <> · Metal ETF blend: {result.meta.metalCommodityBlend}</>
-                ) : null}
-                {result.meta.scrapCombinedIndex != null ? (
-                  <> · Combined scrap: {result.meta.scrapCombinedIndex}</>
-                ) : null}
-                {result.meta.alphaVantage?.status != null ? (
-                  <> · Alpha Vantage: {result.meta.alphaVantage.status}</>
-                ) : null}
-                {' · '}
-                Title: {result.meta.titleFactor}
+                Rule: {result.meta.yearBand} · Condition band: {result.meta.ruleCondition} · Point formula weight:{' '}
+                {result.meta.conditionFactor} · Class: {result.meta.vehicleClass} · Min (table): $
+                {result.meta.priceLow?.toLocaleString?.() ?? result.meta.scrapFloor} · Max (table): $
+                {result.meta.priceHigh?.toLocaleString?.() ?? result.high}
               </>
-            ) : null}
+            ) : (
+              <>
+                Base before condition: ~${result.meta.baseBeforeCondition.toLocaleString()} · Condition:{' '}
+                {Number(result.meta.conditionFactor.toFixed(3))} · Class: {result.meta.vehicleClass} · Scrap floor: $
+                {result.meta.scrapFloor}
+                {result.meta.marketCompsProxy != null ? (
+                  <>
+                    {' '}
+                    · Market proxy: {result.meta.marketCompsProxy} · ZIP scrap: {result.meta.scrapRegionalIndex}
+                    {result.meta.metalCommodityBlend != null ? (
+                      <> · Metal ETF blend: {result.meta.metalCommodityBlend}</>
+                    ) : null}
+                    {result.meta.scrapCombinedIndex != null ? (
+                      <> · Combined scrap: {result.meta.scrapCombinedIndex}</>
+                    ) : null}
+                    {result.meta.alphaVantage?.status != null ? (
+                      <> · Alpha Vantage: {result.meta.alphaVantage.status}</>
+                    ) : null}
+                    {' · '}
+                    Title: {result.meta.titleFactor}
+                  </>
+                ) : null}
+              </>
+            )}
           </p>
           <p className="g2g-disclaimer">
-            Estimates use server v1: seller-reported title, ZIP regional scrap, optional Alpha Vantage ETF metal proxies
-            (SLX / DBB / CPER — not spot $/lb), and a wholesale-style market proxy. Live auction feeds, verified title
-            pulls, and pickup routing are not included yet. Not a guaranteed purchase price.
+            {result.meta?.estimator === 'camry_rule_table'
+              ? 'This 2005–2017 Toyota Camry estimate uses a fixed internal rule table and a deterministic point offer (60% from min to max in the band). It is not a market valuation. Title verification, local scrap, and pickup are not included. Not a guaranteed purchase price.'
+              : 'Estimates use server v1: seller-reported title, ZIP regional scrap, optional Alpha Vantage ETF metal proxies (SLX / DBB / CPER — not spot $/lb), and a wholesale-style market proxy. Live auction feeds, verified title pulls, and pickup routing are not included yet. Not a guaranteed purchase price.'}
           </p>
         </div>
       ) : null}

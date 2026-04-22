@@ -9,6 +9,7 @@
  */
 
 const { getMetalCommodityBlend } = require('./alphaVantage.service');
+const { tryComputeCamryRuleEstimate } = require('./graceCamryRule.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -217,6 +218,7 @@ function validateEstimateBody(body) {
   if (assessment == null || typeof assessment !== 'object') {
     throw new Error('assessment object is required.');
   }
+  const rawVin = body.vin != null ? String(body.vin).trim().toUpperCase().replace(/\s/g, '') : '';
   return {
     year: String(year).trim(),
     make: String(make).trim(),
@@ -228,11 +230,16 @@ function validateEstimateBody(body) {
     assessment,
     titleStatus: titleStatus != null ? String(titleStatus).trim() : 'clean',
     conditionId: body.conditionId,
+    vin: rawVin.length === 17 ? rawVin : '',
   };
 }
 
 async function computeGraceEstimate(body) {
   const validated = validateEstimateBody(body);
+  const camry = await tryComputeCamryRuleEstimate(validated);
+  if (camry) {
+    return camry;
+  }
   const metal = await getMetalCommodityBlend();
   const metalMeta = {
     status: metal.status,
