@@ -1,9 +1,9 @@
-# Example Render Blueprint — do not enable Blue.yaml sync unless you want a new service.
-# For an EXISTING Web Service, set:
+# Example Render Blueprint — do not enable Blueprint sync unless you want a new service.
+# For a Web Service in the Render dashboard, match these (see DEPLOYMENT.md → Render):
 #   Root Directory: backend
 #   Build Command:  npm install && npm run build
-#   Start Command:  npm start
-# `npm run build` builds grace-to-grace-web/dist and frontend/dist before the server runs.
+#   Start Command:  npx knex migrate:latest && npm start
+# `npm run build` runs build:webapps (grace-to-grace-web + frontend) so Express can serve them.
 
 services:
   - type: web
@@ -11,5 +11,5 @@ services:
     runtime: node
     rootDir: backend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npx knex migrate:latest && npm start
     healthCheckPath: /health

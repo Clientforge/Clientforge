@@ -1,6 +1,8 @@
 node_modules
 frontend/node_modules
 frontend/dist
+grace-to-grace-web/node_modules
+grace-to-grace-web/dist
 backend/node_modules
 .env
 *.md

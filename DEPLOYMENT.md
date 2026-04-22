@@ -102,18 +102,35 @@ pm2 startup
 
 ### Railway
 1. Connect your GitHub repo
-2. Set root directory to `backend`
-3. Add a PostgreSQL service
-4. Set environment variables from `.env.production`
-5. Build command: `cd ../frontend && npm ci && npm run build && cd ../backend && npm ci`
-6. Start command: `npx knex migrate:latest && node src/index.js`
+2. Set **root directory** to `backend`
+3. Add a **PostgreSQL** service and attach `DATABASE_URL` to the web service
+4. **Build command:** `npm install && npm run build`  
+   (from `backend`, this runs `build:webapps` — builds `../grace-to-grace-web` and `../frontend`)
+5. **Start command:** `npx knex migrate:latest && npm start`
+6. Set environment variables from `backend/.env.example` (production values)
 
-### Render
-1. Create a Web Service pointing to repo
-2. Build command: `cd frontend && npm ci && npm run build && cd ../backend && npm ci`
-3. Start command: `cd backend && npx knex migrate:latest && node src/index.js`
-4. Add a PostgreSQL database
-5. Set environment variables
+### Render (current setup)
+
+Single **Web Service** + **PostgreSQL**. The API serves the built Vite apps (`frontend/dist`, `grace-to-grace-web/dist`) from Express — no separate static host required.
+
+1. **Create PostgreSQL** in the same region as the web service. Set **`DATABASE_URL`** on the web service to that database (or use Render’s **Connect** to inject it).
+2. **Create Web Service** from this repo (e.g. branch `main`):
+   - **Root Directory:** `backend`  
+   - **Build Command:** `npm install && npm run build`  
+   - **Start Command:** `npx knex migrate:latest && npm start`  
+   - **Health Check Path:** `/health`
+3. **Environment variables** (see `backend/.env.example` for the full list). Minimum in production:
+   - `NODE_ENV=production`
+   - `JWT_SECRET` — strong random (e.g. `openssl rand -hex 32`)
+   - `DATABASE_URL` — from the Render PostgreSQL instance (required for Knex migrations)
+   - `CORS_ORIGIN` — e.g. `https://<your-service>.onrender.com` or your custom domain
+   - `BASE_URL` — same public URL as the service (webhooks, links in emails)
+   - `DB_SSL=true` if connections require SSL (use what works with Render Postgres)
+4. **Open the app** at Render’s default URL, e.g. `https://<name>.onrender.com` — test `/health`, then `/demo/grace-to-grace`.
+5. **Custom domain (e.g. `app.clientforge.ai`):** Web Service → **Custom Domains** → add the hostname, then at your DNS provider add the **CNAME** (or A records) Render shows. Until that DNS exists, the domain will not resolve (`DNS_PROBE_FINISHED_NXDOMAIN` = DNS, not application code).
+6. The repo’s `render.example.yaml` matches the same **rootDir**, build, start, and health check for Blueprint-style deploys.
+
+**Render: Docker (alternative)** — If you use **Environment: Docker** instead of Node: set **Root Directory** to **empty** (repository root) so Render finds the root `Dockerfile`. The multi-stage `Dockerfile` builds **`frontend/`** and **`grace-to-grace-web/`**, then runs migrations + the API. Do **not** set root to `backend` for Docker, or the build will look for `backend/Dockerfile` and fail.
 
 ---
 
