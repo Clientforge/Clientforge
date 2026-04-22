@@ -1,4 +1,5 @@
 const express = require('express');
+const { computeGraceEstimate } = require('../services/gracePricingV1.service');
 
 const router = express.Router();
 
@@ -19,6 +20,18 @@ router.get('/vin-decode/:vin', async (req, res) => {
     return res.json(data);
   } catch (err) {
     return res.status(502).json({ error: 'Could not reach VIN service.' });
+  }
+});
+
+/** Grace to Grace v1 estimate (title + regional scrap + market proxy). Public, no auth. */
+router.post('/grace-estimate', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const out = computeGraceEstimate(req.body);
+    return res.json(out);
+  } catch (err) {
+    const msg = err.message || 'Estimate failed.';
+    return res.status(400).json({ error: msg });
   }
 });
 
