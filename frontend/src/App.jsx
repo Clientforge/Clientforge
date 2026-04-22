@@ -18,6 +18,7 @@ import TenantListPage from './pages/admin/TenantListPage';
 import TenantDetailPage from './pages/admin/TenantDetailPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import GoldenCrownDemoPage from './pages/demos/GoldenCrownDemoPage';
+import GraceToGraceDemoPage from './pages/demos/graceToGrace/GraceToGraceDemoPage';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/demo/golden-crown-kitchen" element={<GoldenCrownDemoPage />} />
+          <Route path="/demo/grace-to-grace/*" element={<GraceToGraceDemoPage />} />
 
           {/* Tenant routes */}
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

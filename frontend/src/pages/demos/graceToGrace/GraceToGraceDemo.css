@@ -1,0 +1,330 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* Scoped so the main ClientForge shell is unaffected */
+.g2g-demo-root {
+  --g2g-bg: #0f1419;
+  --g2g-surface: #161d26;
+  --g2g-elevated: #1c2630;
+  --g2g-border: rgba(255, 255, 255, 0.08);
+  --g2g-text: #e8eaed;
+  --g2g-muted: #9aa3ad;
+  --g2g-accent: #5d9c8b;
+  --g2g-accent-dark: #3f7567;
+  --g2g-amber: #e3b86a;
+  --g2g-danger: #c45c5c;
+  --g2g-radius: 12px;
+  --g2g-font: 'DM Sans', system-ui, sans-serif;
+  --g2g-serif: 'Instrument Serif', Georgia, serif;
+  min-height: 100vh;
+  background: var(--g2g-bg);
+  color: var(--g2g-text);
+  font-family: var(--g2g-font);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+.g2g-demo-root *,
+.g2g-demo-root *::before,
+.g2g-demo-root *::after {
+  box-sizing: border-box;
+}
+
+.g2g-demo-root a {
+  color: var(--g2g-accent);
+  text-decoration: none;
+}
+
+.g2g-demo-root a:hover {
+  text-decoration: underline;
+}
+
+.g2g-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.g2g-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(15, 20, 25, 0.92);
+  border-bottom: 1px solid var(--g2g-border);
+  backdrop-filter: blur(8px);
+}
+
+.g2g-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.g2g-logo {
+  font-family: var(--g2g-serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--g2g-text);
+}
+
+.g2g-logo span {
+  color: var(--g2g-accent);
+}
+
+a.g2g-logo {
+  text-decoration: none;
+}
+
+a.g2g-logo:hover {
+  text-decoration: none;
+  opacity: 0.92;
+}
+
+.g2g-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 1.1rem;
+  flex-wrap: wrap;
+}
+
+.g2g-nav a {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--g2g-muted);
+  text-decoration: none;
+}
+
+.g2g-nav a:hover {
+  color: var(--g2g-text);
+}
+
+.g2g-nav a.g2g-nav--active {
+  color: var(--g2g-accent);
+}
+
+.g2g-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.g2g-hero {
+  text-align: center;
+  padding: 2.5rem 0 3rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.g2g-hero h1 {
+  font-family: var(--g2g-serif);
+  font-size: clamp(2rem, 5vw, 2.85rem);
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0 0 1rem;
+}
+
+.g2g-hero p {
+  color: var(--g2g-muted);
+  font-size: 1.05rem;
+  margin: 0 0 1.75rem;
+}
+
+.g2g-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.6rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.g2g-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.g2g-btn--primary {
+  background: linear-gradient(135deg, var(--g2g-accent) 0%, var(--g2g-accent-dark) 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(93, 156, 139, 0.35);
+}
+
+.g2g-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.g2g-btn--ghost {
+  background: transparent;
+  color: var(--g2g-text);
+  border: 1px solid var(--g2g-border);
+}
+
+.g2g-btn--ghost:hover:not(:disabled) {
+  border-color: var(--g2g-muted);
+}
+
+.g2g-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+@media (min-width: 720px) {
+  .g2g-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.g2g-card {
+  background: var(--g2g-surface);
+  border: 1px solid var(--g2g-border);
+  border-radius: var(--g2g-radius);
+  padding: 1.35rem 1.25rem;
+}
+
+.g2g-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.g2g-card p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--g2g-muted);
+}
+
+.g2g-page-title {
+  font-family: var(--g2g-serif);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 400;
+  margin: 0 0 0.5rem;
+}
+
+.g2g-page-lead {
+  color: var(--g2g-muted);
+  margin: 0 0 2rem;
+  max-width: 42rem;
+}
+
+.g2g-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 36rem;
+}
+
+.g2g-field label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--g2g-muted);
+  margin-bottom: 0.35rem;
+}
+
+.g2g-field input,
+.g2g-field select,
+.g2g-field textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--g2g-border);
+  background: var(--g2g-elevated);
+  color: var(--g2g-text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.g2g-field input:focus,
+.g2g-field select:focus,
+.g2g-field textarea:focus {
+  outline: none;
+  border-color: var(--g2g-accent);
+  box-shadow: 0 0 0 3px rgba(93, 156, 139, 0.2);
+}
+
+.g2g-field-hint {
+  font-size: 0.78rem;
+  color: var(--g2g-muted);
+  margin-top: 0.35rem;
+}
+
+.g2g-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.g2g-row .g2g-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.g2g-alert {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.g2g-alert--error {
+  background: rgba(196, 92, 92, 0.12);
+  border: 1px solid rgba(196, 92, 92, 0.35);
+  color: #e8a0a0;
+}
+
+.g2g-result {
+  margin-top: 2rem;
+  padding: 1.5rem 1.35rem;
+  border-radius: var(--g2g-radius);
+  background: linear-gradient(145deg, var(--g2g-elevated) 0%, var(--g2g-surface) 100%);
+  border: 1px solid rgba(227, 184, 106, 0.25);
+}
+
+.g2g-result h2 {
+  font-family: var(--g2g-serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  margin: 0 0 0.75rem;
+}
+
+.g2g-offer-range {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  color: var(--g2g-amber);
+  margin: 0 0 0.75rem;
+}
+
+.g2g-disclaimer {
+  font-size: 0.8rem;
+  color: var(--g2g-muted);
+  margin: 1rem 0 0;
+  line-height: 1.45;
+}
+
+.g2g-decode-meta {
+  font-size: 0.88rem;
+  color: var(--g2g-muted);
+  margin-top: 0.75rem;
+}
+
+.g2g-muted-block {
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--g2g-border);
+}
