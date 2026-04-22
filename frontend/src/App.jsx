@@ -18,7 +18,12 @@ import TenantListPage from './pages/admin/TenantListPage';
 import TenantDetailPage from './pages/admin/TenantDetailPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import GoldenCrownDemoPage from './pages/demos/GoldenCrownDemoPage';
-import GraceToGraceDemoPage from './pages/demos/graceToGrace/GraceToGraceDemoPage';
+import G2GShell from './pages/demos/graceToGrace/G2GShell';
+import G2GHome from './pages/demos/graceToGrace/G2GHome';
+import G2GOffer from './pages/demos/graceToGrace/G2GOffer';
+import G2GContact from './pages/demos/graceToGrace/G2GContact';
+
+const G2G_BASE = '/demo/grace-to-grace';
 
 export default function App() {
   return (
@@ -29,7 +34,12 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/demo/golden-crown-kitchen" element={<GoldenCrownDemoPage />} />
-          <Route path="/demo/grace-to-grace/*" element={<GraceToGraceDemoPage />} />
+          <Route path={G2G_BASE} element={<G2GShell />}>
+            <Route index element={<G2GHome />} />
+            <Route path="offer" element={<G2GOffer />} />
+            <Route path="contact" element={<G2GContact />} />
+            <Route path="*" element={<Navigate to={G2G_BASE} replace />} />
+          </Route>
 
           {/* Tenant routes */}
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
