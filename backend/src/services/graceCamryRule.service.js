@@ -1,19 +1,23 @@
 /**
- * Grace to Grace — Toyota Camry (2005–2017) rule engine v2.
+ * Grace to Grace — Toyota Camry (2005–2017) rule engine v3.
+ *
+ * Base price always comes from the **running** row (year band + running),
+ * so severe conditions (flood, accident band, etc.) never re-price upward
+ * by switching to a different table row.
  *
  * Deterministic pipeline:
  *   1) Gate (make/model/year)  → fall back to v1 if ineligible.
- *   2) Condition gate           → picks rule band (non_running | running | accident).
- *   3) DB lookup                → priceLow / priceHigh from vehicle_price_rules.
- *   4) Point estimate           → priceLow + 0.6 * (priceHigh - priceLow).
- *   5) Multipliers              → mileage + title, clamped to [0.35, 1.10].
- *   6) Flat deductions          → tires / glass / airbag / body panels.
- *   7) Clamp                    → never below priceLow, never above priceHigh.
- *   8) Persist pricing_requests and return meta for the UI.
+ *   2) DB lookup (running)      → priceLow / priceHigh, scrap floor = priceLow.
+ *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow).
+ *   4) Multipliers (mileage × title) → clamped to [0.35, 1.10].
+ *   5) Drivability / tires     → all multiplicative; no additive deductions.
+ *   6) Body/damage penalties   → per-field multipliers when body[field] === 'some'.
+ *   7) Clean boost             → 1.05 only when no body damage is reported.
+ *   8) Clamp                   → [scrapFloor, priceHigh] from the running row.
+ *   9) Persist pricing_requests and return meta for the UI.
  *
- * Guardrail: factors that choose the condition band (drives, engine, fire, flood,
- * multiple body panels) are NOT also applied as multipliers/deductions, so the
- * penalty is never counted twice.
+ * `mapAssessmentToCondition` is kept for labels / logging only (assessment
+ * category), not for which DB row is used in pricing.
  */
 
 const db = require('../db/connection');
@@ -42,16 +46,35 @@ const TITLE_MULTIPLIERS = {
   parts_only: 0.55,
 };
 
-const DEDUCTIONS = {
-  tiresAttachedNo: 150,
-  tiresInflatedNo: 75,
-  glassSome: 100,
-  airbagSome: 150,
-  panelSomeEach: 75,
-};
-
 const MULTIPLIER_FLOOR = 0.35;
 const MULTIPLIER_CEILING = 1.1;
+
+const BASE_RULE_CONDITION = 'running';
+
+/** When assessment body[field] === 'some', multiply by this (always < 1 for damage). */
+const DAMAGE_PENALTIES = {
+  front: 0.95,
+  rear: 0.97,
+  left_side: 0.97,
+  right_side: 0.97,
+  engine: 0.7,
+  flood: 0.5,
+  fire: 0.4,
+  glass: 0.95,
+  airbag: 0.85,
+};
+
+const ASSESSMENT_TO_PENALTY = {
+  front: 'front',
+  rear: 'rear',
+  left: 'left_side',
+  right: 'right_side',
+  engine: 'engine',
+  flood: 'flood',
+  fire: 'fire',
+  glass: 'glass',
+  airbag: 'airbag',
+};
 
 const PANEL_KEYS = ['front', 'rear', 'left', 'right'];
 
@@ -84,8 +107,8 @@ function isCamryCandidate(make, model) {
 }
 
 /**
- * Decide rule band. First match wins (severity ordered).
- * Returns: { condition, reason } — reason is meta-only.
+ * Decide assessment category. Used for display / DB logging only — not the pricing row.
+ * Returns: { condition, reason }.
  */
 function mapAssessmentToCondition(assessment) {
   const a = assessment && typeof assessment === 'object' ? assessment : {};
@@ -118,45 +141,30 @@ function titleMultiplier(titleStatus) {
   return TITLE_MULTIPLIERS[k] ?? TITLE_MULTIPLIERS.clean;
 }
 
-function computeDeductions(assessment, conditionReason) {
+/**
+ * @returns {{ factor: number, applied: Record<string, number> }} Product of all damage multipliers; applied maps penalty key → factor.
+ */
+function computeDamageMultiplierProduct(assessment) {
   const a = assessment && typeof assessment === 'object' ? assessment : {};
   const body = a.body && typeof a.body === 'object' ? a.body : {};
-  const details = {};
-  let total = 0;
+  let factor = 1;
+  const applied = {};
 
-  if (a.tiresAttached === 'no') {
-    details.tiresAttachedNo = DEDUCTIONS.tiresAttachedNo;
-    total += DEDUCTIONS.tiresAttachedNo;
-  }
-  if (a.tiresInflated === 'no') {
-    details.tiresInflatedNo = DEDUCTIONS.tiresInflatedNo;
-    total += DEDUCTIONS.tiresInflatedNo;
-  }
-  if (body.glass === 'some') {
-    details.glassSome = DEDUCTIONS.glassSome;
-    total += DEDUCTIONS.glassSome;
-  }
-
-  // Body damage already forced the `accident` band — skip per-panel/airbag deductions to avoid double-dip.
-  const bandAlreadyPenalized =
-    conditionReason === 'multiple_body_panels'
-    || conditionReason === 'engine_damage'
-    || conditionReason === 'fire_damage'
-    || conditionReason === 'flood_damage';
-  if (!bandAlreadyPenalized) {
-    if (body.airbag === 'some') {
-      details.airbagSome = DEDUCTIONS.airbagSome;
-      total += DEDUCTIONS.airbagSome;
-    }
-    const panels = PANEL_KEYS.filter((k) => body[k] === 'some');
-    if (panels.length > 0) {
-      details.panelsSome = panels.length * DEDUCTIONS.panelSomeEach;
-      details.panelsSomeKeys = panels;
-      total += panels.length * DEDUCTIONS.panelSomeEach;
+  for (const [bodyKey, penaltyKey] of Object.entries(ASSESSMENT_TO_PENALTY)) {
+    if (body[bodyKey] === 'some') {
+      const p = DAMAGE_PENALTIES[penaltyKey];
+      if (p != null && p < 1) {
+        applied[penaltyKey] = p;
+        factor *= p;
+      }
     }
   }
 
-  return { total, details };
+  return { factor, applied };
+}
+
+function hasNoBodyDamage(assessment) {
+  return computeDamageMultiplierProduct(assessment).factor === 1;
 }
 
 function clamp(value, min, max) {
@@ -204,7 +212,7 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   let rule;
   try {
-    rule = await loadRule({ yearBand, condition });
+    rule = await loadRule({ yearBand, condition: BASE_RULE_CONDITION });
   } catch (err) {
     console.error('[graceCamry] rule lookup failed:', err.message);
     return null;
@@ -213,20 +221,44 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   const priceLow = Number(rule.price_low);
   const priceHigh = Number(rule.price_high);
-  const point = finalOfferFromBand(priceLow, priceHigh);
+  const scrapFloor = priceLow;
+
+  const basePrice = finalOfferFromBand(priceLow, priceHigh);
 
   const mileageMult = mileageMultiplier(validated.mileageMidpoint);
   const titleMult = titleMultiplier(validated.titleStatus);
-  const rawMult = mileageMult * titleMult;
-  const clampedMult = clamp(rawMult, MULTIPLIER_FLOOR, MULTIPLIER_CEILING);
+  const rawMileageTitle = mileageMult * titleMult;
+  const appliedMileageTitle = clamp(rawMileageTitle, MULTIPLIER_FLOOR, MULTIPLIER_CEILING);
 
-  const { total: deductionsTotal, details: deductionsBreakdown } = computeDeductions(
+  let price = basePrice * appliedMileageTitle;
+
+  const a = validated.assessment && typeof validated.assessment === 'object' ? validated.assessment : {};
+  const drivabilityMult = a.drives === 'no' ? 0.6 : 1;
+  if (drivabilityMult < 1) {
+    price *= drivabilityMult;
+  }
+
+  const tireIssue = a.tiresAttached === 'no' || a.tiresInflated === 'no';
+  const tiresMult = tireIssue ? 0.9 : 1;
+  if (tiresMult < 1) {
+    price *= tiresMult;
+  }
+
+  const { factor: damageFactor, applied: damageApplied } = computeDamageMultiplierProduct(
     validated.assessment,
-    reason,
   );
+  if (damageFactor < 1) {
+    price *= damageFactor;
+  }
 
-  const rawOffer = Math.round(point * clampedMult - deductionsTotal);
-  const finalOffer = clamp(rawOffer, priceLow, priceHigh);
+  const cleanBoostEligible = hasNoBodyDamage(validated.assessment);
+  const cleanBoostMult = cleanBoostEligible ? 1.05 : 1;
+  if (cleanBoostMult > 1) {
+    price *= cleanBoostMult;
+  }
+
+  const rawOffer = Math.round(price);
+  const finalOffer = clamp(rawOffer, scrapFloor, priceHigh);
 
   const yearNum = parseInt(String(validated.year), 10) || 0;
   const vin = validated.vin && validated.vin.length === 17 ? validated.vin : null;
@@ -251,30 +283,42 @@ async function tryComputeCamryRuleEstimate(validated) {
     high: priceHigh,
     pointOffer: finalOffer,
     meta: {
-      modelVersion: 'camry_rule_table_v2',
+      modelVersion: 'camry_rule_table_v3',
       estimator: 'camry_rule_table',
       yearBand,
       ruleCondition: condition,
       ruleConditionReason: reason,
+      baseRule: BASE_RULE_CONDITION,
       priceLow,
       priceHigh,
-      pointFromBand: point,
+      pointFromBand: basePrice,
       pointOffer: finalOffer,
       conditionFactor: 0.6,
       multipliers: {
         mileage: Number(mileageMult.toFixed(3)),
         title: Number(titleMult.toFixed(3)),
-        raw: Number(rawMult.toFixed(3)),
-        applied: Number(clampedMult.toFixed(3)),
+        rawMileageTitle: Number(rawMileageTitle.toFixed(3)),
+        appliedMileageTitle: Number(appliedMileageTitle.toFixed(3)),
+        drivability: drivabilityMult,
+        tires: tiresMult,
+        damage: Number(damageFactor.toFixed(4)),
+        cleanBoost: cleanBoostMult,
+        combinedPreClamp: Number(
+          (
+            appliedMileageTitle
+            * drivabilityMult
+            * tiresMult
+            * damageFactor
+            * cleanBoostMult
+          ).toFixed(4),
+        ),
       },
-      deductions: {
-        total: deductionsTotal,
-        ...deductionsBreakdown,
-      },
+      damagePenalties: damageApplied,
+      cleanBoostApplied: cleanBoostMult > 1,
       clamped: rawOffer !== finalOffer,
       vehicleClass: 'camry',
-      baseBeforeCondition: point,
-      scrapFloor: priceLow,
+      baseBeforeCondition: basePrice,
+      scrapFloor,
       titleStatus: String(validated.titleStatus || 'clean'),
     },
   };
@@ -288,8 +332,10 @@ module.exports = {
   finalOfferFromBand,
   mileageMultiplier,
   titleMultiplier,
-  computeDeductions,
+  computeDamageMultiplierProduct,
+  hasNoBodyDamage,
   MILEAGE_MULTIPLIERS,
   TITLE_MULTIPLIERS,
-  DEDUCTIONS,
+  DAMAGE_PENALTIES,
+  BASE_RULE_CONDITION,
 };

@@ -332,17 +332,47 @@ export default function G2GOffer() {
           {result.meta?.estimator === 'camry_rule_table' ? (
             <div style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
               <p style={{ margin: '0 0 0.4rem' }}>
-                Rule band: <strong>{result.meta?.yearBand ?? '—'}</strong> · Condition:{' '}
+                Rule band: <strong>{result.meta?.yearBand ?? '—'}</strong> · Base row:{' '}
+                <strong>{result.meta?.baseRule ?? 'running'}</strong> · Assessment:{' '}
                 <strong>{result.meta?.ruleCondition ?? '—'}</strong>
-                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} · Table min/max: $
+                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} · Table
+                min/max: $
                 {result.meta?.priceLow != null ? Number(result.meta.priceLow).toLocaleString() : '—'} – $
                 {result.meta?.priceHigh != null ? Number(result.meta.priceHigh).toLocaleString() : '—'}
               </p>
               {result.meta?.multipliers ? (
                 <p style={{ margin: '0 0 0.4rem' }}>
                   Multipliers — mileage: {result.meta.multipliers.mileage ?? '—'} · title:{' '}
-                  {result.meta.multipliers.title ?? '—'} · applied:{' '}
-                  <strong>{result.meta.multipliers.applied ?? '—'}</strong>
+                  {result.meta.multipliers.title ?? '—'} · mileage/title:{' '}
+                  <strong>
+                    {result.meta.multipliers.appliedMileageTitle != null
+                      ? result.meta.multipliers.appliedMileageTitle
+                      : (result.meta.multipliers.applied ?? '—')}
+                  </strong>
+                  {result.meta.multipliers.drivability != null
+                    && result.meta.multipliers.drivability < 1 ? (
+                    <> · non-runner: {result.meta.multipliers.drivability}</>
+                  ) : null}
+                  {result.meta.multipliers.tires != null && result.meta.multipliers.tires < 1 ? (
+                    <> · tires: {result.meta.multipliers.tires}</>
+                  ) : null}
+                  {result.meta.multipliers.damage != null && result.meta.multipliers.damage < 1 ? (
+                    <> · body damage: {result.meta.multipliers.damage}</>
+                  ) : null}
+                  {result.meta?.cleanBoostApplied ? (
+                    <> · clean: {result.meta.multipliers?.cleanBoost ?? 1.05}</>
+                  ) : null}
+                  {result.meta.multipliers.combinedPreClamp != null ? (
+                    <> · combined: {result.meta.multipliers.combinedPreClamp}</>
+                  ) : null}
+                </p>
+              ) : null}
+              {result.meta?.damagePenalties && Object.keys(result.meta.damagePenalties).length > 0 ? (
+                <p style={{ margin: '0 0 0.4rem' }}>
+                  Damage factors:{' '}
+                  {Object.entries(result.meta.damagePenalties)
+                    .map(([k, v]) => `${k} ×${v}`)
+                    .join(' · ')}
                 </p>
               ) : null}
               {result.meta?.deductions && Number(result.meta.deductions.total) > 0 ? (
