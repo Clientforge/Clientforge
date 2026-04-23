@@ -330,37 +330,17 @@ export default function G2GOffer() {
             ${Number(result.low).toLocaleString()} — ${Number(result.high).toLocaleString()}
           </p>
           {result.meta?.estimator === 'camry_rule_table' ? (
-            <div style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-              <p style={{ margin: '0 0 0.4rem' }}>
-                Rule band: <strong>{result.meta?.yearBand ?? '—'}</strong> · Condition:{' '}
-                <strong>{result.meta?.ruleCondition ?? '—'}</strong>
-                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} · Table min/max: $
-                {result.meta?.priceLow != null ? Number(result.meta.priceLow).toLocaleString() : '—'} – $
-                {result.meta?.priceHigh != null ? Number(result.meta.priceHigh).toLocaleString() : '—'}
-              </p>
-              {result.meta?.multipliers ? (
-                <p style={{ margin: '0 0 0.4rem' }}>
-                  Multipliers — mileage: {result.meta.multipliers.mileage ?? '—'} · title:{' '}
-                  {result.meta.multipliers.title ?? '—'} · applied:{' '}
-                  <strong>{result.meta.multipliers.applied ?? '—'}</strong>
-                </p>
-              ) : null}
-              {result.meta?.deductions && Number(result.meta.deductions.total) > 0 ? (
-                <p style={{ margin: '0 0 0.4rem' }}>
-                  Deductions: -${Number(result.meta.deductions.total).toLocaleString()}
-                  {result.meta.deductions.tiresAttachedNo ? <> · tires loose</> : null}
-                  {result.meta.deductions.tiresInflatedNo ? <> · tires flat</> : null}
-                  {result.meta.deductions.glassSome ? <> · glass</> : null}
-                  {result.meta.deductions.airbagSome ? <> · airbag</> : null}
-                  {result.meta.deductions.panelsSomeKeys?.length ? (
-                    <> · body panels: {result.meta.deductions.panelsSomeKeys.join(', ')}</>
-                  ) : null}
-                </p>
-              ) : null}
-              {result.meta?.clamped ? (
-                <p style={{ margin: 0 }}>Offer clamped to the rule band min/max.</p>
-              ) : null}
-            </div>
+            <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
+              Rule: {result.meta?.yearBand ?? '—'} · Condition band: {result.meta?.ruleCondition ?? '—'} · Point formula
+              weight: {result.meta?.conditionFactor ?? '—'} · Class: {result.meta?.vehicleClass ?? '—'} · Min (table): $
+              {result.meta?.priceLow != null
+                ? Number(result.meta.priceLow).toLocaleString()
+                : (result.meta?.scrapFloor ?? '—')}{' '}
+              · Max (table): $
+              {result.meta?.priceHigh != null
+                ? Number(result.meta.priceHigh).toLocaleString()
+                : Number(result.high).toLocaleString()}
+            </p>
           ) : result.meta && typeof result.meta === 'object' ? (
             <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
               Base before condition: ~$
