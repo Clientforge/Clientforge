@@ -321,7 +321,8 @@ export default function G2GOffer() {
               {result.meta?.estimator === 'camry_rule_table' ? (
                 <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
                   {' '}
-                  (60% of the way from min to max in the rule band)
+                  (from the reference band, then condition multipliers; floor is scrap value, not the table
+                  minimum)
                 </span>
               ) : null}
             </p>
@@ -335,10 +336,16 @@ export default function G2GOffer() {
                 Rule band: <strong>{result.meta?.yearBand ?? '—'}</strong> · Base row:{' '}
                 <strong>{result.meta?.baseRule ?? 'running'}</strong> · Assessment:{' '}
                 <strong>{result.meta?.ruleCondition ?? '—'}</strong>
-                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} · Table
-                min/max: $
+                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} ·                 Reference (running) min/max: $
                 {result.meta?.priceLow != null ? Number(result.meta.priceLow).toLocaleString() : '—'} – $
                 {result.meta?.priceHigh != null ? Number(result.meta.priceHigh).toLocaleString() : '—'}
+                {result.meta?.scrapFloor != null && result.meta?.priceLow != null
+                  && Number(result.meta.scrapFloor) < Number(result.meta.priceLow) ? (
+                  <> · Hard floor (scrap): ${Number(result.meta.scrapFloor).toLocaleString()}</>
+                ) : result.meta?.scrapFloor != null ? (
+                  <> · Hard floor: ${Number(result.meta.scrapFloor).toLocaleString()}</>
+                ) : null}
+                {result.meta?.scrapSource ? <> · Floor source: {result.meta.scrapSource}</> : null}
               </p>
               {result.meta?.multipliers ? (
                 <p style={{ margin: '0 0 0.4rem' }}>

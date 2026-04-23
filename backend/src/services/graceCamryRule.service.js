@@ -7,14 +7,15 @@
  *
  * Deterministic pipeline:
  *   1) Gate (make/model/year)  → fall back to v1 if ineligible.
- *   2) DB lookup (running)      → priceLow / priceHigh, scrap floor = priceLow.
- *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow).
+ *   2) DB lookup (running)      → reference priceLow / priceHigh for the base only.
+ *      Lookup (non_running)    → `price_low` = scrap floor (true minimum, below running band min).
+ *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow) from the running row.
  *   4) Multipliers (mileage × title) → clamped to [0.35, 1.10] (after base, before drivability).
  *   5) Drivability            → 0.6 if the car does not drive.
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
  *   7) Body/damage penalties  → per-field when body[field] === 'some'.
  *   8) Clean boost            → 1.05 when no body damage.
- *   9) Clamp                  → [scrapFloor, priceHigh] from the running row.
+ *   9) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
  *  10) Persist pricing_requests and return meta for the UI.
  *
  * `mapAssessmentToCondition` is kept for labels / logging only (assessment
@@ -51,6 +52,8 @@ const MULTIPLIER_FLOOR = 0.35;
 const MULTIPLIER_CEILING = 1.1;
 
 const BASE_RULE_CONDITION = 'running';
+/** `vehicle_price_rules` row used only for a realistic hard minimum (price_low) per year band. */
+const SCRAP_RULE_CONDITION = 'non_running';
 
 /** When assessment body[field] === 'some', multiply by this (always < 1 for damage). */
 const DAMAGE_PENALTIES = {
@@ -211,6 +214,26 @@ async function loadRule({ yearBand, condition }) {
   return result.rows[0];
 }
 
+/**
+ * True minimum for offers: non_running band’s `price_low`, or a fraction of running `price_low` if missing.
+ */
+function resolveScrapFloor(scrapRow, runningPriceLow) {
+  const runLow = Number(runningPriceLow);
+  if (scrapRow && scrapRow.price_low != null) {
+    const s = Number(scrapRow.price_low);
+    if (Number.isFinite(s) && s >= 0) {
+      if (Number.isFinite(runLow) && s > runLow) {
+        return Math.max(0, Math.floor(runLow * 0.15));
+      }
+      return s;
+    }
+  }
+  if (Number.isFinite(runLow) && runLow > 0) {
+    return Math.max(0, Math.floor(runLow * 0.2));
+  }
+  return 100;
+}
+
 async function logPricingRequest({
   vin,
   make,
@@ -239,8 +262,12 @@ async function tryComputeCamryRuleEstimate(validated) {
   const { condition, reason } = mapAssessmentToCondition(validated.assessment);
 
   let rule;
+  let scrapRule;
   try {
-    rule = await loadRule({ yearBand, condition: BASE_RULE_CONDITION });
+    [rule, scrapRule] = await Promise.all([
+      loadRule({ yearBand, condition: BASE_RULE_CONDITION }),
+      loadRule({ yearBand, condition: SCRAP_RULE_CONDITION }),
+    ]);
   } catch (err) {
     console.error('[graceCamry] rule lookup failed:', err.message);
     return null;
@@ -249,7 +276,7 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   const priceLow = Number(rule.price_low);
   const priceHigh = Number(rule.price_high);
-  const scrapFloor = priceLow;
+  const scrapFloor = resolveScrapFloor(scrapRule, priceLow);
 
   const basePrice = finalOfferFromBand(priceLow, priceHigh);
 
@@ -306,18 +333,20 @@ async function tryComputeCamryRuleEstimate(validated) {
   }
 
   return {
-    low: priceLow,
+    low: scrapFloor,
     high: priceHigh,
     pointOffer: finalOffer,
     meta: {
-      modelVersion: 'camry_rule_table_v3_1',
+      modelVersion: 'camry_rule_table_v3_2',
       estimator: 'camry_rule_table',
       yearBand,
       ruleCondition: condition,
       ruleConditionReason: reason,
       baseRule: BASE_RULE_CONDITION,
+      /** Running-row reference (base calculation only, not a hard offer minimum). */
       priceLow,
       priceHigh,
+      scrapSource: scrapRule != null ? SCRAP_RULE_CONDITION : 'fallback',
       pointFromBand: basePrice,
       pointOffer: finalOffer,
       conditionFactor: 0.6,
@@ -346,6 +375,7 @@ async function tryComputeCamryRuleEstimate(validated) {
       clamped: rawOffer !== finalOffer,
       vehicleClass: 'camry',
       baseBeforeCondition: basePrice,
+      /** Same value as `low` in the response: only hard minimum. */
       scrapFloor,
       titleStatus: String(validated.titleStatus || 'clean'),
     },
@@ -368,6 +398,8 @@ module.exports = {
   TITLE_MULTIPLIERS,
   DAMAGE_PENALTIES,
   BASE_RULE_CONDITION,
+  SCRAP_RULE_CONDITION,
+  resolveScrapFloor,
   TIRE_MULT_BOTH_BAD,
   TIRE_MULT_NOT_ATTACHED,
   TIRE_MULT_NOT_INFLATED,
