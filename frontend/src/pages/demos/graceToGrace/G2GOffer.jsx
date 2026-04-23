@@ -354,7 +354,13 @@ export default function G2GOffer() {
                     <> · non-runner: {result.meta.multipliers.drivability}</>
                   ) : null}
                   {result.meta.multipliers.tires != null && result.meta.multipliers.tires < 1 ? (
-                    <> · tires: {result.meta.multipliers.tires}</>
+                    <>
+                      {' '}
+                      · tires: {result.meta.multipliers.tires}
+                      {result.meta.multipliers.tireMode && result.meta.multipliers.tireMode !== 'ok' ? (
+                        <> ({result.meta.multipliers.tireMode})</>
+                      ) : null}
+                    </>
                   ) : null}
                   {result.meta.multipliers.damage != null && result.meta.multipliers.damage < 1 ? (
                     <> · body damage: {result.meta.multipliers.damage}</>

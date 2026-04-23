@@ -1,5 +1,5 @@
 /**
- * Grace to Grace — Toyota Camry (2005–2017) rule engine v3.
+ * Grace to Grace — Toyota Camry (2005–2017) rule engine v3.1.
  *
  * Base price always comes from the **running** row (year band + running),
  * so severe conditions (flood, accident band, etc.) never re-price upward
@@ -9,12 +9,13 @@
  *   1) Gate (make/model/year)  → fall back to v1 if ineligible.
  *   2) DB lookup (running)      → priceLow / priceHigh, scrap floor = priceLow.
  *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow).
- *   4) Multipliers (mileage × title) → clamped to [0.35, 1.10].
- *   5) Drivability / tires     → all multiplicative; no additive deductions.
- *   6) Body/damage penalties   → per-field multipliers when body[field] === 'some'.
- *   7) Clean boost             → 1.05 only when no body damage is reported.
- *   8) Clamp                   → [scrapFloor, priceHigh] from the running row.
- *   9) Persist pricing_requests and return meta for the UI.
+ *   4) Multipliers (mileage × title) → clamped to [0.35, 1.10] (after base, before drivability).
+ *   5) Drivability            → 0.6 if the car does not drive.
+ *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
+ *   7) Body/damage penalties  → per-field when body[field] === 'some'.
+ *   8) Clean boost            → 1.05 when no body damage.
+ *   9) Clamp                  → [scrapFloor, priceHigh] from the running row.
+ *  10) Persist pricing_requests and return meta for the UI.
  *
  * `mapAssessmentToCondition` is kept for labels / logging only (assessment
  * category), not for which DB row is used in pricing.
@@ -78,6 +79,14 @@ const ASSESSMENT_TO_PENALTY = {
 
 const PANEL_KEYS = ['front', 'rear', 'left', 'right'];
 
+const TIRE_MULT_BOTH_BAD = 0.8;
+const TIRE_MULT_NOT_ATTACHED = 0.85;
+const TIRE_MULT_NOT_INFLATED = 0.95;
+
+function isNo(val) {
+  return String(val || '').trim().toLowerCase() === 'no';
+}
+
 function getYearBand(yearStr) {
   const y = parseInt(String(yearStr || ''), 10);
   if (Number.isNaN(y)) return null;
@@ -116,7 +125,7 @@ function mapAssessmentToCondition(assessment) {
 
   if (body.fire === 'some') return { condition: 'accident', reason: 'fire_damage' };
   if (body.flood === 'some') return { condition: 'accident', reason: 'flood_damage' };
-  if (a.drives === 'no') return { condition: 'non_running', reason: 'does_not_drive' };
+  if (isNo(a.drives)) return { condition: 'non_running', reason: 'does_not_drive' };
   if (body.engine === 'some') return { condition: 'accident', reason: 'engine_damage' };
 
   const panelSevereCount = [...PANEL_KEYS, 'airbag'].filter((k) => body[k] === 'some').length;
@@ -165,6 +174,25 @@ function computeDamageMultiplierProduct(assessment) {
 
 function hasNoBodyDamage(assessment) {
   return computeDamageMultiplierProduct(assessment).factor === 1;
+}
+
+/**
+ * @returns {{ factor: number, mode: 'ok' | 'inflated' | 'attached' | 'both' }}
+ */
+function computeTireMultiplier(assessment) {
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  const notAttached = isNo(a.tiresAttached);
+  const notInflated = isNo(a.tiresInflated);
+  if (notAttached && notInflated) {
+    return { factor: TIRE_MULT_BOTH_BAD, mode: 'both' };
+  }
+  if (notAttached) {
+    return { factor: TIRE_MULT_NOT_ATTACHED, mode: 'attached' };
+  }
+  if (notInflated) {
+    return { factor: TIRE_MULT_NOT_INFLATED, mode: 'inflated' };
+  }
+  return { factor: 1, mode: 'ok' };
 }
 
 function clamp(value, min, max) {
@@ -233,13 +261,12 @@ async function tryComputeCamryRuleEstimate(validated) {
   let price = basePrice * appliedMileageTitle;
 
   const a = validated.assessment && typeof validated.assessment === 'object' ? validated.assessment : {};
-  const drivabilityMult = a.drives === 'no' ? 0.6 : 1;
+  const drivabilityMult = isNo(a.drives) ? 0.6 : 1;
   if (drivabilityMult < 1) {
     price *= drivabilityMult;
   }
 
-  const tireIssue = a.tiresAttached === 'no' || a.tiresInflated === 'no';
-  const tiresMult = tireIssue ? 0.9 : 1;
+  const { factor: tiresMult, mode: tireMode } = computeTireMultiplier(validated.assessment);
   if (tiresMult < 1) {
     price *= tiresMult;
   }
@@ -283,7 +310,7 @@ async function tryComputeCamryRuleEstimate(validated) {
     high: priceHigh,
     pointOffer: finalOffer,
     meta: {
-      modelVersion: 'camry_rule_table_v3',
+      modelVersion: 'camry_rule_table_v3_1',
       estimator: 'camry_rule_table',
       yearBand,
       ruleCondition: condition,
@@ -300,7 +327,8 @@ async function tryComputeCamryRuleEstimate(validated) {
         rawMileageTitle: Number(rawMileageTitle.toFixed(3)),
         appliedMileageTitle: Number(appliedMileageTitle.toFixed(3)),
         drivability: drivabilityMult,
-        tires: tiresMult,
+        tires: Number(tiresMult.toFixed(4)),
+        tireMode,
         damage: Number(damageFactor.toFixed(4)),
         cleanBoost: cleanBoostMult,
         combinedPreClamp: Number(
@@ -334,8 +362,13 @@ module.exports = {
   titleMultiplier,
   computeDamageMultiplierProduct,
   hasNoBodyDamage,
+  computeTireMultiplier,
+  isNo,
   MILEAGE_MULTIPLIERS,
   TITLE_MULTIPLIERS,
   DAMAGE_PENALTIES,
   BASE_RULE_CONDITION,
+  TIRE_MULT_BOTH_BAD,
+  TIRE_MULT_NOT_ATTACHED,
+  TIRE_MULT_NOT_INFLATED,
 };
