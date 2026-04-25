@@ -101,6 +101,64 @@ const createContact = async (tenantId, data) => {
   return formatContact(result.rows[0]);
 };
 
+const getContact = async (tenantId, contactId) => {
+  const result = await db.query(
+    'SELECT * FROM contacts WHERE tenant_id = $1 AND id = $2',
+    [tenantId, contactId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
+  }
+  return formatContact(result.rows[0]);
+};
+
+/**
+ * @param {object} data - Partial: firstName, lastName, email, tags (array), notes. Phone is not changed.
+ */
+const updateContact = async (tenantId, contactId, data) => {
+  if (!data || typeof data !== 'object') {
+    throw Object.assign(new Error('Invalid body'), { statusCode: 400, isOperational: true });
+  }
+
+  const existing = await db.query(
+    'SELECT * FROM contacts WHERE tenant_id = $1 AND id = $2',
+    [tenantId, contactId],
+  );
+  if (existing.rows.length === 0) {
+    throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
+  }
+  const row = existing.rows[0];
+
+  const firstName = data.firstName !== undefined ? (data.firstName || null) : row.first_name;
+  const lastName = data.lastName !== undefined ? (data.lastName || null) : row.last_name;
+  const email = data.email !== undefined ? (data.email || null) : row.email;
+  const notes = data.notes !== undefined ? (data.notes || null) : row.notes;
+
+  let tagsJson;
+  if (data.tags !== undefined) {
+    const arr = Array.isArray(data.tags) ? data.tags : [];
+    tagsJson = JSON.stringify(arr);
+  } else {
+    const existing = Array.isArray(row.tags) ? row.tags : [];
+    tagsJson = JSON.stringify(existing);
+  }
+
+  const result = await db.query(
+    `UPDATE contacts SET
+       first_name = $1,
+       last_name = $2,
+       email = $3,
+       tags = $4::jsonb,
+       notes = $5,
+       updated_at = NOW()
+     WHERE tenant_id = $6 AND id = $7
+     RETURNING *`,
+    [firstName, lastName, email, tagsJson, notes, tenantId, contactId],
+  );
+
+  return formatContact(result.rows[0]);
+};
+
 const getContactStats = async (tenantId) => {
   const result = await db.query(
     `SELECT
@@ -140,4 +198,12 @@ const listContactTags = async (tenantId) => {
   return (result.rows || []).map((r) => r.tag).filter((t) => t && String(t).length > 0);
 };
 
-module.exports = { importFromCSV, listContacts, createContact, getContactStats, listContactTags };
+module.exports = {
+  importFromCSV,
+  listContacts,
+  createContact,
+  getContact,
+  updateContact,
+  getContactStats,
+  listContactTags,
+};

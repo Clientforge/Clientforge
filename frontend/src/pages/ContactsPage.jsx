@@ -9,6 +9,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingContact, setEditingContact] = useState(null);
 
   const loadContacts = async (page = 1) => {
     setLoading(true);
@@ -109,6 +110,7 @@ export default function ContactsPage() {
                   <th>Tags</th>
                   <th>Source</th>
                   <th>Added</th>
+                  <th style={{ width: '5.5rem' }}> </th>
                 </tr>
               </thead>
               <tbody>
@@ -129,6 +131,15 @@ export default function ContactsPage() {
                     </td>
                     <td className="muted">{c.source}</td>
                     <td className="muted">{formatDate(c.createdAt)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => setEditingContact(c)}
+                      >
+                        Edit
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -153,6 +164,17 @@ export default function ContactsPage() {
 
       {showAdd && (
         <AddContactModal onClose={() => setShowAdd(false)} onSuccess={() => { setShowAdd(false); loadContacts(); }} />
+      )}
+
+      {editingContact && (
+        <EditContactModal
+          contact={editingContact}
+          onClose={() => setEditingContact(null)}
+          onSuccess={() => {
+            setEditingContact(null);
+            loadContacts(pagination.page || 1);
+          }}
+        />
       )}
     </div>
   );
@@ -252,6 +274,124 @@ function ImportModal({ onClose, onSuccess }) {
               <button className="btn btn-primary" onClick={onSuccess}>Done</button>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditContactModal({ contact, onClose, onSuccess }) {
+  const [form, setForm] = useState({
+    firstName: contact.firstName || '',
+    lastName: contact.lastName || '',
+    email: contact.email || '',
+    tags: (contact.tags || []).join(', '),
+    notes: contact.notes || '',
+  });
+  const [tagOptions, setTagOptions] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await api.get('/contacts/tags');
+        setTagOptions(d.tags || []);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await api.put(`/contacts/${contact.id}`, {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email || null,
+        tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        notes: form.notes || null,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Edit contact</h2>
+          <button type="button" className="modal-close" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          {error && <div className="form-error">{error}</div>}
+          <div className="form-group">
+            <label>Phone</label>
+            <input type="text" value={contact.phone} readOnly className="input-readonly" />
+            <p className="hint">Phone can’t be changed (used as the unique key).</p>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>First name</label>
+              <input
+                type="text"
+                value={form.firstName}
+                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Last name</label>
+              <input
+                type="text"
+                value={form.lastName}
+                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Tags (comma-separated)</label>
+            <input
+              type="text"
+              list="edit-contact-tags"
+              value={form.tags}
+              onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              placeholder="vip, returning, promo"
+            />
+            <datalist id="edit-contact-tags">
+              {tagOptions.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          </div>
+          <div className="form-group">
+            <label>Notes</label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              rows={3}
+              placeholder="Internal notes (optional)"
+            />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

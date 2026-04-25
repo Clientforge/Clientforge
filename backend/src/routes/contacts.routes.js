@@ -54,4 +54,18 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:id', async (req, res, next) => {
+  try {
+    const contact = await contactService.getContact(req.tenantId, req.params.id);
+    res.json(contact);
+  } catch (err) { next(err); }
+});
+
+router.put('/:id', async (req, res, next) => {
+  try {
+    const contact = await contactService.updateContact(req.tenantId, req.params.id, req.body);
+    res.json(contact);
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
