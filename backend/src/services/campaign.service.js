@@ -1,5 +1,79 @@
 const db = require('../db/connection');
 
+const PREVIEW_MAX = 2000;
+
+/**
+ * SQL WHERE + params for campaign audience (shared by launch, preview, counts).
+ * @param {string} channel 'sms' | 'email' | 'both'
+ */
+const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
+  const filter = audienceFilter && typeof audienceFilter === 'object' ? audienceFilter : {};
+  const conditions = ['tenant_id = $1', 'unsubscribed = false'];
+  const params = [tenantId];
+  let idx = 2;
+
+  if (filter.tag) {
+    const tag = String(filter.tag).trim();
+    if (tag) {
+      conditions.push(`tags @> $${idx}::jsonb`);
+      params.push(JSON.stringify([tag]));
+      idx++;
+    }
+  }
+
+  const ch = ['sms', 'email', 'both'].includes(channel) ? channel : 'sms';
+  if (ch === 'email') {
+    conditions.push('email IS NOT NULL');
+  } else if (ch === 'sms') {
+    conditions.push('phone IS NOT NULL');
+  } else {
+    conditions.push('phone IS NOT NULL');
+    conditions.push('email IS NOT NULL');
+  }
+  return { whereSql: conditions.join(' AND '), params };
+};
+
+/**
+ * @returns {Promise<{ total: number, limit: number, truncated: boolean, contacts: object[] }>}
+ */
+const previewAudience = async (tenantId, { audienceFilter, channel, limit = 500 } = {}) => {
+  const max = Math.min(Math.max(1, parseInt(limit, 10) || 500), PREVIEW_MAX);
+  const { whereSql, params } = buildAudienceWhere(tenantId, audienceFilter, channel);
+  const countRes = await db.query(
+    `SELECT COUNT(*)::int AS n FROM contacts WHERE ${whereSql}`,
+    params,
+  );
+  const total = countRes.rows[0].n;
+  const dataRes = await db.query(
+    `SELECT id, first_name, last_name, phone, email
+     FROM contacts WHERE ${whereSql}
+     ORDER BY LOWER(COALESCE(last_name, '')), LOWER(COALESCE(first_name, ''))
+     LIMIT $${params.length + 1}`,
+    [...params, max],
+  );
+  return {
+    total,
+    limit: max,
+    truncated: total > max,
+    contacts: dataRes.rows.map((r) => ({
+      id: r.id,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      phone: r.phone,
+      email: r.email,
+    })),
+  };
+};
+
+const previewAudienceForCampaign = async (tenantId, campaignId, query = {}) => {
+  const campaign = await getCampaign(tenantId, campaignId);
+  return previewAudience(tenantId, {
+    audienceFilter: campaign.audienceFilter,
+    channel: campaign.channel || 'sms',
+    limit: query.limit,
+  });
+};
+
 const createCampaign = async (tenantId, data) => {
   const schedule = Array.isArray(data.schedule) && data.schedule.length > 0
     ? data.schedule
@@ -158,26 +232,10 @@ const launchCampaign = async (tenantId, campaignId) => {
 
   const channel = campaign.channel || 'sms';
 
-  const filter = campaign.audienceFilter || {};
-  const conditions = ['tenant_id = $1', 'unsubscribed = false'];
-  const params = [tenantId];
-  let idx = 2;
-
-  if (filter.tag) {
-    conditions.push(`tags @> $${idx}::jsonb`);
-    params.push(JSON.stringify([filter.tag]));
-    idx++;
-  }
-
-  // If email-only, require contacts with email; for sms-only, require phone
-  if (channel === 'email') {
-    conditions.push('email IS NOT NULL');
-  } else if (channel === 'sms') {
-    conditions.push('phone IS NOT NULL');
-  }
+  const { whereSql, params } = buildAudienceWhere(tenantId, campaign.audienceFilter, channel);
 
   const contacts = await db.query(
-    `SELECT id, phone, email, first_name FROM contacts WHERE ${conditions.join(' AND ')}`,
+    `SELECT id, phone, email, first_name FROM contacts WHERE ${whereSql}`,
     params,
   );
 
@@ -443,6 +501,9 @@ module.exports = {
   launchCampaign,
   getCampaignStats,
   getCampaignLinkClicks,
+  buildAudienceWhere,
+  previewAudience,
+  previewAudienceForCampaign,
   cloneCampaign,
   createTemplate,
   listTemplates,

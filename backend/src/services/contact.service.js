@@ -128,4 +128,16 @@ const formatContact = (row) => ({
   createdAt: row.created_at,
 });
 
-module.exports = { importFromCSV, listContacts, createContact, getContactStats };
+/** Distinct tag strings across all contacts (for pickers, filters). */
+const listContactTags = async (tenantId) => {
+  const result = await db.query(
+    `SELECT DISTINCT t AS tag
+     FROM contacts, LATERAL jsonb_array_elements_text(COALESCE(tags, '[]'::jsonb)) AS t
+     WHERE tenant_id = $1
+     ORDER BY 1`,
+    [tenantId],
+  );
+  return (result.rows || []).map((r) => r.tag).filter((t) => t && String(t).length > 0);
+};
+
+module.exports = { importFromCSV, listContacts, createContact, getContactStats, listContactTags };

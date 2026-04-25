@@ -46,6 +46,19 @@ router.post('/from-template/:templateId', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/** Resolve who would receive a campaign: same rules as launch (tag, channel, opt-in fields). */
+router.post('/preview-audience', async (req, res, next) => {
+  try {
+    const { audienceFilter, channel, limit } = req.body || {};
+    const data = await campaignService.previewAudience(req.tenantId, {
+      audienceFilter,
+      channel,
+      limit,
+    });
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
 router.post('/templates', async (req, res, next) => {
   try {
     const template = await campaignService.createTemplate(req.tenantId, req.body);
@@ -57,6 +70,17 @@ router.get('/:id/link-clicks', async (req, res, next) => {
   try {
     const rows = await campaignService.getCampaignLinkClicks(req.tenantId, req.params.id);
     res.json({ clicks: rows });
+  } catch (err) { next(err); }
+});
+
+router.get('/:id/preview-audience', async (req, res, next) => {
+  try {
+    const data = await campaignService.previewAudienceForCampaign(
+      req.tenantId,
+      req.params.id,
+      req.query,
+    );
+    res.json(data);
   } catch (err) { next(err); }
 });
 

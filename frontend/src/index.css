@@ -666,6 +666,10 @@ a:hover { text-decoration: underline; }
 .link-clicks-people-label { font-weight: 500; color: var(--text-2); text-decoration: none; }
 .link-clicks-taps-hint { font-size: 11px; line-height: 1.2; }
 .link-clicks-modal { max-width: 560px; }
+.audience-preview-modal { max-width: 640px; }
+.audience-preview-total { font-size: 0.9rem; margin: 0 0 0.75rem; }
+.audience-preview-table .audience-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.8rem; }
+.audience-preview-table-wrap { max-height: 50vh; overflow: auto; }
 .link-clicks-table-wrap { max-height: 360px; overflow: auto; border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
 .link-clicks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .link-clicks-table th,

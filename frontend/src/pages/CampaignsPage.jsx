@@ -115,6 +115,7 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
   const [launching, setLaunching] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [audiencePreview, setAudiencePreview] = useState(null);
   const s = STATUS_STYLES[campaign.status] || STATUS_STYLES.draft;
 
   const unique = campaign.linkUniqueClicks ?? 0;
@@ -130,7 +131,10 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
   const handleLaunch = async () => {
     const waveCount = (campaign.schedule || []).length || 1;
     const ch = CHANNEL_LABELS[campaign.channel] || 'SMS';
-    const msg = `Launch "${campaign.name}"? ${waveCount} wave(s) via ${ch} to all matching contacts.`;
+    const tagNote = campaign.audienceFilter?.tag
+      ? ` Tag: "${campaign.audienceFilter.tag}".`
+      : '';
+    const msg = `Launch "${campaign.name}"? ${waveCount} wave(s) via ${ch} to all matching contacts.${tagNote} Use Preview to see the list.`;
     if (!window.confirm(msg)) return;
     setLaunching(true);
     try { await api.post(`/campaigns/${campaign.id}/launch`); onRefresh(); }
@@ -179,16 +183,38 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
           </div>
         </td>
         <td className="muted">{formatDate(campaign.createdAt)}</td>
-        <td>
+        <td onClick={(e) => e.stopPropagation()}>
           {campaign.status === 'draft' && (
-            <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); handleLaunch(); }} disabled={launching}>
-              {launching ? 'Launching...' : 'Launch'}
-            </button>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={() => setAudiencePreview({ id: campaign.id, name: campaign.name })}
+              >
+                Recipients
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={handleLaunch}
+                disabled={launching}
+              >
+                {launching ? 'Launching...' : 'Launch'}
+              </button>
+            </div>
           )}
         </td>
       </tr>
       {expanded && (
         <tr className="campaign-detail-row"><td colSpan="9"><CampaignDetail campaign={detail || campaign} formatDate={formatDate} /></td></tr>
+      )}
+      {audiencePreview && (
+        <AudiencePreviewModal
+          onClose={() => setAudiencePreview(null)}
+          title={`Recipients · ${audiencePreview.name}`}
+          campaignId={audiencePreview.id}
+          channel={campaign.channel}
+        />
       )}
     </>
   );
@@ -206,6 +232,13 @@ function CampaignDetail({ campaign, formatDate }) {
       <div className="detail-channel-label">
         <span className={`channel-badge ch-${ch}`}>{CHANNEL_ICONS[ch]} {CHANNEL_LABELS[ch]}</span>
       </div>
+      {campaign.audienceFilter?.tag ? (
+        <p className="muted" style={{ margin: '0.35rem 0 0' }}>
+          Audience tag: <strong>{campaign.audienceFilter.tag}</strong>
+        </p>
+      ) : (
+        <p className="muted" style={{ margin: '0.35rem 0 0' }}>Audience: all eligible contacts (no tag filter)</p>
+      )}
 
       {schedule.length > 0 && (
         <div className="wave-timeline">
@@ -339,6 +372,99 @@ function LinkClicksModal({ campaignId, campaignName, formatDate, onClose }) {
   );
 }
 
+const CHANNEL_RECIPIENT_HINT = {
+  sms: 'Requires phone number. Unsubscribed contacts are excluded.',
+  email: 'Requires email. Unsubscribed contacts are excluded.',
+  both: 'Requires both phone and email. Unsubscribed contacts are excluded.',
+};
+
+/**
+ * Fetches the same audience as campaign launch: optional tag, channel address requirements.
+ * Pass either campaignId (saved draft) or audienceFilter + channel (composer).
+ */
+function AudiencePreviewModal({ onClose, title, campaignId, audienceFilter, channel }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+
+  const ch = channel || 'sms';
+  const filterKey = campaignId != null ? `c:${campaignId}` : `f:${JSON.stringify(audienceFilter || {})}:${ch}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setData(null);
+      setError('');
+      try {
+        const payload = campaignId
+          ? await api.get(`/campaigns/${campaignId}/preview-audience`)
+          : await api.post('/campaigns/preview-audience', {
+            audienceFilter: audienceFilter || {},
+            channel: ch,
+          });
+        if (!cancelled) setData(payload);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load recipients');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [filterKey, campaignId, ch]);
+
+  const showPhone = ch === 'sms' || ch === 'both';
+  const showEmail = ch === 'email' || ch === 'both';
+
+  return (
+    <div className="modal-backdrop" onClick={onClose} role="presentation">
+      <div className="modal modal-lg audience-preview-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{title || 'Recipients'}</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+            &times;
+          </button>
+        </div>
+        <div className="modal-body">
+          <p className="modal-desc" style={{ marginTop: 0 }}>{CHANNEL_RECIPIENT_HINT[ch] || CHANNEL_RECIPIENT_HINT.sms}</p>
+          {error && <div className="form-error">{error}</div>}
+          {data === null && !error && <div className="page-loader">Loading recipients…</div>}
+          {data && (
+            <>
+              <p className="audience-preview-total">
+                <strong>{data.total}</strong> contact{data.total === 1 ? '' : 's'}
+                {data.truncated ? ` (showing first ${data.contacts.length})` : ''} match.
+              </p>
+              {data.total === 0 && <p className="muted">No one matches. Adjust the tag or add contacts with the required address fields.</p>}
+              {data.contacts && data.contacts.length > 0 && (
+                <div className="link-clicks-table-wrap audience-preview-table-wrap">
+                  <table className="link-clicks-table audience-preview-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        {showPhone && <th>Phone</th>}
+                        {showEmail && <th>Email</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.contacts.map((row) => {
+                        const name = [row.firstName, row.lastName].filter(Boolean).join(' ') || '—';
+                        return (
+                          <tr key={row.id}>
+                            <td>{name}</td>
+                            {showPhone && <td className="audience-mono">{row.phone || '—'}</td>}
+                            {showEmail && <td>{row.email || '—'}</td>}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const START_MODE = { scratch: 'scratch', copy: 'copy', template: 'template' };
 
 function CreateCampaignModal({ onClose, onSuccess }) {
@@ -354,9 +480,22 @@ function CreateCampaignModal({ onClose, onSuccess }) {
   const [loadingSource, setLoadingSource] = useState(false);
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
+  const [contactTags, setContactTags] = useState([]);
+  const [audiencePreviewOpen, setAudiencePreviewOpen] = useState(false);
 
   const showSms = form.channel === 'sms' || form.channel === 'both';
   const showEmail = form.channel === 'email' || form.channel === 'both';
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await api.get('/contacts/tags');
+        setContactTags(d.tags || []);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const loadCampaigns = async () => {
     try {
@@ -464,6 +603,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
     (msg || '').replace(/\{firstName\}/gi, 'Sarah').replace(/\{businessName\}/gi, 'Your Business').replace(/\{bookingLink\}/gi, 'book.example.com');
 
   return (
+    <>
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -665,6 +805,38 @@ function CreateCampaignModal({ onClose, onSuccess }) {
                 )}
               </div>
 
+              <div className="audience-campaign-block" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)' }}>
+                <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem' }}>Audience</h4>
+                <p className="hint" style={{ marginBottom: '0.75rem' }}>
+                  Optional tag: only matching contacts are included. Leave empty for everyone who can receive
+                  {form.channel === 'sms' && ' SMS (has phone)'}
+                  {form.channel === 'email' && ' email (has address)'}
+                  {form.channel === 'both' && ' both SMS and email (has phone and email)'}
+                  . Unsubscribed contacts are always excluded.
+                </p>
+                <div className="form-row" style={{ flexWrap: 'wrap', alignItems: 'flex-end', gap: '0.5rem' }}>
+                  <div className="form-group" style={{ flex: '1 1 12rem' }}>
+                    <label>Filter by tag</label>
+                    <input
+                      type="text"
+                      list="campaign-audience-tag-list"
+                      value={form.audienceFilter?.tag || ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm({ ...form, audienceFilter: v.trim() ? { tag: v.trim() } : {} });
+                      }}
+                      placeholder="e.g. vip, returning"
+                    />
+                    <datalist id="campaign-audience-tag-list">
+                      {contactTags.map((t) => <option key={t} value={t} />)}
+                    </datalist>
+                  </div>
+                  <button type="button" className="btn btn-ghost" onClick={() => setAudiencePreviewOpen(true)}>
+                    Preview recipients
+                  </button>
+                </div>
+              </div>
+
               <div className="template-vars" style={{ marginTop: 12 }}>
                 <span className="hint">Variables: </span>
                 <code>{'{firstName}'}</code>
@@ -702,6 +874,19 @@ function CreateCampaignModal({ onClose, onSuccess }) {
                   <span className={`channel-badge ch-${form.channel}`}>{CHANNEL_ICONS[form.channel]} {CHANNEL_LABELS[form.channel]}</span>
                   <span className="muted">{form.schedule.length}-wave {form.schedule.length > 1 ? 'sequence' : 'broadcast'}</span>
                 </div>
+                {form.audienceFilter?.tag ? (
+                  <p style={{ margin: '0.5rem 0 0' }}>
+                    Tag filter: <strong>{form.audienceFilter.tag}</strong>
+                    {' '}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudiencePreviewOpen(true)}>Preview recipients</button>
+                  </p>
+                ) : (
+                  <p className="muted" style={{ margin: '0.5rem 0 0' }}>
+                    Audience: all eligible contacts (no tag)
+                    {' '}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudiencePreviewOpen(true)}>Preview recipients</button>
+                  </p>
+                )}
               </div>
 
               <div className="review-timeline">
@@ -761,5 +946,14 @@ function CreateCampaignModal({ onClose, onSuccess }) {
         </div>
       </div>
     </div>
+    {audiencePreviewOpen && (
+      <AudiencePreviewModal
+        onClose={() => setAudiencePreviewOpen(false)}
+        title="Recipients (preview)"
+        audienceFilter={form.audienceFilter}
+        channel={form.channel}
+      />
+    )}
+    </>
   );
 }

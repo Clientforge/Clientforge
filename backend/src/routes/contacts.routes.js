@@ -18,6 +18,13 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/tags', async (req, res, next) => {
+  try {
+    const tags = await contactService.listContactTags(req.tenantId);
+    res.json({ tags });
+  } catch (err) { next(err); }
+});
+
 router.get('/stats', async (req, res, next) => {
   try {
     const stats = await contactService.getContactStats(req.tenantId);
