@@ -322,6 +322,20 @@ a.g2g-logo:focus-visible {
   font-size: 0.82rem;
 }
 
+.g2g-segment--triple {
+  flex-wrap: wrap;
+  max-width: 100%;
+  justify-content: stretch;
+}
+
+.g2g-segment--triple button {
+  flex: 1 1 8.5rem;
+  min-width: min(100%, 8.5rem);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  padding: 0.45rem 0.6rem;
+}
+
 .g2g-segment button {
   margin: 0;
   padding: 0.5rem 1.1rem;

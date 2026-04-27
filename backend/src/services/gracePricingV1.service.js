@@ -9,7 +9,11 @@
  */
 
 const { getMetalCommodityBlend } = require('./alphaVantage.service');
-const { tryComputeCamryRuleEstimate } = require('./graceCamryRule.service');
+const {
+  tryComputeCamryRuleEstimate,
+  computeV1DrivabilityFactor,
+  computeConditionStackMultiplier,
+} = require('./graceCamryRule.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -118,15 +122,15 @@ function deriveTitleFactor(titleStatus) {
 
 function deriveConditionFactor(assessment) {
   const a = assessment && typeof assessment === 'object' ? assessment : {};
-  const drives = a.drives === 'no' ? 'no' : 'yes';
   const tiresInflated = a.tiresInflated === 'no' ? 'no' : 'yes';
   const tiresAttached = a.tiresAttached === 'no' ? 'no' : 'yes';
   const body = a.body && typeof a.body === 'object' ? a.body : {};
 
   let f = 1;
-  if (drives === 'no') f *= 0.36;
+  f *= computeV1DrivabilityFactor(assessment);
   if (tiresInflated === 'no') f *= 0.88;
   if (tiresAttached === 'no') f *= 0.82;
+  f *= computeConditionStackMultiplier(assessment).factor;
 
   for (const k of ['front', 'rear', 'left', 'right']) {
     if (body[k] === 'some') f *= 0.94;

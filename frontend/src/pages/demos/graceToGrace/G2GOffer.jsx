@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import {
   MILEAGE_SELECT_OPTIONS,
-  BODY_PANEL_KEYS,
+  BODY_STRUCTURAL_KEYS,
   BODY_PANEL_LABELS,
   TITLE_STATUS_OPTIONS,
+  START_DRIVE,
+  EXTERIOR,
+  EXTERIOR_COMPLETE,
+  CATALYTIC,
 } from './pricingEngine';
 import { postGraceEstimate } from './graceEstimateApi';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
 
-function YesNoRow({ label, value, onChange, groupId }) {
+function YesNoRow({ label, value, onChange, groupId, hint }) {
   return (
     <div className="g2g-toggle-row">
       <span className="g2g-toggle-label" id={`${groupId}-label`}>
@@ -28,6 +32,70 @@ function YesNoRow({ label, value, onChange, groupId }) {
           onClick={() => onChange('no')}
         >
           No
+        </button>
+      </div>
+      {hint ? <p className="g2g-field-hint" style={{ width: '100%', margin: '0.25rem 0 0' }}>{hint}</p> : null}
+    </div>
+  );
+}
+
+function StartDriveRow({ value, onChange, groupId }) {
+  return (
+    <div className="g2g-damage-row">
+      <span className="g2g-damage-label" id={`${groupId}-label`}>
+        Start &amp; drive
+      </span>
+      <div
+        className="g2g-segment g2g-segment--wide g2g-segment--triple"
+        role="group"
+        aria-labelledby={`${groupId}-label`}
+      >
+        <button
+          type="button"
+          className={value === START_DRIVE.starts_drives ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(START_DRIVE.starts_drives)}
+        >
+          Yes — starts and drives
+        </button>
+        <button
+          type="button"
+          className={value === START_DRIVE.starts_not_drives ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(START_DRIVE.starts_not_drives)}
+        >
+          Starts but does not drive
+        </button>
+        <button
+          type="button"
+          className={value === START_DRIVE.does_not_start ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(START_DRIVE.does_not_start)}
+        >
+          Does not start (or requires a jump)
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TwoOptionRow({ label, value, onChange, groupId, leftValue, rightValue, leftLabel, rightLabel }) {
+  return (
+    <div className="g2g-damage-row">
+      <span className="g2g-damage-label" id={`${groupId}-label`}>
+        {label}
+      </span>
+      <div className="g2g-segment g2g-segment--wide" role="group" aria-labelledby={`${groupId}-label`}>
+        <button
+          type="button"
+          className={value === leftValue ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(leftValue)}
+        >
+          {leftLabel}
+        </button>
+        <button
+          type="button"
+          className={value === rightValue ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(rightValue)}
+        >
+          {rightLabel}
         </button>
       </div>
     </div>
@@ -60,8 +128,17 @@ function DamageRow({ label, value, onChange, groupId }) {
   );
 }
 
-const initialBody = () =>
-  Object.fromEntries(BODY_PANEL_KEYS.map((k) => [k, 'none']));
+const initialBody = () => ({
+  front: 'none',
+  rear: 'none',
+  left: 'none',
+  right: 'none',
+  engine: 'none',
+  flood: 'none',
+  fire: 'none',
+  glass: 'none',
+  airbag: 'none',
+});
 
 export default function G2GOffer() {
   useEffect(() => {
@@ -82,9 +159,14 @@ export default function G2GOffer() {
   const [zip, setZip] = useState('');
   const [titleStatus, setTitleStatus] = useState('clean');
 
-  const [drives, setDrives] = useState('yes');
+  const [startDrive, setStartDrive] = useState(START_DRIVE.starts_drives);
+  const [battery, setBattery] = useState('yes');
+  const [key, setKey] = useState('yes');
   const [tiresInflated, setTiresInflated] = useState('yes');
   const [tiresAttached, setTiresAttached] = useState('yes');
+  const [exterior, setExterior] = useState(EXTERIOR.no_major);
+  const [exteriorComplete, setExteriorComplete] = useState(EXTERIOR_COMPLETE.all);
+  const [catalytic, setCatalytic] = useState(CATALYTIC.present);
   const [bodyDamage, setBodyDamage] = useState(initialBody);
 
   const [result, setResult] = useState(null);
@@ -133,6 +215,7 @@ export default function G2GOffer() {
       return;
     }
     setSubmitting(true);
+    const drives = startDrive === START_DRIVE.does_not_start ? 'no' : 'yes';
     try {
       const range = await postGraceEstimate({
         year: year.trim(),
@@ -144,9 +227,15 @@ export default function G2GOffer() {
         titleStatus,
         vin: normalizeVin(vin) || undefined,
         assessment: {
+          startDrive,
           drives,
+          battery,
+          key,
           tiresInflated,
           tiresAttached,
+          exterior,
+          exteriorComplete,
+          catalytic,
           body: bodyDamage,
         },
       });
@@ -158,8 +247,8 @@ export default function G2GOffer() {
     }
   };
 
-  const setPanel = (key, val) => {
-    setBodyDamage((prev) => ({ ...prev, [key]: val }));
+  const setPanel = (k, val) => {
+    setBodyDamage((prev) => ({ ...prev, [k]: val }));
   };
 
   return (
@@ -253,7 +342,7 @@ export default function G2GOffer() {
 
         <section className="g2g-form-section" aria-labelledby="g2g-car-conditions-heading">
           <h2 id="g2g-car-conditions-heading" className="g2g-form-section-title">
-            Car conditions
+            Vehicle condition
           </h2>
 
           <div className="g2g-field">
@@ -272,7 +361,23 @@ export default function G2GOffer() {
             </select>
           </div>
 
-          <YesNoRow label="Does the car drive?" value={drives} onChange={setDrives} groupId="g2g-drives" />
+          <YesNoRow
+            label="Battery"
+            value={battery}
+            onChange={setBattery}
+            groupId="g2g-battery"
+            hint="Yes = installed and working. No = missing or not working."
+          />
+          <YesNoRow
+            label="Key availability"
+            value={key}
+            onChange={setKey}
+            groupId="g2g-key"
+            hint="Yes = key is available. No = no key."
+          />
+
+          <StartDriveRow value={startDrive} onChange={setStartDrive} groupId="g2g-start-drive" />
+
           <YesNoRow
             label="Are all tires inflated with air?"
             value={tiresInflated}
@@ -285,23 +390,74 @@ export default function G2GOffer() {
             onChange={setTiresAttached}
             groupId="g2g-tires-attached"
           />
+
+          <TwoOptionRow
+            label="Exterior condition"
+            value={exterior}
+            onChange={setExterior}
+            groupId="g2g-exterior"
+            leftValue={EXTERIOR.no_major}
+            rightValue={EXTERIOR.rust_or_damage}
+            leftLabel="No major damage (minor dents/dings only)"
+            rightLabel="Has rust or visible exterior damage"
+          />
+          <TwoOptionRow
+            label="Exterior completeness"
+            value={exteriorComplete}
+            onChange={setExteriorComplete}
+            groupId="g2g-exterior-complete"
+            leftValue={EXTERIOR_COMPLETE.all}
+            rightValue={EXTERIOR_COMPLETE.incomplete}
+            leftLabel="All exterior parts (doors, bumpers, panels) are attached"
+            rightLabel="One or more are broken, loose, or missing"
+          />
+          <TwoOptionRow
+            label="Glass, mirrors &amp; lights"
+            value={bodyDamage.glass}
+            onChange={(v) => setPanel('glass', v)}
+            groupId="g2g-glass"
+            leftValue="none"
+            rightValue="some"
+            leftLabel="No damage (all intact)"
+            rightLabel="At least one is damaged or missing"
+          />
+          <TwoOptionRow
+            label="Catalytic converter"
+            value={catalytic}
+            onChange={setCatalytic}
+            groupId="g2g-cat"
+            leftValue={CATALYTIC.present}
+            rightValue={CATALYTIC.missing}
+            leftLabel="Present (attached)"
+            rightLabel="Missing"
+          />
         </section>
 
         <section className="g2g-form-section" aria-labelledby="g2g-body-heading">
           <h2 id="g2g-body-heading" className="g2g-form-section-title">
-            Body condition
+            Body &amp; panels
           </h2>
           <p className="g2g-form-section-hint">For each area, choose whether there is no damage or some damage.</p>
           <div className="g2g-damage-list">
-            {BODY_PANEL_KEYS.map((key) => (
+            {BODY_STRUCTURAL_KEYS.map((panelKey) => (
               <DamageRow
-                key={key}
-                label={BODY_PANEL_LABELS[key]}
-                value={bodyDamage[key]}
-                onChange={(v) => setPanel(key, v)}
-                groupId={`g2g-body-${key}`}
+                key={panelKey}
+                label={BODY_PANEL_LABELS[panelKey]}
+                value={bodyDamage[panelKey]}
+                onChange={(v) => setPanel(panelKey, v)}
+                groupId={`g2g-body-${panelKey}`}
               />
             ))}
+            <TwoOptionRow
+              label="Airbag condition"
+              value={bodyDamage.airbag}
+              onChange={(v) => setPanel('airbag', v)}
+              groupId="g2g-airbag"
+              leftValue="none"
+              rightValue="some"
+              leftLabel="No — airbags are intact"
+              rightLabel="Yes — airbags are deployed"
+            />
           </div>
         </section>
 
@@ -336,11 +492,11 @@ export default function G2GOffer() {
                 Rule band: <strong>{result.meta?.yearBand ?? '—'}</strong> · Base row:{' '}
                 <strong>{result.meta?.baseRule ?? 'running'}</strong> · Assessment:{' '}
                 <strong>{result.meta?.ruleCondition ?? '—'}</strong>
-                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} ·                 Reference (running) min/max: $
-                {result.meta?.priceLow != null ? Number(result.meta.priceLow).toLocaleString() : '—'} – $
-                {result.meta?.priceHigh != null ? Number(result.meta.priceHigh).toLocaleString() : '—'}
+                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} · Reference
+                (running) min/max: ${result.meta?.priceLow != null ? Number(result.meta.priceLow).toLocaleString() : '—'}{' '}
+                – ${result.meta?.priceHigh != null ? Number(result.meta.priceHigh).toLocaleString() : '—'}
                 {result.meta?.scrapFloor != null && result.meta?.priceLow != null
-                  && Number(result.meta.scrapFloor) < Number(result.meta.priceLow) ? (
+                && Number(result.meta.scrapFloor) < Number(result.meta.priceLow) ? (
                   <> · Hard floor (scrap): ${Number(result.meta.scrapFloor).toLocaleString()}</>
                 ) : result.meta?.scrapFloor != null ? (
                   <> · Hard floor: ${Number(result.meta.scrapFloor).toLocaleString()}</>
@@ -358,7 +514,7 @@ export default function G2GOffer() {
                   </strong>
                   {result.meta.multipliers.drivability != null
                     && result.meta.multipliers.drivability < 1 ? (
-                    <> · non-runner: {result.meta.multipliers.drivability}</>
+                    <> · start/drive: {result.meta.multipliers.drivability}</>
                   ) : null}
                   {result.meta.multipliers.tires != null && result.meta.multipliers.tires < 1 ? (
                     <>
@@ -368,6 +524,10 @@ export default function G2GOffer() {
                         <> ({result.meta.multipliers.tireMode})</>
                       ) : null}
                     </>
+                  ) : null}
+                  {result.meta.multipliers.conditionStack != null
+                    && result.meta.multipliers.conditionStack < 1 ? (
+                    <> · other condition: {result.meta.multipliers.conditionStack}</>
                   ) : null}
                   {result.meta.multipliers.damage != null && result.meta.multipliers.damage < 1 ? (
                     <> · body damage: {result.meta.multipliers.damage}</>

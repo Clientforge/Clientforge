@@ -1,5 +1,5 @@
 /**
- * Grace to Grace — Toyota Camry (2005–2017) rule engine v3.1.
+ * Grace to Grace — Toyota Camry (2005–2017) rule engine v3.3.
  *
  * Base price always comes from the **running** row (year band + running),
  * so severe conditions (flood, accident band, etc.) never re-price upward
@@ -11,12 +11,13 @@
  *      Lookup (non_running)    → `price_low` = scrap floor (true minimum, below running band min).
  *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow) from the running row.
  *   4) Multipliers (mileage × title) → clamped to [0.35, 1.10] (after base, before drivability).
- *   5) Drivability            → 0.6 if the car does not drive.
+ *   5) Start & drive         → 0.75 if starts but does not drive; 0.6 if does not start; else 1.0
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
- *   7) Body/damage penalties  → per-field when body[field] === 'some'.
- *   8) Clean boost            → 1.05 when no body damage.
- *   9) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
- *  10) Persist pricing_requests and return meta for the UI.
+ *   7) Condition stack        → battery, key, exterior, parts, cat (see computeConditionStackMultiplier).
+ *   8) Body/damage penalties  → per-field when body[field] === 'some'.
+ *   9) Clean boost            → 1.05 when fully “clean” (no body issues + new fields + starts & drives).
+ *  10) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
+ *  11) Persist pricing_requests and return meta for the UI.
  *
  * `mapAssessmentToCondition` is kept for labels / logging only (assessment
  * category), not for which DB row is used in pricing.
@@ -90,6 +91,82 @@ function isNo(val) {
   return String(val || '').trim().toLowerCase() === 'no';
 }
 
+const START_DRIVE = {
+  starts_drives: 'starts_drives',
+  starts_not_drives: 'starts_not_drives',
+  does_not_start: 'does_not_start',
+};
+
+/**
+ * Normalize start/drive; supports legacy `drives` === 'no' only.
+ * @returns {'starts_drives'|'starts_not_drives'|'does_not_start'}
+ */
+function getStartDrive(assessment) {
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  const sd = String(a.startDrive || '').trim();
+  if (sd === START_DRIVE.starts_drives || sd === START_DRIVE.starts_not_drives || sd === START_DRIVE.does_not_start) {
+    return sd;
+  }
+  if (isNo(a.drives)) return START_DRIVE.does_not_start;
+  return START_DRIVE.starts_drives;
+}
+
+/** Camry table: penalty for partial vs full non-runner. */
+function computeCamryDrivabilityMultiplier(assessment) {
+  const sd = getStartDrive(assessment);
+  if (sd === START_DRIVE.does_not_start) return 0.6;
+  if (sd === START_DRIVE.starts_not_drives) return 0.75;
+  return 1;
+}
+
+/** v1 blended factor (legacy 0.36 for “doesn’t drive”). */
+function computeV1DrivabilityFactor(assessment) {
+  const sd = getStartDrive(assessment);
+  if (sd === START_DRIVE.does_not_start) return 0.36;
+  if (sd === START_DRIVE.starts_not_drives) return 0.55;
+  return 1;
+}
+
+/**
+ * Battery, key, exterior, completeness, catalytic — applied after tires, before body damage product.
+ * @returns {{ factor: number, applied: Record<string, number> }}
+ */
+function computeConditionStackMultiplier(assessment) {
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  let factor = 1;
+  const applied = {};
+  if (isNo(a.battery)) {
+    applied.battery = 0.94;
+    factor *= 0.94;
+  }
+  if (isNo(a.key)) {
+    applied.key = 0.9;
+    factor *= 0.9;
+  }
+  if (a.exterior === 'rust_or_damage') {
+    applied.exterior = 0.95;
+    factor *= 0.95;
+  }
+  if (a.exteriorComplete === 'incomplete') {
+    applied.exteriorComplete = 0.94;
+    factor *= 0.94;
+  }
+  if (a.catalytic === 'missing') {
+    applied.catalytic = 0.78;
+    factor *= 0.78;
+  }
+  return { factor, applied };
+}
+
+function isCleanBoostEligible(assessment) {
+  if (!hasNoBodyDamage(assessment)) return false;
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  if (isNo(a.battery) || isNo(a.key) || a.catalytic === 'missing') return false;
+  if (a.exterior === 'rust_or_damage' || a.exteriorComplete === 'incomplete') return false;
+  if (getStartDrive(assessment) !== START_DRIVE.starts_drives) return false;
+  return true;
+}
+
 function getYearBand(yearStr) {
   const y = parseInt(String(yearStr || ''), 10);
   if (Number.isNaN(y)) return null;
@@ -128,7 +205,9 @@ function mapAssessmentToCondition(assessment) {
 
   if (body.fire === 'some') return { condition: 'accident', reason: 'fire_damage' };
   if (body.flood === 'some') return { condition: 'accident', reason: 'flood_damage' };
-  if (isNo(a.drives)) return { condition: 'non_running', reason: 'does_not_drive' };
+  if (getStartDrive(assessment) === START_DRIVE.does_not_start) {
+    return { condition: 'non_running', reason: 'does_not_start' };
+  }
   if (body.engine === 'some') return { condition: 'accident', reason: 'engine_damage' };
 
   const panelSevereCount = [...PANEL_KEYS, 'airbag'].filter((k) => body[k] === 'some').length;
@@ -287,8 +366,7 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   let price = basePrice * appliedMileageTitle;
 
-  const a = validated.assessment && typeof validated.assessment === 'object' ? validated.assessment : {};
-  const drivabilityMult = isNo(a.drives) ? 0.6 : 1;
+  const drivabilityMult = computeCamryDrivabilityMultiplier(validated.assessment);
   if (drivabilityMult < 1) {
     price *= drivabilityMult;
   }
@@ -298,6 +376,13 @@ async function tryComputeCamryRuleEstimate(validated) {
     price *= tiresMult;
   }
 
+  const { factor: conditionStackMult, applied: conditionStackApplied } = computeConditionStackMultiplier(
+    validated.assessment,
+  );
+  if (conditionStackMult < 1) {
+    price *= conditionStackMult;
+  }
+
   const { factor: damageFactor, applied: damageApplied } = computeDamageMultiplierProduct(
     validated.assessment,
   );
@@ -305,7 +390,7 @@ async function tryComputeCamryRuleEstimate(validated) {
     price *= damageFactor;
   }
 
-  const cleanBoostEligible = hasNoBodyDamage(validated.assessment);
+  const cleanBoostEligible = isCleanBoostEligible(validated.assessment);
   const cleanBoostMult = cleanBoostEligible ? 1.05 : 1;
   if (cleanBoostMult > 1) {
     price *= cleanBoostMult;
@@ -337,7 +422,7 @@ async function tryComputeCamryRuleEstimate(validated) {
     high: priceHigh,
     pointOffer: finalOffer,
     meta: {
-      modelVersion: 'camry_rule_table_v3_2',
+      modelVersion: 'camry_rule_table_v3_3',
       estimator: 'camry_rule_table',
       yearBand,
       ruleCondition: condition,
@@ -358,6 +443,7 @@ async function tryComputeCamryRuleEstimate(validated) {
         drivability: drivabilityMult,
         tires: Number(tiresMult.toFixed(4)),
         tireMode,
+        conditionStack: Number(conditionStackMult.toFixed(4)),
         damage: Number(damageFactor.toFixed(4)),
         cleanBoost: cleanBoostMult,
         combinedPreClamp: Number(
@@ -365,12 +451,14 @@ async function tryComputeCamryRuleEstimate(validated) {
             appliedMileageTitle
             * drivabilityMult
             * tiresMult
+            * conditionStackMult
             * damageFactor
             * cleanBoostMult
           ).toFixed(4),
         ),
       },
       damagePenalties: damageApplied,
+      conditionStackPenalties: conditionStackApplied,
       cleanBoostApplied: cleanBoostMult > 1,
       clamped: rawOffer !== finalOffer,
       vehicleClass: 'camry',
@@ -385,13 +473,18 @@ async function tryComputeCamryRuleEstimate(validated) {
 module.exports = {
   tryComputeCamryRuleEstimate,
   getYearBand,
+  getStartDrive,
   mapAssessmentToCondition,
   isCamryCandidate,
   finalOfferFromBand,
   mileageMultiplier,
   titleMultiplier,
   computeDamageMultiplierProduct,
+  computeConditionStackMultiplier,
+  computeV1DrivabilityFactor,
+  computeCamryDrivabilityMultiplier,
   hasNoBodyDamage,
+  isCleanBoostEligible,
   computeTireMultiplier,
   isNo,
   MILEAGE_MULTIPLIERS,

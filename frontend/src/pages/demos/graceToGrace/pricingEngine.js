@@ -43,6 +43,9 @@ export const BODY_PANEL_KEYS = [
   'airbag',
 ];
 
+/** Per-area “none / some” (glass & airbag use custom copy in the offer form). */
+export const BODY_STRUCTURAL_KEYS = ['front', 'rear', 'left', 'right', 'engine', 'flood', 'fire'];
+
 export const BODY_PANEL_LABELS = {
   front: 'Front',
   rear: 'Rear',
@@ -51,6 +54,27 @@ export const BODY_PANEL_LABELS = {
   engine: 'Engine',
   flood: 'Flood',
   fire: 'Fire',
-  glass: 'Glass',
+  glass: 'Glass, mirrors & lights',
   airbag: 'Airbag',
+};
+
+export const START_DRIVE = {
+  starts_drives: 'starts_drives',
+  starts_not_drives: 'starts_not_drives',
+  does_not_start: 'does_not_start',
+};
+
+export const EXTERIOR = {
+  no_major: 'no_major',
+  rust_or_damage: 'rust_or_damage',
+};
+
+export const EXTERIOR_COMPLETE = {
+  all: 'all',
+  incomplete: 'incomplete',
+};
+
+export const CATALYTIC = {
+  present: 'present',
+  missing: 'missing',
 };
