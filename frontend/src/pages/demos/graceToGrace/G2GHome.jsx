@@ -14,7 +14,8 @@ export default function G2GHome() {
       <section className="g2g-hero">
         <h1>{TAGLINE}</h1>
         <p>
-          Enter your VIN for automatic year, make, and model from NHTSA data, then tell us the condition. You&apos;ll
+          Enter your VIN to pre-fill year, make, and model (matched to our lists), or pick them from the menus, then tell
+          us the condition. You&apos;ll
           see an <strong>estimated</strong> offer range in seconds — not a final quote until we verify the vehicle.
         </p>
         <Link to={`${BASE}/offer`} className="g2g-btn g2g-btn--primary">

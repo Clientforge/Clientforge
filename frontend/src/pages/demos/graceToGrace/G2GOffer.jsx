@@ -11,6 +11,15 @@ import {
 } from './pricingEngine';
 import { postGraceEstimate } from './graceEstimateApi';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
+import {
+  OTHER_VALUE,
+  VEHICLE_YEARS,
+  VEHICLE_MAKES,
+  MODELS_BY_MAKE,
+  matchMakeToCatalog,
+  matchModelToCatalog,
+  coerceDecodedYear,
+} from './vehicleCatalog';
 
 function YesNoRow({ label, value, onChange, groupId, hint }) {
   return (
@@ -150,8 +159,10 @@ export default function G2GOffer() {
   const [decodeError, setDecodeError] = useState('');
 
   const [year, setYear] = useState('');
-  const [make, setMake] = useState('');
-  const [model, setModel] = useState('');
+  const [makeSelect, setMakeSelect] = useState('');
+  const [makeOther, setMakeOther] = useState('');
+  const [modelSelect, setModelSelect] = useState('');
+  const [modelOther, setModelOther] = useState('');
   const [bodyClass, setBodyClass] = useState('');
   const [engineNote, setEngineNote] = useState('');
 
@@ -186,9 +197,28 @@ export default function G2GOffer() {
     setDecoding(true);
     try {
       const data = await decodeVin(v);
-      setYear(data.year || '');
-      setMake(data.make || '');
-      setModel(data.model || '');
+      const y = coerceDecodedYear(data.year);
+      if (y) setYear(y);
+      const rawMake = String(data.make || '').trim();
+      const rawModel = String(data.model || '').trim();
+      const canonMake = matchMakeToCatalog(rawMake);
+      if (canonMake) {
+        setMakeSelect(canonMake);
+        setMakeOther('');
+        const canonModel = matchModelToCatalog(canonMake, rawModel);
+        if (canonModel) {
+          setModelSelect(canonModel);
+          setModelOther('');
+        } else {
+          setModelSelect(OTHER_VALUE);
+          setModelOther(rawModel);
+        }
+      } else {
+        setMakeSelect(OTHER_VALUE);
+        setMakeOther(rawMake);
+        setModelSelect('');
+        setModelOther(rawModel);
+      }
       setBodyClass(data.bodyClass || '');
       setEngineNote(data.engine || '');
     } catch (e) {
@@ -202,8 +232,18 @@ export default function G2GOffer() {
     e.preventDefault();
     setFormError('');
     setResult(null);
-    if (!year.trim() || !make.trim() || !model.trim()) {
-      setFormError('Year, make, and model are required (use VIN decode or enter manually).');
+    const makeFinal =
+      makeSelect === OTHER_VALUE
+        ? makeOther.trim()
+        : makeSelect.trim();
+    const modelFinal =
+      makeSelect === OTHER_VALUE
+        ? modelOther.trim()
+        : modelSelect === OTHER_VALUE
+          ? modelOther.trim()
+          : modelSelect.trim();
+    if (!year.trim() || !makeFinal || !modelFinal) {
+      setFormError('Select year, make, and model (use VIN decode or choose from the lists). If your make is not listed, use Other.');
       return;
     }
     if (!mileageBracket) {
@@ -219,8 +259,8 @@ export default function G2GOffer() {
     try {
       const range = await postGraceEstimate({
         year: year.trim(),
-        make: make.trim(),
-        model: model.trim(),
+        make: makeFinal,
+        model: modelFinal,
         bodyClass,
         zip: zip.trim().replace(/\D/g, '').slice(0, 5),
         mileageMidpoint: mileageBracket,
@@ -251,12 +291,15 @@ export default function G2GOffer() {
     setBodyDamage((prev) => ({ ...prev, [k]: val }));
   };
 
+  const modelListForMake = makeSelect && makeSelect !== OTHER_VALUE ? MODELS_BY_MAKE[makeSelect] || [] : [];
+
   return (
     <>
       <h1 className="g2g-page-title">Get your estimate</h1>
       <p className="g2g-page-lead">
-        Optionally decode your VIN with NHTSA data, confirm vehicle details, then answer a few questions about mileage
-        and condition. You&apos;ll get a dollar range from our demo pricing engine — not a binding offer.
+        Optionally decode your VIN with NHTSA data, confirm or choose year, make, and model from the lists, then answer
+        a few questions about mileage and condition. You&apos;ll get a dollar range from our demo pricing engine — not a
+        binding offer.
       </p>
 
       <form className="g2g-form g2g-form--offer" onSubmit={handleEstimate}>
@@ -285,20 +328,109 @@ export default function G2GOffer() {
           ) : null}
         </div>
 
-        <div className="g2g-row">
+        <div className="g2g-row g2g-row--vehicle">
           <div className="g2g-field">
             <label htmlFor="g2g-year">Year</label>
-            <input id="g2g-year" name="year" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value)} />
+            <select id="g2g-year" name="year" value={year} onChange={(e) => setYear(e.target.value)}>
+              <option value="">Select year</option>
+              {VEHICLE_YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="g2g-field">
             <label htmlFor="g2g-make">Make</label>
-            <input id="g2g-make" name="make" value={make} onChange={(e) => setMake(e.target.value)} />
+            <select
+              id="g2g-make"
+              name="make"
+              value={makeSelect}
+              onChange={(e) => {
+                const v = e.target.value;
+                setMakeSelect(v);
+                if (v !== OTHER_VALUE) {
+                  setMakeOther('');
+                }
+                setModelSelect('');
+                setModelOther('');
+              }}
+            >
+              <option value="">Select make</option>
+              {VEHICLE_MAKES.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+              <option value={OTHER_VALUE}>Other (type make &amp; model)</option>
+            </select>
           </div>
-          <div className="g2g-field">
-            <label htmlFor="g2g-model">Model</label>
-            <input id="g2g-model" name="model" value={model} onChange={(e) => setModel(e.target.value)} />
-          </div>
+          {makeSelect && makeSelect !== OTHER_VALUE ? (
+            <div className="g2g-field">
+              <label htmlFor="g2g-model">Model</label>
+              <select
+                id="g2g-model"
+                name="model"
+                value={modelSelect}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setModelSelect(v);
+                  if (v !== OTHER_VALUE) {
+                    setModelOther('');
+                  }
+                }}
+              >
+                <option value="">Select model</option>
+                {modelListForMake.map((mo) => (
+                  <option key={mo} value={mo}>
+                    {mo}
+                  </option>
+                ))}
+                <option value={OTHER_VALUE}>Other (specify)</option>
+              </select>
+            </div>
+          ) : null}
         </div>
+        {makeSelect === OTHER_VALUE ? (
+          <div className="g2g-row">
+            <div className="g2g-field">
+              <label htmlFor="g2g-make-other">Make (not listed)</label>
+              <input
+                id="g2g-make-other"
+                name="makeOther"
+                autoComplete="off"
+                placeholder="e.g. Alfa Romeo"
+                value={makeOther}
+                onChange={(e) => setMakeOther(e.target.value)}
+              />
+            </div>
+            <div className="g2g-field">
+              <label htmlFor="g2g-model-free">Model</label>
+              <input
+                id="g2g-model-free"
+                name="modelFree"
+                autoComplete="off"
+                placeholder="e.g. Stelvio"
+                value={modelOther}
+                onChange={(e) => setModelOther(e.target.value)}
+              />
+            </div>
+          </div>
+        ) : null}
+        {makeSelect && makeSelect !== OTHER_VALUE && modelSelect === OTHER_VALUE ? (
+          <div className="g2g-field">
+            <label htmlFor="g2g-model-other">Model name</label>
+            <input
+              id="g2g-model-other"
+              name="modelOther"
+              autoComplete="off"
+              placeholder="Type the model (e.g. Camry XSE)"
+              value={modelOther}
+              onChange={(e) => setModelOther(e.target.value)}
+            />
+            <p className="g2g-field-hint">Use when your exact trim isn&apos;t in the list. We still price from make &amp; model text.</p>
+          </div>
+        ) : null}
 
         {engineNote || bodyClass ? (
           <div className="g2g-decode-meta">
