@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MILEAGE_SELECT_OPTIONS,
   BODY_STRUCTURAL_KEYS,
@@ -20,6 +20,39 @@ import {
   matchModelToCatalog,
   coerceDecodedYear,
 } from './vehicleCatalog';
+
+const FLOW = {
+  year: 1,
+  make: 2,
+  model: 3,
+  vin: 4,
+  zipTitle: 5,
+  mileage: 6,
+  battery: 7,
+  key: 8,
+  startDrive: 9,
+  tiresInflated: 10,
+  tiresAttached: 11,
+  exterior: 12,
+  exteriorComplete: 13,
+  glass: 14,
+  catalytic: 15,
+  body: 16,
+};
+
+function FlowBlock({ children, step, flowMax, className = '' }) {
+  const isPast = step < flowMax;
+  const isCurrent = step === flowMax;
+  return (
+    <div
+      className={`g2g-flow-block ${isPast ? 'g2g-flow-block--past' : ''} ${isCurrent ? 'g2g-flow-block--current' : ''} ${className}`.trim()}
+      data-flow-step={step}
+      aria-current={isCurrent ? 'step' : undefined}
+    >
+      {children}
+    </div>
+  );
+}
 
 function YesNoRow({ label, value, onChange, groupId, hint }) {
   return (
@@ -94,14 +127,14 @@ function TwoOptionRow({ label, value, onChange, groupId, leftValue, rightValue, 
       <div className="g2g-segment g2g-segment--wide" role="group" aria-labelledby={`${groupId}-label`}>
         <button
           type="button"
-          className={value === leftValue ? 'g2g-segment--active' : ''}
+          className={value != null && value === leftValue ? 'g2g-segment--active' : ''}
           onClick={() => onChange(leftValue)}
         >
           {leftLabel}
         </button>
         <button
           type="button"
-          className={value === rightValue ? 'g2g-segment--active' : ''}
+          className={value != null && value === rightValue ? 'g2g-segment--active' : ''}
           onClick={() => onChange(rightValue)}
         >
           {rightLabel}
@@ -145,11 +178,78 @@ const initialBody = () => ({
   engine: 'none',
   flood: 'none',
   fire: 'none',
-  glass: 'none',
+  glass: null,
   airbag: 'none',
 });
 
+function isModelComplete(makeSelect, makeOther, modelSelect, modelOther) {
+  if (!makeSelect) return false;
+  if (makeSelect === OTHER_VALUE) {
+    return Boolean(makeOther.trim() && modelOther.trim());
+  }
+  if (!modelSelect) return false;
+  if (modelSelect === OTHER_VALUE) {
+    return Boolean(modelOther.trim());
+  }
+  return true;
+}
+
+function computeUnlockedStep({
+  year,
+  makeSelect,
+  makeOther,
+  modelSelect,
+  modelOther,
+  vinStepAcknowledged,
+  zip,
+  mileageBracket,
+  battery,
+  key,
+  startDrive,
+  tiresInflated,
+  tiresAttached,
+  exterior,
+  exteriorComplete,
+  glass,
+  catalytic,
+}) {
+  let m = FLOW.year;
+  if (!String(year || '').trim()) return m;
+  m = FLOW.make;
+  if (!makeSelect) return m;
+  m = FLOW.model;
+  if (!isModelComplete(makeSelect, makeOther, modelSelect, modelOther)) return m;
+  m = FLOW.vin;
+  if (!vinStepAcknowledged) return m;
+  m = FLOW.zipTitle;
+  if (String(zip || '').replace(/\D/g, '').length < 5) return m;
+  m = FLOW.mileage;
+  if (!mileageBracket) return m;
+  m = FLOW.battery;
+  if (battery == null) return m;
+  m = FLOW.key;
+  if (key == null) return m;
+  m = FLOW.startDrive;
+  if (startDrive == null) return m;
+  m = FLOW.tiresInflated;
+  if (tiresInflated == null) return m;
+  m = FLOW.tiresAttached;
+  if (tiresAttached == null) return m;
+  m = FLOW.exterior;
+  if (exterior == null) return m;
+  m = FLOW.exteriorComplete;
+  if (exteriorComplete == null) return m;
+  m = FLOW.glass;
+  if (glass == null) return m;
+  m = FLOW.catalytic;
+  if (catalytic == null) return m;
+  m = FLOW.body;
+  return m;
+}
+
 export default function G2GOffer() {
+  const flowEndRef = useRef(null);
+
   useEffect(() => {
     document.title = 'Get offer — Grace to Grace';
   }, []);
@@ -170,19 +270,74 @@ export default function G2GOffer() {
   const [zip, setZip] = useState('');
   const [titleStatus, setTitleStatus] = useState('clean');
 
-  const [startDrive, setStartDrive] = useState(START_DRIVE.starts_drives);
-  const [battery, setBattery] = useState('yes');
-  const [key, setKey] = useState('yes');
-  const [tiresInflated, setTiresInflated] = useState('yes');
-  const [tiresAttached, setTiresAttached] = useState('yes');
-  const [exterior, setExterior] = useState(EXTERIOR.no_major);
-  const [exteriorComplete, setExteriorComplete] = useState(EXTERIOR_COMPLETE.all);
-  const [catalytic, setCatalytic] = useState(CATALYTIC.present);
+  const [vinStepAcknowledged, setVinStepAcknowledged] = useState(false);
+  const [startDrive, setStartDrive] = useState(null);
+  const [battery, setBattery] = useState(null);
+  const [key, setKey] = useState(null);
+  const [tiresInflated, setTiresInflated] = useState(null);
+  const [tiresAttached, setTiresAttached] = useState(null);
+  const [exterior, setExterior] = useState(null);
+  const [exteriorComplete, setExteriorComplete] = useState(null);
+  const [catalytic, setCatalytic] = useState(null);
   const [bodyDamage, setBodyDamage] = useState(initialBody);
 
   const [result, setResult] = useState(null);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const unlocked = useMemo(
+    () =>
+      computeUnlockedStep({
+        year,
+        makeSelect,
+        makeOther,
+        modelSelect,
+        modelOther,
+        vinStepAcknowledged,
+        zip,
+        mileageBracket,
+        battery,
+        key,
+        startDrive,
+        tiresInflated,
+        tiresAttached,
+        exterior,
+        exteriorComplete,
+        glass: bodyDamage.glass,
+        catalytic,
+      }),
+    [
+      year,
+      makeSelect,
+      makeOther,
+      modelSelect,
+      modelOther,
+      vinStepAcknowledged,
+      zip,
+      mileageBracket,
+      battery,
+      key,
+      startDrive,
+      tiresInflated,
+      tiresAttached,
+      exterior,
+      exteriorComplete,
+      bodyDamage.glass,
+      catalytic,
+    ],
+  );
+
+  const [flowMax, setFlowMax] = useState(1);
+
+  useEffect(() => {
+    setFlowMax((f) => Math.max(f, unlocked));
+  }, [unlocked]);
+
+  useEffect(() => {
+    if (flowEndRef.current) {
+      flowEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [flowMax]);
 
   const handleDecode = async () => {
     setDecodeError('');
@@ -221,6 +376,7 @@ export default function G2GOffer() {
       }
       setBodyClass(data.bodyClass || '');
       setEngineNote(data.engine || '');
+      setVinStepAcknowledged(true);
     } catch (e) {
       setDecodeError(e.message || 'Decode failed.');
     } finally {
@@ -243,7 +399,7 @@ export default function G2GOffer() {
           ? modelOther.trim()
           : modelSelect.trim();
     if (!year.trim() || !makeFinal || !modelFinal) {
-      setFormError('Select year, make, and model (use VIN decode or choose from the lists). If your make is not listed, use Other.');
+      setFormError('Complete the vehicle steps: year, make, and model.');
       return;
     }
     if (!mileageBracket) {
@@ -252,6 +408,20 @@ export default function G2GOffer() {
     }
     if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
       setFormError('Enter a 5-digit ZIP code.');
+      return;
+    }
+    if (
+      battery == null
+      || key == null
+      || startDrive == null
+      || tiresInflated == null
+      || tiresAttached == null
+      || exterior == null
+      || exteriorComplete == null
+      || catalytic == null
+      || bodyDamage.glass == null
+    ) {
+      setFormError('Answer each condition question to get an estimate.');
       return;
     }
     setSubmitting(true);
@@ -293,312 +463,402 @@ export default function G2GOffer() {
 
   const modelListForMake = makeSelect && makeSelect !== OTHER_VALUE ? MODELS_BY_MAKE[makeSelect] || [] : [];
 
+  const canSubmitEstimate = unlocked >= FLOW.body;
+
   return (
     <>
       <h1 className="g2g-page-title">Get your estimate</h1>
       <p className="g2g-page-lead">
-        Optionally decode your VIN with NHTSA data, confirm or choose year, make, and model from the lists, then answer
-        a few questions about mileage and condition. You&apos;ll get a dollar range from our demo pricing engine — not a
-        binding offer.
+        Answer each question as it appears. Your previous answers stay on screen — like a short conversation — until
+        you see your range. Not a binding offer.
       </p>
 
-      <form className="g2g-form g2g-form--offer" onSubmit={handleEstimate}>
-        <div className="g2g-field">
-          <label htmlFor="g2g-vin">VIN (optional)</label>
-          <div className="g2g-row">
-            <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
-              <input
-                id="g2g-vin"
-                name="vin"
-                autoComplete="off"
-                placeholder="17-character VIN if you have it"
-                value={vin}
-                maxLength={17}
-                onChange={(ev) => setVin(ev.target.value.toUpperCase())}
-              />
-            </div>
-            <button type="button" className="g2g-btn g2g-btn--ghost" disabled={decoding} onClick={handleDecode}>
-              {decoding ? 'Decoding…' : 'Decode VIN'}
-            </button>
-          </div>
-          {decodeError ? (
-            <p className="g2g-field-hint" style={{ color: 'var(--g2g-danger)' }}>
-              {decodeError}
-            </p>
+      <div className="g2g-flow" aria-live="polite">
+        <form className="g2g-form g2g-form--offer g2g-form--flow" onSubmit={handleEstimate}>
+          {flowMax >= FLOW.year ? (
+            <FlowBlock step={FLOW.year} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">What year is your vehicle?</div>
+              <div className="g2g-field">
+                <label htmlFor="g2g-year">Year</label>
+                <select
+                  id="g2g-year"
+                  name="year"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                >
+                  <option value="">Select year</option>
+                  {VEHICLE_YEARS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FlowBlock>
           ) : null}
-        </div>
 
-        <div className="g2g-row g2g-row--vehicle">
-          <div className="g2g-field">
-            <label htmlFor="g2g-year">Year</label>
-            <select id="g2g-year" name="year" value={year} onChange={(e) => setYear(e.target.value)}>
-              <option value="">Select year</option>
-              {VEHICLE_YEARS.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="g2g-field">
-            <label htmlFor="g2g-make">Make</label>
-            <select
-              id="g2g-make"
-              name="make"
-              value={makeSelect}
-              onChange={(e) => {
-                const v = e.target.value;
-                setMakeSelect(v);
-                if (v !== OTHER_VALUE) {
-                  setMakeOther('');
-                }
-                setModelSelect('');
-                setModelOther('');
-              }}
-            >
-              <option value="">Select make</option>
-              {VEHICLE_MAKES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-              <option value={OTHER_VALUE}>Other (type make &amp; model)</option>
-            </select>
-          </div>
-          {makeSelect && makeSelect !== OTHER_VALUE ? (
-            <div className="g2g-field">
-              <label htmlFor="g2g-model">Model</label>
-              <select
-                id="g2g-model"
-                name="model"
-                value={modelSelect}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setModelSelect(v);
-                  if (v !== OTHER_VALUE) {
+          {flowMax >= FLOW.make ? (
+            <FlowBlock step={FLOW.make} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">What make?</div>
+              <div className="g2g-field">
+                <label htmlFor="g2g-make">Make</label>
+                <select
+                  id="g2g-make"
+                  name="make"
+                  value={makeSelect}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setMakeSelect(v);
+                    if (v !== OTHER_VALUE) {
+                      setMakeOther('');
+                    }
+                    setModelSelect('');
                     setModelOther('');
-                  }
-                }}
-              >
-                <option value="">Select model</option>
-                {modelListForMake.map((mo) => (
-                  <option key={mo} value={mo}>
-                    {mo}
-                  </option>
-                ))}
-                <option value={OTHER_VALUE}>Other (specify)</option>
-              </select>
-            </div>
+                  }}
+                >
+                  <option value="">Select make</option>
+                  {VEHICLE_MAKES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                  <option value={OTHER_VALUE}>Other (type make &amp; model)</option>
+                </select>
+              </div>
+            </FlowBlock>
           ) : null}
-        </div>
-        {makeSelect === OTHER_VALUE ? (
-          <div className="g2g-row">
-            <div className="g2g-field">
-              <label htmlFor="g2g-make-other">Make (not listed)</label>
-              <input
-                id="g2g-make-other"
-                name="makeOther"
-                autoComplete="off"
-                placeholder="e.g. Alfa Romeo"
-                value={makeOther}
-                onChange={(e) => setMakeOther(e.target.value)}
+
+          {flowMax >= FLOW.model ? (
+            <FlowBlock step={FLOW.model} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">What model?</div>
+              {makeSelect && makeSelect !== OTHER_VALUE ? (
+                <div className="g2g-field">
+                  <label htmlFor="g2g-model">Model</label>
+                  <select
+                    id="g2g-model"
+                    name="model"
+                    value={modelSelect}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setModelSelect(v);
+                      if (v !== OTHER_VALUE) {
+                        setModelOther('');
+                      }
+                    }}
+                  >
+                    <option value="">Select model</option>
+                    {modelListForMake.map((mo) => (
+                      <option key={mo} value={mo}>
+                        {mo}
+                      </option>
+                    ))}
+                    <option value={OTHER_VALUE}>Other (specify)</option>
+                  </select>
+                </div>
+              ) : null}
+              {makeSelect === OTHER_VALUE ? (
+                <div className="g2g-row">
+                  <div className="g2g-field">
+                    <label htmlFor="g2g-make-other">Make (not listed)</label>
+                    <input
+                      id="g2g-make-other"
+                      name="makeOther"
+                      autoComplete="off"
+                      placeholder="e.g. Alfa Romeo"
+                      value={makeOther}
+                      onChange={(e) => setMakeOther(e.target.value)}
+                    />
+                  </div>
+                  <div className="g2g-field">
+                    <label htmlFor="g2g-model-free">Model</label>
+                    <input
+                      id="g2g-model-free"
+                      name="modelFree"
+                      autoComplete="off"
+                      placeholder="e.g. Stelvio"
+                      value={modelOther}
+                      onChange={(e) => setModelOther(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              {makeSelect && makeSelect !== OTHER_VALUE && modelSelect === OTHER_VALUE ? (
+                <div className="g2g-field">
+                  <label htmlFor="g2g-model-other">Model name</label>
+                  <input
+                    id="g2g-model-other"
+                    name="modelOther"
+                    autoComplete="off"
+                    placeholder="Type the model (e.g. Camry XSE)"
+                    value={modelOther}
+                    onChange={(e) => setModelOther(e.target.value)}
+                  />
+                  <p className="g2g-field-hint">Use when your exact trim isn&apos;t in the list.</p>
+                </div>
+              ) : null}
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.vin ? (
+            <FlowBlock step={FLOW.vin} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">VIN (optional)</div>
+              <p className="g2g-flow-block-lead">
+                Add a VIN to fill details from NHTSA, or skip to continue with what you entered.
+              </p>
+              <div className="g2g-field">
+                <label htmlFor="g2g-vin">17-character VIN</label>
+                <div className="g2g-row">
+                  <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
+                    <input
+                      id="g2g-vin"
+                      name="vin"
+                      autoComplete="off"
+                      placeholder="If you don’t have it, skip below"
+                      value={vin}
+                      maxLength={17}
+                      onChange={(ev) => setVin(ev.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <button type="button" className="g2g-btn g2g-btn--ghost" disabled={decoding} onClick={handleDecode}>
+                    {decoding ? 'Decoding…' : 'Decode VIN'}
+                  </button>
+                </div>
+                {decodeError ? (
+                  <p className="g2g-field-hint" style={{ color: 'var(--g2g-danger)' }}>
+                    {decodeError}
+                  </p>
+                ) : null}
+              </div>
+              {engineNote || bodyClass ? (
+                <div className="g2g-decode-meta">
+                  {bodyClass ? <div>Body class (from VIN): {bodyClass}</div> : null}
+                  {engineNote ? <div>Engine (from VIN): {engineNote}</div> : null}
+                </div>
+              ) : null}
+              {!vinStepAcknowledged ? (
+                <div className="g2g-flow-actions">
+                  <button
+                    type="button"
+                    className="g2g-btn g2g-btn--primary"
+                    onClick={() => setVinStepAcknowledged(true)}
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : null}
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.zipTitle ? (
+            <FlowBlock step={FLOW.zipTitle} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">Where is the vehicle &amp; what title status?</div>
+              <div className="g2g-field">
+                <label htmlFor="g2g-zip">ZIP code</label>
+                <input
+                  id="g2g-zip"
+                  name="zip"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  placeholder="30260"
+                  maxLength={10}
+                  value={zip}
+                  onChange={(e) => setZip(e.target.value)}
+                />
+              </div>
+              <div className="g2g-field">
+                <label htmlFor="g2g-title">Title status (seller-reported)</label>
+                <select
+                  id="g2g-title"
+                  name="titleStatus"
+                  value={titleStatus}
+                  onChange={(e) => setTitleStatus(e.target.value)}
+                >
+                  {TITLE_STATUS_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="g2g-field-hint">Pricing uses your selection; verified title is not pulled yet.</p>
+              </div>
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.mileage ? (
+            <FlowBlock step={FLOW.mileage} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">What&apos;s the mileage?</div>
+              <div className="g2g-field">
+                <label htmlFor="g2g-mileage-select">Mileage range</label>
+                <select
+                  id="g2g-mileage-select"
+                  name="mileageBracket"
+                  value={mileageBracket}
+                  onChange={(e) => setMileageBracket(e.target.value)}
+                >
+                  {MILEAGE_SELECT_OPTIONS.map((o) => (
+                    <option key={o.label} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.battery ? (
+            <FlowBlock step={FLOW.battery} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">Condition</div>
+              <YesNoRow
+                label="Battery"
+                value={battery}
+                onChange={setBattery}
+                groupId="g2g-battery"
+                hint="Yes = installed and working. No = missing or not working."
               />
-            </div>
-            <div className="g2g-field">
-              <label htmlFor="g2g-model-free">Model</label>
-              <input
-                id="g2g-model-free"
-                name="modelFree"
-                autoComplete="off"
-                placeholder="e.g. Stelvio"
-                value={modelOther}
-                onChange={(e) => setModelOther(e.target.value)}
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.key ? (
+            <FlowBlock step={FLOW.key} flowMax={flowMax}>
+              <YesNoRow
+                label="Key availability"
+                value={key}
+                onChange={setKey}
+                groupId="g2g-key"
+                hint="Yes = key is available. No = no key."
               />
-            </div>
-          </div>
-        ) : null}
-        {makeSelect && makeSelect !== OTHER_VALUE && modelSelect === OTHER_VALUE ? (
-          <div className="g2g-field">
-            <label htmlFor="g2g-model-other">Model name</label>
-            <input
-              id="g2g-model-other"
-              name="modelOther"
-              autoComplete="off"
-              placeholder="Type the model (e.g. Camry XSE)"
-              value={modelOther}
-              onChange={(e) => setModelOther(e.target.value)}
-            />
-            <p className="g2g-field-hint">Use when your exact trim isn&apos;t in the list. We still price from make &amp; model text.</p>
-          </div>
-        ) : null}
+            </FlowBlock>
+          ) : null}
 
-        {engineNote || bodyClass ? (
-          <div className="g2g-decode-meta">
-            {bodyClass ? <div>Body class (from VIN): {bodyClass}</div> : null}
-            {engineNote ? <div>Engine (from VIN): {engineNote}</div> : null}
-          </div>
-        ) : null}
+          {flowMax >= FLOW.startDrive ? (
+            <FlowBlock step={FLOW.startDrive} flowMax={flowMax}>
+              <StartDriveRow value={startDrive} onChange={setStartDrive} groupId="g2g-start-drive" />
+            </FlowBlock>
+          ) : null}
 
-        <div className="g2g-field">
-          <label htmlFor="g2g-zip">ZIP code</label>
-          <input
-            id="g2g-zip"
-            name="zip"
-            inputMode="numeric"
-            autoComplete="postal-code"
-            placeholder="30260"
-            maxLength={10}
-            value={zip}
-            onChange={(e) => setZip(e.target.value)}
-          />
-        </div>
-
-        <div className="g2g-field">
-          <label htmlFor="g2g-title">Title status (seller-reported)</label>
-          <select
-            id="g2g-title"
-            name="titleStatus"
-            value={titleStatus}
-            onChange={(e) => setTitleStatus(e.target.value)}
-          >
-            {TITLE_STATUS_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <p className="g2g-field-hint">
-            v1 uses your selection for pricing. Verified NMVTIS / title branding is not pulled automatically yet.
-          </p>
-        </div>
-
-        <section className="g2g-form-section" aria-labelledby="g2g-car-conditions-heading">
-          <h2 id="g2g-car-conditions-heading" className="g2g-form-section-title">
-            Vehicle condition
-          </h2>
-
-          <div className="g2g-field">
-            <label htmlFor="g2g-mileage-select">What is the mileage on the car?</label>
-            <select
-              id="g2g-mileage-select"
-              name="mileageBracket"
-              value={mileageBracket}
-              onChange={(e) => setMileageBracket(e.target.value)}
-            >
-              {MILEAGE_SELECT_OPTIONS.map((o) => (
-                <option key={o.label} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <YesNoRow
-            label="Battery"
-            value={battery}
-            onChange={setBattery}
-            groupId="g2g-battery"
-            hint="Yes = installed and working. No = missing or not working."
-          />
-          <YesNoRow
-            label="Key availability"
-            value={key}
-            onChange={setKey}
-            groupId="g2g-key"
-            hint="Yes = key is available. No = no key."
-          />
-
-          <StartDriveRow value={startDrive} onChange={setStartDrive} groupId="g2g-start-drive" />
-
-          <YesNoRow
-            label="Are all tires inflated with air?"
-            value={tiresInflated}
-            onChange={setTiresInflated}
-            groupId="g2g-tires-air"
-          />
-          <YesNoRow
-            label="Are all the tires attached to the car?"
-            value={tiresAttached}
-            onChange={setTiresAttached}
-            groupId="g2g-tires-attached"
-          />
-
-          <TwoOptionRow
-            label="Exterior condition"
-            value={exterior}
-            onChange={setExterior}
-            groupId="g2g-exterior"
-            leftValue={EXTERIOR.no_major}
-            rightValue={EXTERIOR.rust_or_damage}
-            leftLabel="No major damage (minor dents/dings only)"
-            rightLabel="Has rust or visible exterior damage"
-          />
-          <TwoOptionRow
-            label="Exterior completeness"
-            value={exteriorComplete}
-            onChange={setExteriorComplete}
-            groupId="g2g-exterior-complete"
-            leftValue={EXTERIOR_COMPLETE.all}
-            rightValue={EXTERIOR_COMPLETE.incomplete}
-            leftLabel="All exterior parts (doors, bumpers, panels) are attached"
-            rightLabel="One or more are broken, loose, or missing"
-          />
-          <TwoOptionRow
-            label="Glass, mirrors &amp; lights"
-            value={bodyDamage.glass}
-            onChange={(v) => setPanel('glass', v)}
-            groupId="g2g-glass"
-            leftValue="none"
-            rightValue="some"
-            leftLabel="No damage (all intact)"
-            rightLabel="At least one is damaged or missing"
-          />
-          <TwoOptionRow
-            label="Catalytic converter"
-            value={catalytic}
-            onChange={setCatalytic}
-            groupId="g2g-cat"
-            leftValue={CATALYTIC.present}
-            rightValue={CATALYTIC.missing}
-            leftLabel="Present (attached)"
-            rightLabel="Missing"
-          />
-        </section>
-
-        <section className="g2g-form-section" aria-labelledby="g2g-body-heading">
-          <h2 id="g2g-body-heading" className="g2g-form-section-title">
-            Body &amp; panels
-          </h2>
-          <p className="g2g-form-section-hint">For each area, choose whether there is no damage or some damage.</p>
-          <div className="g2g-damage-list">
-            {BODY_STRUCTURAL_KEYS.map((panelKey) => (
-              <DamageRow
-                key={panelKey}
-                label={BODY_PANEL_LABELS[panelKey]}
-                value={bodyDamage[panelKey]}
-                onChange={(v) => setPanel(panelKey, v)}
-                groupId={`g2g-body-${panelKey}`}
+          {flowMax >= FLOW.tiresInflated ? (
+            <FlowBlock step={FLOW.tiresInflated} flowMax={flowMax}>
+              <YesNoRow
+                label="Are all tires inflated with air?"
+                value={tiresInflated}
+                onChange={setTiresInflated}
+                groupId="g2g-tires-air"
               />
-            ))}
-            <TwoOptionRow
-              label="Airbag condition"
-              value={bodyDamage.airbag}
-              onChange={(v) => setPanel('airbag', v)}
-              groupId="g2g-airbag"
-              leftValue="none"
-              rightValue="some"
-              leftLabel="No — airbags are intact"
-              rightLabel="Yes — airbags are deployed"
-            />
-          </div>
-        </section>
+            </FlowBlock>
+          ) : null}
 
-        {formError ? <div className="g2g-alert g2g-alert--error">{formError}</div> : null}
+          {flowMax >= FLOW.tiresAttached ? (
+            <FlowBlock step={FLOW.tiresAttached} flowMax={flowMax}>
+              <YesNoRow
+                label="Are all tires attached to the car?"
+                value={tiresAttached}
+                onChange={setTiresAttached}
+                groupId="g2g-tires-attached"
+              />
+            </FlowBlock>
+          ) : null}
 
-        <button type="submit" className="g2g-btn g2g-btn--primary" disabled={submitting}>
-          {submitting ? 'Calculating…' : 'Show estimated range'}
-        </button>
-      </form>
+          {flowMax >= FLOW.exterior ? (
+            <FlowBlock step={FLOW.exterior} flowMax={flowMax}>
+              <TwoOptionRow
+                label="Exterior condition"
+                value={exterior}
+                onChange={setExterior}
+                groupId="g2g-exterior"
+                leftValue={EXTERIOR.no_major}
+                rightValue={EXTERIOR.rust_or_damage}
+                leftLabel="No major damage (minor dents/dings only)"
+                rightLabel="Has rust or visible exterior damage"
+              />
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.exteriorComplete ? (
+            <FlowBlock step={FLOW.exteriorComplete} flowMax={flowMax}>
+              <TwoOptionRow
+                label="Exterior completeness"
+                value={exteriorComplete}
+                onChange={setExteriorComplete}
+                groupId="g2g-exterior-complete"
+                leftValue={EXTERIOR_COMPLETE.all}
+                rightValue={EXTERIOR_COMPLETE.incomplete}
+                leftLabel="All exterior parts (doors, bumpers, panels) are attached"
+                rightLabel="One or more are broken, loose, or missing"
+              />
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.glass ? (
+            <FlowBlock step={FLOW.glass} flowMax={flowMax}>
+              <TwoOptionRow
+                label="Glass, mirrors &amp; lights"
+                value={bodyDamage.glass}
+                onChange={(v) => setPanel('glass', v)}
+                groupId="g2g-glass"
+                leftValue="none"
+                rightValue="some"
+                leftLabel="No damage (all intact)"
+                rightLabel="At least one is damaged or missing"
+              />
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.catalytic ? (
+            <FlowBlock step={FLOW.catalytic} flowMax={flowMax}>
+              <TwoOptionRow
+                label="Catalytic converter"
+                value={catalytic}
+                onChange={setCatalytic}
+                groupId="g2g-cat"
+                leftValue={CATALYTIC.present}
+                rightValue={CATALYTIC.missing}
+                leftLabel="Present (attached)"
+                rightLabel="Missing"
+              />
+            </FlowBlock>
+          ) : null}
+
+          {flowMax >= FLOW.body ? (
+            <FlowBlock step={FLOW.body} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">Body &amp; panels</div>
+              <p className="g2g-form-section-hint" style={{ marginTop: 0 }}>
+                For each area, choose whether there is no damage or some damage.
+              </p>
+              <div className="g2g-damage-list">
+                {BODY_STRUCTURAL_KEYS.map((panelKey) => (
+                  <DamageRow
+                    key={panelKey}
+                    label={BODY_PANEL_LABELS[panelKey]}
+                    value={bodyDamage[panelKey]}
+                    onChange={(v) => setPanel(panelKey, v)}
+                    groupId={`g2g-body-${panelKey}`}
+                  />
+                ))}
+                <TwoOptionRow
+                  label="Airbag condition"
+                  value={bodyDamage.airbag}
+                  onChange={(v) => setPanel('airbag', v)}
+                  groupId="g2g-airbag"
+                  leftValue="none"
+                  rightValue="some"
+                  leftLabel="No — airbags are intact"
+                  rightLabel="Yes — airbags are deployed"
+                />
+              </div>
+            </FlowBlock>
+          ) : null}
+
+          <span ref={flowEndRef} className="g2g-flow-anchor" />
+
+          {formError ? <div className="g2g-alert g2g-alert--error">{formError}</div> : null}
+
+          {canSubmitEstimate ? (
+            <button type="submit" className="g2g-btn g2g-btn--primary g2g-submit-sticky" disabled={submitting}>
+              {submitting ? 'Calculating…' : 'Show estimated range'}
+            </button>
+          ) : null}
+        </form>
+      </div>
 
       {result && result.low != null && result.high != null ? (
         <div className="g2g-result">

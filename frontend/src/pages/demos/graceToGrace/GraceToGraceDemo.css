@@ -500,3 +500,81 @@ a.g2g-logo:focus-visible {
   padding-top: 1.5rem;
   border-top: 1px solid var(--g2g-border);
 }
+
+/* Progressive offer flow — one page, questions stack as answered */
+.g2g-flow {
+  max-width: 42rem;
+}
+
+.g2g-form--flow {
+  gap: 0;
+  max-width: 42rem;
+}
+
+.g2g-flow-block {
+  padding: 1.15rem 1.1rem;
+  margin-bottom: 0.85rem;
+  border-radius: var(--g2g-radius);
+  border: 1px solid var(--g2g-border);
+  background: var(--g2g-surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.g2g-flow-block--past {
+  opacity: 0.96;
+  border-color: rgba(50, 38, 28, 0.1);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.g2g-flow-block--current {
+  border-color: var(--g2g-segment-active-border);
+  box-shadow: 0 0 0 1px rgba(47, 143, 120, 0.12);
+}
+
+.g2g-flow-block-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--g2g-text);
+  margin: 0 0 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.g2g-flow-block-lead {
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  margin: -0.35rem 0 0.85rem;
+  line-height: 1.45;
+}
+
+.g2g-flow-actions {
+  margin-top: 1rem;
+}
+
+.g2g-flow-anchor {
+  display: block;
+  height: 1px;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.g2g-submit-sticky {
+  margin-top: 0.5rem;
+}
+
+.g2g-form--flow .g2g-field {
+  margin-bottom: 0;
+}
+
+.g2g-form--flow .g2g-field + .g2g-field {
+  margin-top: 0.85rem;
+}
+
+.g2g-form--flow .g2g-toggle-row {
+  margin-top: 0.35rem;
+}
+
+.g2g-form--flow .g2g-damage-row {
+  border-bottom: none;
+  padding-bottom: 0;
+}
