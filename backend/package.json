@@ -10,6 +10,7 @@
     "build:frontend": "npm install --prefix ../frontend && npm run build --prefix ../frontend",
     "build:webapps": "npm run build:grace-to-grace && npm run build:frontend",
     "build": "npm run build:webapps",
+    "build:valuation-bands": "node scripts/buildVehicleValuationBands.js",
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
     "migrate:status": "knex migrate:status",

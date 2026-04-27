@@ -1,0 +1,1612 @@
+[
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 105,
+    "worst_max": 150,
+    "best_min": 515,
+    "best_max": 1780
+  },
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 150,
+    "worst_max": 395,
+    "best_min": 1385,
+    "best_max": 1780
+  },
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 250,
+    "worst_max": 395,
+    "best_min": 1385,
+    "best_max": 1730
+  },
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 285,
+    "worst_max": 445,
+    "best_min": 2585,
+    "best_max": 3600
+  },
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 480,
+    "worst_max": 485,
+    "best_min": 3795,
+    "best_max": 3945
+  },
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 405,
+    "worst_max": 575,
+    "best_min": 3785,
+    "best_max": 4635
+  },
+  {
+    "make": "Toyota",
+    "model": "Corolla",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 480,
+    "worst_max": 620,
+    "best_min": 4755,
+    "best_max": 4755
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 135,
+    "worst_max": 140,
+    "best_min": 515,
+    "best_max": 790
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 140,
+    "worst_max": 140,
+    "best_min": 790,
+    "best_max": 925
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 140,
+    "worst_max": 150,
+    "best_min": 925,
+    "best_max": 1430
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 150,
+    "worst_max": 295,
+    "best_min": 1520,
+    "best_max": 3075
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 370,
+    "worst_max": 405,
+    "best_min": 3160,
+    "best_max": 3570
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 590,
+    "worst_max": 605,
+    "best_min": 3325,
+    "best_max": 5100
+  },
+  {
+    "make": "Toyota",
+    "model": "Camry",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 890,
+    "worst_max": 935,
+    "best_min": 5440,
+    "best_max": 5440
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 125,
+    "worst_max": 125,
+    "best_min": 515,
+    "best_max": 590
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 125,
+    "worst_max": 130,
+    "best_min": 590,
+    "best_max": 825
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 130,
+    "worst_max": 170,
+    "best_min": 825,
+    "best_max": 1330
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 190,
+    "worst_max": 635,
+    "best_min": 1945,
+    "best_max": 2050
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 340,
+    "worst_max": 535,
+    "best_min": 3275,
+    "best_max": 3585
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 575,
+    "worst_max": 885,
+    "best_min": 4855,
+    "best_max": 5955
+  },
+  {
+    "make": "Toyota",
+    "model": "Prius",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 950,
+    "worst_max": 1270,
+    "best_min": 5885,
+    "best_max": 5885
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 130,
+    "worst_max": 180,
+    "best_min": 895,
+    "best_max": 1395
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 180,
+    "worst_max": 210,
+    "best_min": 1395,
+    "best_max": 1910
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 210,
+    "worst_max": 285,
+    "best_min": 1800,
+    "best_max": 1910
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 280,
+    "worst_max": 485,
+    "best_min": 2645,
+    "best_max": 4405
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 1095,
+    "worst_max": 1130,
+    "best_min": 5715,
+    "best_max": 6600
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1045,
+    "worst_max": 1120,
+    "best_min": 5710,
+    "best_max": 7210
+  },
+  {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1870,
+    "worst_max": 1975,
+    "best_min": 8375,
+    "best_max": 8375
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 1420,
+    "best_max": 1430
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 165,
+    "worst_max": 170,
+    "best_min": 1430,
+    "best_max": 1720
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 165,
+    "worst_max": 365,
+    "best_min": 1750,
+    "best_max": 3015
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 545,
+    "worst_max": 860,
+    "best_min": 4340,
+    "best_max": 5315
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 670,
+    "worst_max": 1710,
+    "best_min": 6290,
+    "best_max": 8160
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1450,
+    "worst_max": 1890,
+    "best_min": 8480,
+    "best_max": 9850
+  },
+  {
+    "make": "Toyota",
+    "model": "Highlander",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1900,
+    "worst_max": 3040,
+    "best_min": 9800,
+    "best_max": 9800
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 200,
+    "worst_max": 455,
+    "best_min": 1765,
+    "best_max": 4190
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 455,
+    "worst_max": 620,
+    "best_min": 4190,
+    "best_max": 4230
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 620,
+    "worst_max": 745,
+    "best_min": 4230,
+    "best_max": 5360
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 1145,
+    "worst_max": 1540,
+    "best_min": 5360,
+    "best_max": 8900
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 1210,
+    "worst_max": 1645,
+    "best_min": 9650,
+    "best_max": 9745
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1715,
+    "worst_max": 1725,
+    "best_min": 9270,
+    "best_max": 10755
+  },
+  {
+    "make": "Toyota",
+    "model": "4Runner",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1795,
+    "worst_max": 1825,
+    "best_min": 9970,
+    "best_max": 9970
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 245,
+    "worst_max": 245,
+    "best_min": 905,
+    "best_max": 1175
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 240,
+    "worst_max": 245,
+    "best_min": 1175,
+    "best_max": 1795
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 240,
+    "worst_max": 570,
+    "best_min": 1795,
+    "best_max": 4095
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 470,
+    "worst_max": 850,
+    "best_min": 3405,
+    "best_max": 7140
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 1045,
+    "worst_max": 1130,
+    "best_min": 4905,
+    "best_max": 5640
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1255,
+    "worst_max": 1415,
+    "best_min": 5785,
+    "best_max": 11160
+  },
+  {
+    "make": "Toyota",
+    "model": "Sequoia",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1345,
+    "worst_max": 1970,
+    "best_min": 8715,
+    "best_max": 14220
+  },
+  {
+    "make": "Toyota",
+    "model": "Venza",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 590,
+    "worst_max": 655,
+    "best_min": 3920,
+    "best_max": 4010
+  },
+  {
+    "make": "Toyota",
+    "model": "Venza",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 745,
+    "worst_max": 815,
+    "best_min": 3800,
+    "best_max": 4540
+  },
+  {
+    "make": "Toyota",
+    "model": "Venza",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1015,
+    "worst_max": 1015,
+    "best_min": 5050,
+    "best_max": 5050
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 425,
+    "worst_max": 510,
+    "best_min": 2750,
+    "best_max": 4485
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 510,
+    "worst_max": 895,
+    "best_min": 4485,
+    "best_max": 6000
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 575,
+    "worst_max": 895,
+    "best_min": 6000,
+    "best_max": 6415
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 600,
+    "worst_max": 770,
+    "best_min": 6330,
+    "best_max": 8290
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 590,
+    "worst_max": 595,
+    "best_min": 7580,
+    "best_max": 7720
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 850,
+    "worst_max": 1400,
+    "best_min": 8405,
+    "best_max": 8915
+  },
+  {
+    "make": "Toyota",
+    "model": "Tacoma",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1435,
+    "worst_max": 1815,
+    "best_min": 9295,
+    "best_max": 10705
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 260,
+    "worst_max": 585,
+    "best_min": 1830,
+    "best_max": 2855
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 445,
+    "worst_max": 585,
+    "best_min": 1915,
+    "best_max": 2855
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 445,
+    "worst_max": 935,
+    "best_min": 1915,
+    "best_max": 3565
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 650,
+    "worst_max": 725,
+    "best_min": 3500,
+    "best_max": 5370
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 1275,
+    "worst_max": 1495,
+    "best_min": 4975,
+    "best_max": 5050
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1670,
+    "worst_max": 1720,
+    "best_min": 5980,
+    "best_max": 6150
+  },
+  {
+    "make": "Toyota",
+    "model": "Tundra",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 2520,
+    "worst_max": 3245,
+    "best_min": 6825,
+    "best_max": 6825
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 185,
+    "worst_max": 185,
+    "best_min": 515,
+    "best_max": 580
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 185,
+    "worst_max": 195,
+    "best_min": 580,
+    "best_max": 1300
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 195,
+    "worst_max": 200,
+    "best_min": 935,
+    "best_max": 1300
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 200,
+    "worst_max": 390,
+    "best_min": 1590,
+    "best_max": 3865
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 400,
+    "worst_max": 990,
+    "best_min": 3930,
+    "best_max": 5665
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 635,
+    "worst_max": 1240,
+    "best_min": 3570,
+    "best_max": 6490
+  },
+  {
+    "make": "Toyota",
+    "model": "Sienna",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1055,
+    "worst_max": 3245,
+    "best_min": 8995,
+    "best_max": 8995
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 130,
+    "worst_max": 135,
+    "best_min": 505,
+    "best_max": 740
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 135,
+    "worst_max": 135,
+    "best_min": 635,
+    "best_max": 740
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 135,
+    "worst_max": 145,
+    "best_min": 635,
+    "best_max": 1410
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 145,
+    "worst_max": 155,
+    "best_min": 1410,
+    "best_max": 2200
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 300,
+    "worst_max": 355,
+    "best_min": 2940,
+    "best_max": 3585
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 520,
+    "worst_max": 540,
+    "best_min": 3570,
+    "best_max": 4720
+  },
+  {
+    "make": "Honda",
+    "model": "Accord",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 730,
+    "worst_max": 995,
+    "best_min": 5305,
+    "best_max": 5305
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 100,
+    "worst_max": 110,
+    "best_min": 525,
+    "best_max": 540
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 110,
+    "worst_max": 110,
+    "best_min": 525,
+    "best_max": 945
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 110,
+    "worst_max": 115,
+    "best_min": 805,
+    "best_max": 945
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 115,
+    "worst_max": 115,
+    "best_min": 750,
+    "best_max": 2110
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 170,
+    "worst_max": 245,
+    "best_min": 3255,
+    "best_max": 3655
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 470,
+    "worst_max": 770,
+    "best_min": 3800,
+    "best_max": 4200
+  },
+  {
+    "make": "Honda",
+    "model": "Civic",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 500,
+    "worst_max": 575,
+    "best_min": 5005,
+    "best_max": 5005
+  },
+  {
+    "make": "Honda",
+    "model": "Insight",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 75,
+    "worst_max": 75,
+    "best_min": 500,
+    "best_max": 525
+  },
+  {
+    "make": "Honda",
+    "model": "Insight",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 75,
+    "worst_max": 75,
+    "best_min": 525,
+    "best_max": 525
+  },
+  {
+    "make": "Honda",
+    "model": "Insight",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 120,
+    "worst_max": 125,
+    "best_min": 640,
+    "best_max": 1080
+  },
+  {
+    "make": "Honda",
+    "model": "Insight",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 130,
+    "worst_max": 130,
+    "best_min": 1085,
+    "best_max": 1085
+  },
+  {
+    "make": "Honda",
+    "model": "Insight",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 445,
+    "worst_max": 670,
+    "best_min": 3485,
+    "best_max": 3485
+  },
+  {
+    "make": "Honda",
+    "model": "Clarity",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 165,
+    "worst_max": 165,
+    "best_min": 525,
+    "best_max": 1080
+  },
+  {
+    "make": "Honda",
+    "model": "Clarity",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 165,
+    "worst_max": 165,
+    "best_min": 1080,
+    "best_max": 1695
+  },
+  {
+    "make": "Honda",
+    "model": "Clarity",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 165,
+    "worst_max": 300,
+    "best_min": 2620,
+    "best_max": 4080
+  },
+  {
+    "make": "Honda",
+    "model": "Clarity",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 710,
+    "worst_max": 1015,
+    "best_min": 4350,
+    "best_max": 4350
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 145,
+    "worst_max": 150,
+    "best_min": 600,
+    "best_max": 1145
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 150,
+    "worst_max": 155,
+    "best_min": 1145,
+    "best_max": 1700
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 155,
+    "worst_max": 360,
+    "best_min": 1700,
+    "best_max": 2805
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 275,
+    "worst_max": 625,
+    "best_min": 2590,
+    "best_max": 5085
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 625,
+    "worst_max": 880,
+    "best_min": 4635,
+    "best_max": 4925
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 785,
+    "worst_max": 1435,
+    "best_min": 4745,
+    "best_max": 6290
+  },
+  {
+    "make": "Honda",
+    "model": "CR-V",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1205,
+    "worst_max": 1255,
+    "best_min": 6260,
+    "best_max": 6260
+  },
+  {
+    "make": "Honda",
+    "model": "Passport",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 175,
+    "worst_max": 180,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Honda",
+    "model": "Passport",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 180,
+    "worst_max": 180,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Honda",
+    "model": "Pilot",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 210,
+    "worst_max": 210,
+    "best_min": 535,
+    "best_max": 615
+  },
+  {
+    "make": "Honda",
+    "model": "Pilot",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 205,
+    "worst_max": 210,
+    "best_min": 615,
+    "best_max": 910
+  },
+  {
+    "make": "Honda",
+    "model": "Pilot",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 205,
+    "worst_max": 205,
+    "best_min": 1035,
+    "best_max": 2055
+  },
+  {
+    "make": "Honda",
+    "model": "Pilot",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 235,
+    "worst_max": 360,
+    "best_min": 1700,
+    "best_max": 3525
+  },
+  {
+    "make": "Honda",
+    "model": "Pilot",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 660,
+    "worst_max": 855,
+    "best_min": 5190,
+    "best_max": 6410
+  },
+  {
+    "make": "Honda",
+    "model": "Pilot",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1125,
+    "worst_max": 1290,
+    "best_min": 7035,
+    "best_max": 7035
+  },
+  {
+    "make": "Honda",
+    "model": "Ridgeline",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 215,
+    "worst_max": 215,
+    "best_min": 1785,
+    "best_max": 3455
+  },
+  {
+    "make": "Honda",
+    "model": "Ridgeline",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 215,
+    "worst_max": 375,
+    "best_min": 3300,
+    "best_max": 3670
+  },
+  {
+    "make": "Honda",
+    "model": "Ridgeline",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 930,
+    "worst_max": 960,
+    "best_min": 4770,
+    "best_max": 5525
+  },
+  {
+    "make": "Honda",
+    "model": "Ridgeline",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1180,
+    "worst_max": 1180,
+    "best_min": 5625,
+    "best_max": 5625
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 200,
+    "worst_max": 210,
+    "best_min": 500,
+    "best_max": 565
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 210,
+    "worst_max": 215,
+    "best_min": 565,
+    "best_max": 790
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 215,
+    "worst_max": 215,
+    "best_min": 790,
+    "best_max": 875
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 215,
+    "worst_max": 215,
+    "best_min": 665,
+    "best_max": 2515
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 215,
+    "worst_max": 405,
+    "best_min": 2005,
+    "best_max": 2650
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 465,
+    "worst_max": 1055,
+    "best_min": 3570,
+    "best_max": 6490
+  },
+  {
+    "make": "Honda",
+    "model": "Odyssey",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1200,
+    "worst_max": 1575,
+    "best_min": 6015,
+    "best_max": 6015
+  },
+  {
+    "make": "Lexus",
+    "model": "IS",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 150,
+    "worst_max": 150,
+    "best_min": 905,
+    "best_max": 1390
+  },
+  {
+    "make": "Lexus",
+    "model": "IS",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 150,
+    "worst_max": 160,
+    "best_min": 905,
+    "best_max": 1395
+  },
+  {
+    "make": "Lexus",
+    "model": "IS",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 175,
+    "worst_max": 250,
+    "best_min": 1585,
+    "best_max": 1925
+  },
+  {
+    "make": "Lexus",
+    "model": "IS",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 185,
+    "worst_max": 705,
+    "best_min": 3330,
+    "best_max": 4465
+  },
+  {
+    "make": "Lexus",
+    "model": "IS",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 525,
+    "worst_max": 885,
+    "best_min": 4950,
+    "best_max": 5475
+  },
+  {
+    "make": "Lexus",
+    "model": "IS",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 890,
+    "worst_max": 1500,
+    "best_min": 6480,
+    "best_max": 7800
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 515,
+    "best_max": 730
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 155,
+    "worst_max": 160,
+    "best_min": 730,
+    "best_max": 1005
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 160,
+    "worst_max": 195,
+    "best_min": 1005,
+    "best_max": 1400
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 200,
+    "worst_max": 210,
+    "best_min": 1335,
+    "best_max": 1930
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 655,
+    "worst_max": 920,
+    "best_min": 3330,
+    "best_max": 4200
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 905,
+    "worst_max": 1315,
+    "best_min": 5485,
+    "best_max": 8130
+  },
+  {
+    "make": "Lexus",
+    "model": "ES",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1040,
+    "worst_max": 2595,
+    "best_min": 11620,
+    "best_max": 12065
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 930,
+    "best_max": 1110
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 170,
+    "worst_max": 255,
+    "best_min": 1110,
+    "best_max": 2790
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 255,
+    "worst_max": 255,
+    "best_min": 2790,
+    "best_max": 3055
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 395,
+    "worst_max": 785,
+    "best_min": 2965,
+    "best_max": 5965
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 1020,
+    "worst_max": 1400,
+    "best_min": 6625,
+    "best_max": 6915
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1755,
+    "worst_max": 1965,
+    "best_min": 9565,
+    "best_max": 10070
+  },
+  {
+    "make": "Lexus",
+    "model": "RX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1890,
+    "worst_max": 2120,
+    "best_min": 11675,
+    "best_max": 13875
+  },
+  {
+    "make": "Lexus",
+    "model": "GX",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 485,
+    "worst_max": 525,
+    "best_min": 3705,
+    "best_max": 4435
+  },
+  {
+    "make": "Lexus",
+    "model": "GX",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 525,
+    "worst_max": 905,
+    "best_min": 4435,
+    "best_max": 6185
+  },
+  {
+    "make": "Lexus",
+    "model": "GX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 1335,
+    "worst_max": 1880,
+    "best_min": 5880,
+    "best_max": 8345
+  },
+  {
+    "make": "Lexus",
+    "model": "GX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 2115,
+    "worst_max": 2550,
+    "best_min": 8790,
+    "best_max": 11160
+  },
+  {
+    "make": "Lexus",
+    "model": "GX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1710,
+    "worst_max": 1865,
+    "best_min": 11965,
+    "best_max": 12050
+  },
+  {
+    "make": "Lexus",
+    "model": "GX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 2120,
+    "worst_max": 3150,
+    "best_min": 12440,
+    "best_max": 17725
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 720,
+    "worst_max": 855,
+    "best_min": 2745,
+    "best_max": 4930
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 855,
+    "worst_max": 1040,
+    "best_min": 4930,
+    "best_max": 5480
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 1040,
+    "worst_max": 2675,
+    "best_min": 5480,
+    "best_max": 12830
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 2020,
+    "worst_max": 3740,
+    "best_min": 13010,
+    "best_max": 18150
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 3740,
+    "worst_max": 4160,
+    "best_min": 18150,
+    "best_max": 19435
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 6495,
+    "worst_max": 6880,
+    "best_min": 26865,
+    "best_max": 30505
+  },
+  {
+    "make": "Lexus",
+    "model": "LX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 7465,
+    "worst_max": 7785,
+    "best_min": 31250,
+    "best_max": 32725
+  },
+  {
+    "make": "Lexus",
+    "model": "NX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 985,
+    "worst_max": 985,
+    "best_min": 6615,
+    "best_max": 6615
+  },
+  {
+    "make": "Lexus",
+    "model": "NX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1205,
+    "worst_max": 1375,
+    "best_min": 5865,
+    "best_max": 7690
+  },
+  {
+    "make": "Lexus",
+    "model": "NX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1020,
+    "worst_max": 1595,
+    "best_min": 8130,
+    "best_max": 9205
+  },
+  {
+    "make": "Lexus",
+    "model": "RC",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 405,
+    "worst_max": 405,
+    "best_min": 5910,
+    "best_max": 5910
+  },
+  {
+    "make": "Lexus",
+    "model": "RC",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 620,
+    "worst_max": 760,
+    "best_min": 5555,
+    "best_max": 8680
+  },
+  {
+    "make": "Lexus",
+    "model": "RC",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1055,
+    "worst_max": 1750,
+    "best_min": 9410,
+    "best_max": 9585
+  }
+]
