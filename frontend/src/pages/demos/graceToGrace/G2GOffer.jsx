@@ -613,6 +613,12 @@ export default function G2GOffer() {
                   minimum)
                 </span>
               ) : null}
+              {result.meta?.estimator === 'valuation_bands' ? (
+                <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
+                  {' '}
+                  (interpolated between the configured worst and best dollar bands from your answers)
+                </span>
+              ) : null}
             </p>
           ) : null}
           <p className="g2g-offer-range">
@@ -696,6 +702,29 @@ export default function G2GOffer() {
                 <p style={{ margin: 0 }}>Offer clamped to the rule band min/max.</p>
               ) : null}
             </div>
+          ) : result.meta?.estimator === 'valuation_bands' ? (
+            <div style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
+              <p style={{ margin: '0 0 0.4rem' }}>
+                Band table: <strong>{result.meta?.make ?? '—'}</strong> {result.meta?.model ?? '—'} · Model years{' '}
+                <strong>
+                  {result.meta?.yearFrom != null ? result.meta.yearFrom : '—'}–
+                  {result.meta?.yearTo != null ? result.meta.yearTo : '—'}
+                </strong>
+                {result.meta?.conditionTierScore != null ? (
+                  <>
+                    {' '}
+                    · Condition score (0=worst tier, 1=best): <strong>{result.meta.conditionTierScore}</strong>
+                  </>
+                ) : null}
+              </p>
+              <p style={{ margin: '0 0 0.4rem' }}>
+                Worst band: $
+                {result.meta?.worst?.min != null ? Number(result.meta.worst.min).toLocaleString() : '—'} – $
+                {result.meta?.worst?.max != null ? Number(result.meta.worst.max).toLocaleString() : '—'} · Best band: $
+                {result.meta?.best?.min != null ? Number(result.meta.best.min).toLocaleString() : '—'} – $
+                {result.meta?.best?.max != null ? Number(result.meta.best.max).toLocaleString() : '—'}
+              </p>
+            </div>
           ) : result.meta && typeof result.meta === 'object' ? (
             <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
               Base before condition: ~$
@@ -738,7 +767,9 @@ export default function G2GOffer() {
           <p className="g2g-disclaimer">
             {result.meta?.estimator === 'camry_rule_table'
               ? 'This 2005–2017 Toyota Camry estimate uses a fixed internal rule table and a deterministic point offer (60% from min to max in the band). It is not a market valuation. Title verification, local scrap, and pickup are not included. Not a guaranteed purchase price.'
-              : 'Estimates use server v1: seller-reported title, ZIP regional scrap, optional Alpha Vantage ETF metal proxies (SLX / DBB / CPER — not spot $/lb), and a wholesale-style market proxy. Live auction feeds, verified title pulls, and pickup routing are not included yet. Not a guaranteed purchase price.'}
+              : result.meta?.estimator === 'valuation_bands'
+                ? 'This estimate uses internal worst/best dollar bands for your make, model, and year range, then maps your answers to a position between those bands. It is not a market valuation. Verified title, local sales, and pickup are not included. Not a guaranteed purchase price.'
+                : 'Estimates use server v1: seller-reported title, ZIP regional scrap, optional Alpha Vantage ETF metal proxies (SLX / DBB / CPER — not spot $/lb), and a wholesale-style market proxy. Live auction feeds, verified title pulls, and pickup routing are not included yet. Not a guaranteed purchase price.'}
           </p>
         </div>
       ) : null}

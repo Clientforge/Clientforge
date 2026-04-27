@@ -14,6 +14,7 @@ const {
   computeV1DrivabilityFactor,
   computeConditionStackMultiplier,
 } = require('./graceCamryRule.service');
+const { tryComputeValuationBandEstimate } = require('./graceValuationBands.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -240,6 +241,10 @@ function validateEstimateBody(body) {
 
 async function computeGraceEstimate(body) {
   const validated = validateEstimateBody(body);
+  const fromBands = await tryComputeValuationBandEstimate(validated);
+  if (fromBands) {
+    return fromBands;
+  }
   const camry = await tryComputeCamryRuleEstimate(validated);
   if (camry) {
     return camry;
