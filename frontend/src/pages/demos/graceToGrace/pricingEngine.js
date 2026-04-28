@@ -78,3 +78,9 @@ export const CATALYTIC = {
   present: 'present',
   missing: 'missing',
 };
+
+/** Interior — server maps to valuation-band tier scoring. */
+export const INTERIOR_QUALITY = {
+  clean: 'clean',
+  damaged: 'damaged',
+};

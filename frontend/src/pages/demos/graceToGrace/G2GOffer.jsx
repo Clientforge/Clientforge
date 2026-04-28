@@ -8,6 +8,7 @@ import {
   EXTERIOR,
   EXTERIOR_COMPLETE,
   CATALYTIC,
+  INTERIOR_QUALITY,
 } from './pricingEngine';
 import { postGraceEstimate } from './graceEstimateApi';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
@@ -37,7 +38,8 @@ const FLOW = {
   exteriorComplete: 13,
   glass: 14,
   catalytic: 15,
-  body: 16,
+  interior: 16,
+  body: 17,
 };
 
 function FlowBlock({ children, step, flowMax, className = '' }) {
@@ -212,6 +214,7 @@ function computeUnlockedStep({
   exteriorComplete,
   glass,
   catalytic,
+  interiorQuality,
 }) {
   let m = FLOW.year;
   if (!String(year || '').trim()) return m;
@@ -243,6 +246,8 @@ function computeUnlockedStep({
   if (glass == null) return m;
   m = FLOW.catalytic;
   if (catalytic == null) return m;
+  m = FLOW.interior;
+  if (interiorQuality == null) return m;
   m = FLOW.body;
   return m;
 }
@@ -279,6 +284,7 @@ export default function G2GOffer() {
   const [exterior, setExterior] = useState(null);
   const [exteriorComplete, setExteriorComplete] = useState(null);
   const [catalytic, setCatalytic] = useState(null);
+  const [interiorQuality, setInteriorQuality] = useState(null);
   const [bodyDamage, setBodyDamage] = useState(initialBody);
 
   const [result, setResult] = useState(null);
@@ -305,6 +311,7 @@ export default function G2GOffer() {
         exteriorComplete,
         glass: bodyDamage.glass,
         catalytic,
+        interiorQuality,
       }),
     [
       year,
@@ -324,6 +331,7 @@ export default function G2GOffer() {
       exteriorComplete,
       bodyDamage.glass,
       catalytic,
+      interiorQuality,
     ],
   );
 
@@ -419,6 +427,7 @@ export default function G2GOffer() {
       || exterior == null
       || exteriorComplete == null
       || catalytic == null
+      || interiorQuality == null
       || bodyDamage.glass == null
     ) {
       setFormError('Answer each condition question to get an estimate.');
@@ -446,6 +455,7 @@ export default function G2GOffer() {
           exterior,
           exteriorComplete,
           catalytic,
+          interior: interiorQuality,
           body: bodyDamage,
         },
       });
@@ -818,6 +828,21 @@ export default function G2GOffer() {
             </FlowBlock>
           ) : null}
 
+          {flowMax >= FLOW.interior ? (
+            <FlowBlock step={FLOW.interior} flowMax={flowMax}>
+              <TwoOptionRow
+                label="Interior condition"
+                value={interiorQuality}
+                onChange={setInteriorQuality}
+                groupId="g2g-interior-quality"
+                leftValue={INTERIOR_QUALITY.clean}
+                rightValue={INTERIOR_QUALITY.damaged}
+                leftLabel="Clean — no heavy wear, odors, stains, or missing trim"
+                rightLabel="Heavy wear, odors/stains, ripped or missing upholstery, or missing trim/panels"
+              />
+            </FlowBlock>
+          ) : null}
+
           {flowMax >= FLOW.body ? (
             <FlowBlock step={FLOW.body} flowMax={flowMax}>
               <div className="g2g-flow-block-title">Body &amp; panels</div>
@@ -876,7 +901,8 @@ export default function G2GOffer() {
               {result.meta?.estimator === 'valuation_bands' ? (
                 <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
                   {' '}
-                  (interpolated between the configured worst and best dollar bands from your answers)
+                  (tier score blends worst vs best band anchors — severe issues pull toward the lowest band more
+                  sharply)
                 </span>
               ) : null}
             </p>

@@ -1,9 +1,11 @@
 /**
  * Grace to Grace — Make / model / year-range valuation bands.
  *
- * Each row defines worst and best min/max dollars; seller assessment is mapped to
- * a score 0 = toward worst, 1 = toward best, and we interpolate the offer range
- * and a point (mid) within that range.
+ * Each row defines worst and best min/max dollars; seller assessment maps to a
+ * score `s` ∈ [0, 1]: 0 = worst-tier anchor band, 1 = best-tier anchor band.
+ * We blend **mean**(sub-scores) with **minimum** (“weakest link”) so stacked
+ * damage pulls offers toward worst bands instead of being diluted by unrelated
+ * “good” answers (e.g. clean title paired with salvage-level mechanicals).
  */
 
 const db = require('../db/connection');
@@ -42,15 +44,16 @@ function titleScore(titleStatus) {
   const t = String(titleStatus || 'clean')
     .trim()
     .toLowerCase();
+  /** Aligned with “worst = salvage/rebuilt” narrative: rebuilt tracks closer to salvage than clean. */
   const map = {
     clean: 1,
-    lien_reported: 0.7,
-    rebuilt: 0.32,
+    lien_reported: 0.68,
+    rebuilt: 0.14,
     salvage: 0.1,
     parts_only: 0.05,
-    missing_unknown: 0.4,
+    missing_unknown: 0.38,
   };
-  return map[t] ?? 0.45;
+  return map[t] ?? 0.43;
 }
 
 function startDriveScore(assessment) {
@@ -64,6 +67,53 @@ function mean(nums) {
   const v = nums.filter((n) => Number.isFinite(n));
   if (v.length === 0) return 0.5;
   return v.reduce((a, b) => a + b, 0) / v.length;
+}
+
+/** How strongly the weakest sub-score anchors the blended tier (higher → more worst-sensitive). */
+const BOTTLENECK_WEIGHT = 0.66;
+
+/** Best = clean interior; worst = damaged / heavily worn interior (seller-reported). */
+function interiorTier(assessment) {
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  if (a.interior == null || String(a.interior).trim() === '') return null;
+  const v = String(a.interior)
+    .trim()
+    .toLowerCase();
+  if (v === 'damaged') return 0.22;
+  if (v === 'clean') return 1;
+  return 0.7;
+}
+
+/** Midpoints mirror `pricingEngine.js` mileage select values (Bracket label → midpoint). */
+function mileageTierScore(mileageMidpoint) {
+  const n = parseInt(String(mileageMidpoint || '').replace(/\D/g, ''), 10);
+  if (!Number.isFinite(n) || n <= 0) return 1;
+  if (n >= 225000) return 0.58;
+  if (n >= 175000) return 0.68;
+  if (n >= 125000) return 0.78;
+  if (n >= 75000) return 0.88;
+  if (n >= 35000) return 0.95;
+  return 1;
+}
+
+/**
+ * Blend average with bottleneck so stacked bad signals aren’t drowned out by a few “perfect” pillars.
+ */
+function blendTierScore(weightValues) {
+  const v = weightValues.filter((n) => Number.isFinite(n));
+  if (v.length === 0) return 0.5;
+  const m = mean(v);
+  const b = Math.min(...v);
+  return (1 - BOTTLENECK_WEIGHT) * m + BOTTLENECK_WEIGHT * b;
+}
+
+/**
+ * Smooth remap [0,1] → [0,1], fixes endpoints and midpoint (0.5→0.5), eases lows further toward 0 so
+ * “everything bad” composites land near worst band anchors instead of sitting mid-span on linear blend.
+ */
+function tierEase(s) {
+  const x = Math.max(0, Math.min(1, s));
+  return x * x * (3 - 2 * x);
 }
 
 /**
@@ -89,25 +139,20 @@ function scoreConditionTier(assessment, titleStatus, mileageMidpoint) {
   const tCat = a.catalytic === 'missing' ? 0.1 : 1;
 
   const panelKeys = ['front', 'rear', 'left', 'right'];
-  const panelParts = panelKeys.map((k) => (body[k] === 'some' ? 0.45 : 1));
-  const tPanels = mean(panelParts);
+  const panelParts = panelKeys.map((k) => (body[k] === 'some' ? 0.42 : 1));
+  /** Worst-panel severity (matches “panels present” stacking for worst-tier vehicles vs diluting by averaging). */
+  const tPanels = Math.min(...panelParts);
 
   let tEngine = body.engine === 'some' ? 0.25 : 1;
   let tFlood = body.flood === 'some' ? 0.02 : 1;
   let tFire = body.fire === 'some' ? 0.04 : 1;
   const tGlass = body.glass === 'some' ? 0.55 : 1;
   const tAir = body.airbag === 'some' ? 0.4 : 1;
+  const tInt = interiorTier(a);
 
-  const n = parseInt(String(mileageMidpoint || '').replace(/\D/g, ''), 10);
-  let tMile = 1;
-  if (Number.isFinite(n) && n > 0) {
-    if (n >= 220000) tMile = 0.68;
-    else if (n >= 200000) tMile = 0.78;
-    else if (n >= 150000) tMile = 0.9;
-    else if (n >= 120000) tMile = 0.95;
-  }
+  const tMile = mileageTierScore(mileageMidpoint);
 
-  let s = mean([
+  const pillarWeights = [
     tTitle,
     tStart,
     tBatt,
@@ -123,10 +168,15 @@ function scoreConditionTier(assessment, titleStatus, mileageMidpoint) {
     tGlass,
     tAir,
     tMile,
-  ]);
+    ...(tInt != null ? [tInt] : []),
+  ];
 
-  if (tFlood < 0.1) s = Math.min(s, 0.18);
-  if (tFire < 0.1) s = Math.min(s, 0.15);
+  let s = blendTierScore(pillarWeights);
+
+  if (tFlood < 0.1) s = Math.min(s, 0.14);
+  if (tFire < 0.1) s = Math.min(s, 0.12);
+
+  s = tierEase(s);
 
   return Math.max(0, Math.min(1, s));
 }
@@ -204,7 +254,7 @@ async function tryComputeValuationBandEstimate(validated) {
     high,
     pointOffer,
     meta: {
-      modelVersion: 'valuation_bands_v1',
+      modelVersion: 'valuation_bands_v2',
       estimator: 'valuation_bands',
       bandId: row.id,
       make: row.make,
@@ -227,4 +277,8 @@ module.exports = {
   interpolateBand,
   modelBaseName,
   norm,
+  interiorTier,
+  mileageTierScore,
+  blendTierScore,
+  tierEase,
 };
