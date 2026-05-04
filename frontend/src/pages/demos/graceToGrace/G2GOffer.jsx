@@ -11,6 +11,7 @@ import {
   INTERIOR_QUALITY,
 } from './pricingEngine';
 import { postGraceEstimate, postGraceSellIntent } from './graceEstimateApi';
+import { getOrCreateG2gSessionId } from './g2gSession';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
 import {
   OTHER_VALUE,
@@ -482,6 +483,7 @@ export default function G2GOffer() {
     const drives = startDrive === START_DRIVE.does_not_start ? 'no' : 'yes';
     try {
       const range = await postGraceEstimate({
+        sessionId: getOrCreateG2gSessionId(),
         year: year.trim(),
         make: makeFinal,
         model: modelFinal,

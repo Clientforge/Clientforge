@@ -1,11 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const adminService = require('../services/admin.service');
+const { getG2gEstimateSnapshots } = require('../services/graceEstimateSnapshot.service');
 
 router.get('/stats', async (req, res, next) => {
   try {
     const stats = await adminService.getPlatformStats();
     res.json(stats);
+  } catch (err) { next(err); }
+});
+
+router.get('/g2g-estimate-snapshots', async (req, res, next) => {
+  try {
+    const { page, limit } = req.query;
+    const result = await getG2gEstimateSnapshots({
+      page: parseInt(page, 10) || 1,
+      limit: parseInt(limit, 10) || 50,
+    });
+    res.json(result);
   } catch (err) { next(err); }
 });
 

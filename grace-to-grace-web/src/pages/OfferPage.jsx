@@ -3,6 +3,7 @@ import { computeOfferRange, CONDITION_OPTIONS } from '../lib/pricingEngine.js';
 import { decodeVin, isValidVinFormat, normalizeVin } from '../lib/vinDecode.js';
 import { BRAND } from '../constants.js';
 import { postGraceSellIntent } from '../lib/sellIntentApi.js';
+import { getOrCreateG2gSessionId, postGraceEstimateSnapshot } from '../lib/estimateSnapshotApi.js';
 
 export default function OfferPage() {
   useEffect(() => {
@@ -78,6 +79,21 @@ export default function OfferPage() {
       mileage: mileage.trim(),
     });
     setResult(range);
+    postGraceEstimateSnapshot({
+      sessionId: getOrCreateG2gSessionId(),
+      input: {
+        year: year.trim(),
+        make: make.trim(),
+        model: model.trim(),
+        zip: zip.trim().replace(/\D/g, '').slice(0, 5),
+        vin: normalizeVin(vin) || undefined,
+        mileage: mileage.trim() || undefined,
+        conditionId,
+        bodyClass: bodyClass || undefined,
+        engineNote: engineNote || undefined,
+      },
+      result: range,
+    }).catch(() => {});
   };
 
   const conditionLabel =
