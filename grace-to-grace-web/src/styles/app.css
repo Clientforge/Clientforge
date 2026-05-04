@@ -305,18 +305,46 @@ a.g2g-logo:hover {
   border-top: 1px solid var(--g2g-border);
 }
 
-.g2g-sell-panel .g2g-consent {
+.g2g-sell-panel .g2g-consent-wrap {
   display: flex;
-  gap: 0.5rem;
   align-items: flex-start;
-  font-size: 0.85rem;
-  color: var(--g2g-muted);
-  line-height: 1.4;
+  gap: 0.62rem;
+  width: 100%;
 }
 
-.g2g-sell-panel .g2g-consent input {
-  margin-top: 0.2rem;
+.g2g-sell-panel .g2g-consent-wrap input[type='checkbox'] {
+  margin-top: 0.28rem;
   flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.g2g-sell-panel .g2g-consent-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.g2g-textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--g2g-border);
+  background: var(--g2g-elevated);
+  color: var(--g2g-text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.g2g-textarea:focus {
+  outline: none;
+  border-color: var(--g2g-accent);
+  box-shadow: 0 0 0 3px rgba(93, 156, 139, 0.2);
 }
 
 .g2g-mt {

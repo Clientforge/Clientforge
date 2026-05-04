@@ -30,6 +30,7 @@ export default function OfferPage() {
   const [sellOpen, setSellOpen] = useState(false);
   const [sellName, setSellName] = useState('');
   const [sellPhone, setSellPhone] = useState('');
+  const [sellAddress, setSellAddress] = useState('');
   const [sellConsent, setSellConsent] = useState(false);
   const [sellBusy, setSellBusy] = useState(false);
   const [sellErr, setSellErr] = useState('');
@@ -111,6 +112,10 @@ export default function OfferPage() {
       setSellErr('Enter your phone number.');
       return;
     }
+    if (!sellAddress.trim() || sellAddress.trim().length < 8) {
+      setSellErr('Enter your full pickup address (street, city, state, ZIP).');
+      return;
+    }
     if (!sellConsent) {
       setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
       return;
@@ -121,6 +126,7 @@ export default function OfferPage() {
       await postGraceSellIntent({
         customerName: sellName.trim(),
         phone: sellPhone.trim(),
+        address: sellAddress.trim(),
         smsConsent: true,
         year: year.trim(),
         make: make.trim(),
@@ -293,17 +299,32 @@ export default function OfferPage() {
                 />
               </div>
               <div className="g2g-field g2g-mt">
-                <label className="g2g-consent">
+                <label htmlFor="sell-address">Full pickup address</label>
+                <textarea
+                  id="sell-address"
+                  name="address"
+                  className="g2g-textarea"
+                  rows={3}
+                  autoComplete="street-address"
+                  placeholder="Street, city, state, ZIP"
+                  value={sellAddress}
+                  onChange={(ev) => setSellAddress(ev.target.value)}
+                  required
+                />
+              </div>
+              <div className="g2g-field g2g-mt">
+                <div className="g2g-consent-wrap">
                   <input
+                    id="sell-consent"
                     type="checkbox"
                     checked={sellConsent}
                     onChange={(ev) => setSellConsent(ev.target.checked)}
                   />
-                  <span>
+                  <label htmlFor="sell-consent" className="g2g-consent-text">
                     I agree to receive SMS messages from {BRAND} about selling my vehicle. Message and data rates may
                     apply. Reply STOP to opt out.
-                  </span>
-                </label>
+                  </label>
+                </div>
               </div>
               {sellErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{sellErr}</div> : null}
               <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={sellBusy}>

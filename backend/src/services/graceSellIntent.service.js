@@ -34,6 +34,10 @@ function validatePayload(body) {
   if (customerName.length < 2) {
     throw new SellIntentError('Enter your full name (at least 2 characters).');
   }
+  const address = trimStr(body.address, 500);
+  if (address.length < 8) {
+    throw new SellIntentError('Enter your full street address for pickup (city, state, ZIP).');
+  }
   const phoneRaw = trimStr(body.phone, 32);
   if (!phoneRaw) {
     throw new SellIntentError('Phone number is required.');
@@ -73,6 +77,7 @@ function validatePayload(body) {
 
   return {
     customerName,
+    address,
     customerPhone,
     year,
     make,
@@ -98,6 +103,7 @@ function buildNotifySmsBody(v) {
     `[G2G] Ready to sell\n` +
     `Name: ${v.customerName}\n` +
     `Phone: ${v.customerPhone}\n` +
+    `Address: ${v.address}\n` +
     `Vehicle: ${v.year} ${v.make} ${v.model}\n` +
     `VIN: ${vinPart}\n` +
     `Condition: ${condPart}\n` +
