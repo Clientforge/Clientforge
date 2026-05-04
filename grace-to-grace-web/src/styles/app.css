@@ -293,10 +293,34 @@ a.g2g-logo:hover {
   color: #e8a0a0;
 }
 
-.g2g-alert--info {
-  background: rgba(93, 156, 139, 0.1);
-  border: 1px solid rgba(93, 156, 139, 0.3);
+.g2g-alert--success {
+  background: rgba(93, 156, 139, 0.15);
+  border: 1px solid rgba(93, 156, 139, 0.45);
   color: var(--g2g-text);
+}
+
+.g2g-sell-panel {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--g2g-border);
+}
+
+.g2g-sell-panel .g2g-consent {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  line-height: 1.4;
+}
+
+.g2g-sell-panel .g2g-consent input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.g2g-mt {
+  margin-top: 0.75rem;
 }
 
 .g2g-result {

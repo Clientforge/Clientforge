@@ -10,7 +10,7 @@ import {
   CATALYTIC,
   INTERIOR_QUALITY,
 } from './pricingEngine';
-import { postGraceEstimate } from './graceEstimateApi';
+import { postGraceEstimate, postGraceSellIntent } from './graceEstimateApi';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
 import {
   OTHER_VALUE,
@@ -252,6 +252,41 @@ function computeUnlockedStep({
   return m;
 }
 
+function buildSellConditionSummary({
+  titleStatus,
+  mileageBracket,
+  battery,
+  key,
+  startDrive,
+  tiresInflated,
+  tiresAttached,
+  exterior,
+  exteriorComplete,
+  catalytic,
+  interiorQuality,
+  bodyDamage,
+}) {
+  const mi = MILEAGE_SELECT_OPTIONS.find((o) => o.value === mileageBracket)?.label || mileageBracket || '—';
+  const damagedPanels = BODY_STRUCTURAL_KEYS.filter((k) => bodyDamage[k] === 'some')
+    .map((k) => BODY_PANEL_LABELS[k])
+    .join(', ');
+  const parts = [
+    `title:${titleStatus}`,
+    `mi:${mi}`,
+    `drive:${startDrive}`,
+    `bat:${battery}`,
+    `key:${key}`,
+    `tires:${tiresInflated}/${tiresAttached}`,
+    `ext:${exterior}/${exteriorComplete}`,
+    `cat:${catalytic}`,
+    `int:${interiorQuality}`,
+    `glass:${bodyDamage.glass}`,
+    bodyDamage.airbag === 'some' ? 'airbag:deployed' : 'airbag:ok',
+  ];
+  if (damagedPanels) parts.push(`panels:${damagedPanels}`);
+  return parts.join(' · ').slice(0, 500);
+}
+
 export default function G2GOffer() {
   const flowEndRef = useRef(null);
 
@@ -290,6 +325,14 @@ export default function G2GOffer() {
   const [result, setResult] = useState(null);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [sellOpen, setSellOpen] = useState(false);
+  const [sellName, setSellName] = useState('');
+  const [sellPhone, setSellPhone] = useState('');
+  const [sellConsent, setSellConsent] = useState(false);
+  const [sellBusy, setSellBusy] = useState(false);
+  const [sellErr, setSellErr] = useState('');
+  const [sellOk, setSellOk] = useState(false);
 
   const unlocked = useMemo(
     () =>
@@ -396,6 +439,8 @@ export default function G2GOffer() {
     e.preventDefault();
     setFormError('');
     setResult(null);
+    setSellOk(false);
+    setSellOpen(false);
     const makeFinal =
       makeSelect === OTHER_VALUE
         ? makeOther.trim()
@@ -464,6 +509,74 @@ export default function G2GOffer() {
       setFormError(err.message || 'Could not reach pricing service.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSellSubmit = async (e) => {
+    e.preventDefault();
+    setSellErr('');
+    setSellOk(false);
+    const makeFinal =
+      makeSelect === OTHER_VALUE ? makeOther.trim() : makeSelect.trim();
+    const modelFinal =
+      makeSelect === OTHER_VALUE
+        ? modelOther.trim()
+        : modelSelect === OTHER_VALUE
+          ? modelOther.trim()
+          : modelSelect.trim();
+    if (!sellName.trim() || sellName.trim().length < 2) {
+      setSellErr('Enter your name.');
+      return;
+    }
+    if (!sellPhone.trim()) {
+      setSellErr('Enter your phone number.');
+      return;
+    }
+    if (!sellConsent) {
+      setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
+      return;
+    }
+    if (!result || result.low == null || result.high == null) return;
+
+    const miLabel =
+      MILEAGE_SELECT_OPTIONS.find((o) => o.value === mileageBracket)?.label || mileageBracket;
+    const conditionLabel = buildSellConditionSummary({
+      titleStatus,
+      mileageBracket,
+      battery,
+      key,
+      startDrive,
+      tiresInflated,
+      tiresAttached,
+      exterior,
+      exteriorComplete,
+      catalytic,
+      interiorQuality,
+      bodyDamage,
+    });
+
+    setSellBusy(true);
+    try {
+      await postGraceSellIntent({
+        customerName: sellName.trim(),
+        phone: sellPhone.trim(),
+        smsConsent: true,
+        year: year.trim(),
+        make: makeFinal,
+        model: modelFinal,
+        zip: zip.trim().replace(/\D/g, '').slice(0, 5),
+        vin: normalizeVin(vin) || undefined,
+        mileage: miLabel || undefined,
+        conditionLabel,
+        estimateLow: result.low,
+        estimateHigh: result.high,
+      });
+      setSellOk(true);
+      setSellOpen(false);
+    } catch (err) {
+      setSellErr(err.message || 'Something went wrong.');
+    } finally {
+      setSellBusy(false);
     }
   };
 
@@ -910,6 +1023,70 @@ export default function G2GOffer() {
           <p className="g2g-offer-range">
             ${Number(result.low).toLocaleString()} — ${Number(result.high).toLocaleString()}
           </p>
+          <button
+            type="button"
+            className="g2g-btn g2g-btn--primary g2g-mt"
+            onClick={() => {
+              setSellOpen((o) => !o);
+              setSellErr('');
+              setSellOk(false);
+            }}
+          >
+            {sellOpen ? 'Hide' : 'Sell'} now — we&apos;ll text you
+          </button>
+          {sellOk ? (
+            <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
+              Thanks — we got your details and our team has been notified. We&apos;ll reach out shortly.
+            </div>
+          ) : null}
+          {sellOpen ? (
+            <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
+              <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
+                Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and
+                estimate details.
+              </p>
+              <div className="g2g-field">
+                <label htmlFor="g2g-sell-name">Your name</label>
+                <input
+                  id="g2g-sell-name"
+                  name="customerName"
+                  autoComplete="name"
+                  value={sellName}
+                  onChange={(ev) => setSellName(ev.target.value)}
+                  required
+                />
+              </div>
+              <div className="g2g-field g2g-mt">
+                <label htmlFor="g2g-sell-phone">Mobile phone</label>
+                <input
+                  id="g2g-sell-phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={sellPhone}
+                  onChange={(ev) => setSellPhone(ev.target.value)}
+                  required
+                />
+              </div>
+              <div className="g2g-field g2g-mt">
+                <label className="g2g-consent">
+                  <input
+                    type="checkbox"
+                    checked={sellConsent}
+                    onChange={(ev) => setSellConsent(ev.target.checked)}
+                  />
+                  <span>
+                    I agree to receive SMS messages from Grace to Grace about selling my vehicle. Message and data rates
+                    may apply. Reply STOP to opt out.
+                  </span>
+                </label>
+              </div>
+              {sellErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{sellErr}</div> : null}
+              <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={sellBusy}>
+                {sellBusy ? 'Sending…' : 'Submit & notify our team'}
+              </button>
+            </form>
+          ) : null}
           {result.meta?.estimator === 'camry_rule_table' ? (
             <div style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
               <p style={{ margin: '0 0 0.4rem' }}>

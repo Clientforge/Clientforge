@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { computeOfferRange, CONDITION_OPTIONS } from '../lib/pricingEngine.js';
 import { decodeVin, isValidVinFormat, normalizeVin } from '../lib/vinDecode.js';
+import { BRAND } from '../constants.js';
+import { postGraceSellIntent } from '../lib/sellIntentApi.js';
 
 export default function OfferPage() {
   useEffect(() => {
@@ -23,6 +25,14 @@ export default function OfferPage() {
 
   const [result, setResult] = useState(null);
   const [formError, setFormError] = useState('');
+
+  const [sellOpen, setSellOpen] = useState(false);
+  const [sellName, setSellName] = useState('');
+  const [sellPhone, setSellPhone] = useState('');
+  const [sellConsent, setSellConsent] = useState(false);
+  const [sellBusy, setSellBusy] = useState(false);
+  const [sellErr, setSellErr] = useState('');
+  const [sellOk, setSellOk] = useState(false);
 
   const handleDecode = async () => {
     setDecodeError('');
@@ -50,6 +60,8 @@ export default function OfferPage() {
     e.preventDefault();
     setFormError('');
     setResult(null);
+    setSellOk(false);
+    setSellOpen(false);
     if (!year.trim() || !make.trim() || !model.trim()) {
       setFormError('Year, make, and model are required (use VIN decode or enter manually).');
       return;
@@ -66,6 +78,51 @@ export default function OfferPage() {
       mileage: mileage.trim(),
     });
     setResult(range);
+  };
+
+  const conditionLabel =
+    CONDITION_OPTIONS.find((o) => o.id === conditionId)?.label || conditionId;
+
+  const handleSellSubmit = async (e) => {
+    e.preventDefault();
+    setSellErr('');
+    setSellOk(false);
+    if (!sellName.trim() || sellName.trim().length < 2) {
+      setSellErr('Enter your name.');
+      return;
+    }
+    if (!sellPhone.trim()) {
+      setSellErr('Enter your phone number.');
+      return;
+    }
+    if (!sellConsent) {
+      setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
+      return;
+    }
+    if (!result) return;
+    setSellBusy(true);
+    try {
+      await postGraceSellIntent({
+        customerName: sellName.trim(),
+        phone: sellPhone.trim(),
+        smsConsent: true,
+        year: year.trim(),
+        make: make.trim(),
+        model: model.trim(),
+        zip: zip.trim().replace(/\D/g, '').slice(0, 5),
+        vin: normalizeVin(vin) || undefined,
+        mileage: mileage.trim() || undefined,
+        conditionLabel,
+        estimateLow: result.low,
+        estimateHigh: result.high,
+      });
+      setSellOk(true);
+      setSellOpen(false);
+    } catch (err) {
+      setSellErr(err.message || 'Something went wrong.');
+    } finally {
+      setSellBusy(false);
+    }
   };
 
   return (
@@ -174,6 +231,70 @@ export default function OfferPage() {
           <p className="g2g-offer-range">
             ${result.low.toLocaleString()} — ${result.high.toLocaleString()}
           </p>
+          <button
+            type="button"
+            className="g2g-btn g2g-btn--primary g2g-mt"
+            onClick={() => {
+              setSellOpen((o) => !o);
+              setSellErr('');
+              setSellOk(false);
+            }}
+          >
+            {sellOpen ? 'Hide' : 'Sell'} now — we&apos;ll text you
+          </button>
+          {sellOk ? (
+            <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
+              Thanks — we got your details and our team has been notified. We&apos;ll reach out shortly.
+            </div>
+          ) : null}
+          {sellOpen ? (
+            <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
+              <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
+                Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and
+                estimate details.
+              </p>
+              <div className="g2g-field">
+                <label htmlFor="sell-name">Your name</label>
+                <input
+                  id="sell-name"
+                  name="customerName"
+                  autoComplete="name"
+                  value={sellName}
+                  onChange={(ev) => setSellName(ev.target.value)}
+                  required
+                />
+              </div>
+              <div className="g2g-field g2g-mt">
+                <label htmlFor="sell-phone">Mobile phone</label>
+                <input
+                  id="sell-phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={sellPhone}
+                  onChange={(ev) => setSellPhone(ev.target.value)}
+                  required
+                />
+              </div>
+              <div className="g2g-field g2g-mt">
+                <label className="g2g-consent">
+                  <input
+                    type="checkbox"
+                    checked={sellConsent}
+                    onChange={(ev) => setSellConsent(ev.target.checked)}
+                  />
+                  <span>
+                    I agree to receive SMS messages from {BRAND} about selling my vehicle. Message and data rates may
+                    apply. Reply STOP to opt out.
+                  </span>
+                </label>
+              </div>
+              {sellErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{sellErr}</div> : null}
+              <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={sellBusy}>
+                {sellBusy ? 'Sending…' : 'Submit & notify our team'}
+              </button>
+            </form>
+          ) : null}
           <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
             Internal base (before condition): ~${result.meta.baseBeforeCondition.toLocaleString()} · Condition factor:{' '}
             {result.meta.conditionFactor} · Class: {result.meta.vehicleClass} · Scrap floor: $

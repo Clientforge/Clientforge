@@ -16,3 +16,17 @@ export async function postGraceEstimate(payload) {
   }
   return data;
 }
+
+/** Grace to Grace — staff SMS when customer submits "Sell now" after an estimate. */
+export async function postGraceSellIntent(payload) {
+  const res = await fetch(`${apiBase()}/public/grace-sell-intent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Could not send request. Try again or call us.');
+  }
+  return data;
+}
