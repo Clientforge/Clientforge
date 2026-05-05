@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   MILEAGE_SELECT_OPTIONS,
   BODY_STRUCTURAL_KEYS,
@@ -329,6 +330,9 @@ function buildSellConditionSummary({
 
 export default function G2GOffer() {
   const flowEndRef = useRef(null);
+  const vinFirstInputRef = useRef(null);
+  const [searchParams] = useSearchParams();
+  const vinDeepLinkApplied = useRef(false);
 
   useEffect(() => {
     document.title = 'Get offer — Grace to Grace';
@@ -471,6 +475,27 @@ export default function G2GOffer() {
     setSellOpen(false);
     setFlowMax(0);
   };
+
+  useEffect(() => {
+    if (searchParams.get('start') !== 'vin') return undefined;
+    if (vinDeepLinkApplied.current) return undefined;
+    vinDeepLinkApplied.current = true;
+    startVinPath();
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep link
+  }, [searchParams]);
+
+  const vinQueryFocusDone = useRef(false);
+  useLayoutEffect(() => {
+    if (searchParams.get('start') !== 'vin') return;
+    if (!showVinFirstPanel) return;
+    if (vinQueryFocusDone.current) return;
+    const el = vinFirstInputRef.current;
+    if (!el) return;
+    vinQueryFocusDone.current = true;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [searchParams, showVinFirstPanel]);
 
   const switchToManualEntry = () => {
     setEntryMode('manual');
@@ -751,6 +776,7 @@ export default function G2GOffer() {
                 <div className="g2g-row">
                   <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
                     <input
+                      ref={vinFirstInputRef}
                       id="g2g-vin-first"
                       name="vin"
                       autoComplete="off"

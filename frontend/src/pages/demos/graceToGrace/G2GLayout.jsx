@@ -20,11 +20,20 @@ export default function G2GLayout() {
               <NavLink to={BASE} end className={navClass}>
                 Home
               </NavLink>
-              <NavLink to={`${BASE}/offer`} className={navClass}>
-                Get offer
-              </NavLink>
+              <Link to={`${BASE}/#how-it-works`} className="g2g-nav-hash">
+                How it works
+              </Link>
+              <Link to={`${BASE}/#reviews`} className="g2g-nav-hash">
+                Reviews
+              </Link>
+              <Link to={`${BASE}/#faq`} className="g2g-nav-hash">
+                FAQ
+              </Link>
               <NavLink to={`${BASE}/contact`} className={navClass}>
                 Contact
+              </NavLink>
+              <NavLink to={`${BASE}/offer`} className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
+                Get offer
               </NavLink>
             </nav>
           </div>

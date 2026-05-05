@@ -1,3 +1,4 @@
+export const BRAND = 'Grace to Grace';
 export const TAGLINE = 'Instant estimated offers for junk, damaged & scrap vehicles.';
 
 export const CONTACT_EMAIL =
