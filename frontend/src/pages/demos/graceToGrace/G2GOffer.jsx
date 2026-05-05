@@ -736,7 +736,8 @@ export default function G2GOffer() {
       return;
     }
     const offerDisplay = displayOfferUsd(result);
-    if (!result || offerDisplay == null) return;
+    const customOfferFlow = Boolean(result?.meta?.noEstimate);
+    if (!result || (offerDisplay == null && !customOfferFlow)) return;
 
     const miLabel =
       MILEAGE_SELECT_OPTIONS.find((o) => o.value === mileageBracket)?.label || mileageBracket;
@@ -769,9 +770,11 @@ export default function G2GOffer() {
         vin: normalizeVin(vin) || undefined,
         mileage: miLabel || undefined,
         conditionLabel,
-        estimateLow: result.low != null ? result.low : offerDisplay,
-        estimateHigh: result.high != null ? result.high : offerDisplay,
-        manualReviewRequired: Boolean(result.meta?.manualReviewRequired),
+        estimateLow: result.low != null ? result.low : offerDisplay != null ? offerDisplay : undefined,
+        estimateHigh: result.high != null ? result.high : offerDisplay != null ? offerDisplay : undefined,
+        manualReviewRequired: Boolean(
+          result.meta?.manualReviewRequired || result.meta?.noEstimate,
+        ),
       });
       setSellOk(true);
       setSellOpen(false);
@@ -789,6 +792,10 @@ export default function G2GOffer() {
   const modelListForMake = makeSelect && makeSelect !== OTHER_VALUE ? MODELS_BY_MAKE[makeSelect] || [] : [];
 
   const canSubmitEstimate = unlocked >= FLOW.body;
+
+  const hasPricedOffer = Boolean(result && displayOfferUsd(result) != null);
+  const hasCustomOfferFlow = Boolean(result?.meta?.noEstimate);
+  const showResultActions = hasPricedOffer || hasCustomOfferFlow;
 
   return (
     <>
@@ -1284,10 +1291,24 @@ export default function G2GOffer() {
       </div>
       )}
 
-      {result && displayOfferUsd(result) != null ? (
+      {showResultActions ? (
         <div className="g2g-result">
-          <h2>Here&apos;s what your car could be worth</h2>
-          <p className="g2g-offer-range">${displayOfferUsd(result).toLocaleString()}</p>
+          {hasCustomOfferFlow ? (
+            <>
+              <h2>We&apos;re ready to help with your vehicle</h2>
+              <div className="g2g-alert g2g-alert--info g2g-mt" role="status">
+                <p className="g2g-no-estimate-copy">
+                  Your vehicle may require a quick review. Enter your details below and our team will provide a custom
+                  offer.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>Here&apos;s what your car could be worth</h2>
+              <p className="g2g-offer-range">${displayOfferUsd(result).toLocaleString()}</p>
+            </>
+          )}
           <button
             type="button"
             className="g2g-btn g2g-btn--primary g2g-mt"
@@ -1297,7 +1318,11 @@ export default function G2GOffer() {
               setSellOk(false);
             }}
           >
-            {sellOpen ? 'Hide' : 'Sell'} now — we&apos;ll text you
+            {hasCustomOfferFlow
+              ? sellOpen
+                ? 'Hide form'
+                : 'Enter your details — we&apos;ll text you'
+              : `${sellOpen ? 'Hide' : 'Sell'} now — we&apos;ll text you`}
           </button>
           {sellOk ? (
             <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
@@ -1307,8 +1332,9 @@ export default function G2GOffer() {
           {sellOpen ? (
             <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
               <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
-                Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and
-                offer details.
+                {hasCustomOfferFlow
+                  ? 'Share your contact info and pickup address. We&apos;ll text our buyer team so someone can follow up with your custom offer.'
+                  : 'Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and offer details.'}
               </p>
               <div className="g2g-field">
                 <label htmlFor="g2g-sell-name">Your name</label>
@@ -1412,20 +1438,12 @@ export default function G2GOffer() {
               </button>
             </form>
           ) : null}
-          <p className="g2g-disclaimer">
-            This amount is an estimate based on what you shared. Your final offer may change after we confirm the
-            vehicle, title, and pickup details.
-          </p>
-        </div>
-      ) : result && result.meta?.noEstimate ? (
-        <div className="g2g-result">
-          <h2>We don&apos;t have an instant estimate for this vehicle</h2>
-          <div className="g2g-alert g2g-alert--info g2g-mt" role="status">
-            <p className="g2g-no-estimate-copy">
-              That year, make, and model aren&apos;t in our pricing reference yet, so we can&apos;t show a dollar
-              range. Check the spelling, or contact Grace to Grace — we can still put together a custom quote for you.
+          {!hasCustomOfferFlow ? (
+            <p className="g2g-disclaimer">
+              This amount is an estimate based on what you shared. Your final offer may change after we confirm the
+              vehicle, title, and pickup details.
             </p>
-          </div>
+          ) : null}
         </div>
       ) : null}
     </>
