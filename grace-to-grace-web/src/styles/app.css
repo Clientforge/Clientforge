@@ -282,6 +282,12 @@ a.g2g-logo:hover {
   min-width: 140px;
 }
 
+.g2g-row .g2g-field.g2g-pickup-zip-field {
+  flex: 0 1 5.75rem;
+  max-width: 6.5rem;
+  min-width: 4.75rem;
+}
+
 .g2g-alert {
   padding: 0.85rem 1rem;
   border-radius: 8px;

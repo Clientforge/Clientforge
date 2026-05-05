@@ -4,6 +4,11 @@ import { computeOfferRange, CONDITION_OPTIONS, displayOfferUsd } from '../lib/pr
 import { decodeVin, isValidVinFormat, normalizeVin } from '../lib/vinDecode.js';
 import { BRAND } from '../constants.js';
 import { postGraceSellIntent } from '../lib/sellIntentApi.js';
+import {
+  US_STATE_OPTIONS,
+  composeSellAddress,
+  isValidUsZipInput,
+} from '../lib/usStates.js';
 import { getOrCreateG2gSessionId, postGraceEstimateSnapshot } from '../lib/estimateSnapshotApi.js';
 
 export default function OfferPage() {
@@ -45,7 +50,10 @@ export default function OfferPage() {
   const [sellOpen, setSellOpen] = useState(false);
   const [sellName, setSellName] = useState('');
   const [sellPhone, setSellPhone] = useState('');
-  const [sellAddress, setSellAddress] = useState('');
+  const [sellStreet, setSellStreet] = useState('');
+  const [sellCity, setSellCity] = useState('');
+  const [sellState, setSellState] = useState('');
+  const [sellPickupZip, setSellPickupZip] = useState('');
   const [sellConsent, setSellConsent] = useState(false);
   const [sellBusy, setSellBusy] = useState(false);
   const [sellErr, setSellErr] = useState('');
@@ -127,10 +135,28 @@ export default function OfferPage() {
       setSellErr('Enter your phone number.');
       return;
     }
-    if (!sellAddress.trim() || sellAddress.trim().length < 8) {
-      setSellErr('Enter your full pickup address (street, city, state, ZIP).');
+    if (!sellStreet.trim() || sellStreet.trim().length < 3) {
+      setSellErr('Enter the street address for pickup.');
       return;
     }
+    if (!sellCity.trim() || sellCity.trim().length < 2) {
+      setSellErr('Enter the city.');
+      return;
+    }
+    if (!sellState) {
+      setSellErr('Select the state.');
+      return;
+    }
+    if (!isValidUsZipInput(sellPickupZip)) {
+      setSellErr('Enter a valid 5-digit ZIP (or ZIP+4).');
+      return;
+    }
+    const addressLine = composeSellAddress({
+      street: sellStreet,
+      city: sellCity,
+      state: sellState,
+      zip: sellPickupZip,
+    });
     if (!sellConsent) {
       setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
       return;
@@ -141,7 +167,7 @@ export default function OfferPage() {
       await postGraceSellIntent({
         customerName: sellName.trim(),
         phone: sellPhone.trim(),
-        address: sellAddress.trim(),
+        address: addressLine,
         smsConsent: true,
         year: year.trim(),
         make: make.trim(),
@@ -313,18 +339,63 @@ export default function OfferPage() {
                 />
               </div>
               <div className="g2g-field g2g-mt">
-                <label htmlFor="sell-address">Full pickup address</label>
-                <textarea
-                  id="sell-address"
-                  name="address"
-                  className="g2g-textarea"
-                  rows={3}
+                <label htmlFor="sell-street">Street address</label>
+                <input
+                  id="sell-street"
+                  name="addressStreet"
                   autoComplete="street-address"
-                  placeholder="Street, city, state, ZIP"
-                  value={sellAddress}
-                  onChange={(ev) => setSellAddress(ev.target.value)}
+                  placeholder="Number and street"
+                  value={sellStreet}
+                  onChange={(ev) => setSellStreet(ev.target.value)}
                   required
                 />
+              </div>
+              <div className="g2g-field g2g-mt">
+                <div className="g2g-row">
+                  <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
+                    <label htmlFor="sell-city">City</label>
+                    <input
+                      id="sell-city"
+                      name="addressCity"
+                      autoComplete="address-level2"
+                      placeholder="City"
+                      value={sellCity}
+                      onChange={(ev) => setSellCity(ev.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
+                    <label htmlFor="sell-state">State</label>
+                    <select
+                      id="sell-state"
+                      name="addressState"
+                      autoComplete="address-level1"
+                      value={sellState}
+                      onChange={(ev) => setSellState(ev.target.value)}
+                      required
+                    >
+                      {US_STATE_OPTIONS.map((o) => (
+                        <option key={o.value || 'placeholder'} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="g2g-field g2g-pickup-zip-field">
+                    <label htmlFor="sell-pickup-zip">ZIP</label>
+                    <input
+                      id="sell-pickup-zip"
+                      name="addressZip"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      placeholder="30260"
+                      maxLength={10}
+                      value={sellPickupZip}
+                      onChange={(ev) => setSellPickupZip(ev.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
               <div className="g2g-field g2g-mt">
                 <div className="g2g-consent-wrap">
