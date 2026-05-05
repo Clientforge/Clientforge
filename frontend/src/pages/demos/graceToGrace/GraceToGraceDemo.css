@@ -629,6 +629,56 @@ a.g2g-logo:focus-visible {
   margin-top: 0.75rem;
 }
 
+.g2g-vin-decode-summary {
+  margin-top: 1rem;
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 8px;
+  border: 1px solid var(--g2g-segment-active-border);
+  background: rgba(47, 143, 120, 0.07);
+}
+
+.g2g-vin-decode-summary__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--g2g-text);
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.g2g-vin-decode-summary__lead {
+  font-size: 0.82rem;
+  color: var(--g2g-muted);
+  margin: 0 0 0.85rem;
+  line-height: 1.45;
+}
+
+.g2g-vin-decode-summary__list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.g2g-vin-decode-summary__row {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+
+.g2g-vin-decode-summary__row dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--g2g-muted);
+}
+
+.g2g-vin-decode-summary__row dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--g2g-text);
+}
+
 .g2g-muted-block {
   font-size: 0.85rem;
   color: var(--g2g-muted);

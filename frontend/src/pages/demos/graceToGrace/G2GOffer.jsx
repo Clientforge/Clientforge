@@ -368,6 +368,8 @@ export default function G2GOffer() {
   const [titleStatus, setTitleStatus] = useState('clean');
 
   const [vinStepAcknowledged, setVinStepAcknowledged] = useState(false);
+  /** Set when decode succeeds; cleared when VIN no longer matches (user edits) or new path. */
+  const [lastDecodedVin, setLastDecodedVin] = useState('');
   const [startDrive, setStartDrive] = useState(null);
   const [battery, setBattery] = useState(null);
   const [key, setKey] = useState(null);
@@ -454,6 +456,21 @@ export default function G2GOffer() {
   }, [flowMax]);
 
   const ymmComplete = isModelComplete(makeSelect, makeOther, modelSelect, modelOther);
+  const vinDecodedMatchesInput =
+    Boolean(lastDecodedVin) && normalizeVin(vin) === lastDecodedVin;
+
+  const { displayMake, displayModel } = useMemo(() => {
+    const makeFinal =
+      makeSelect === OTHER_VALUE ? makeOther.trim() : makeSelect.trim();
+    const modelFinal =
+      makeSelect === OTHER_VALUE
+        ? modelOther.trim()
+        : modelSelect === OTHER_VALUE
+          ? modelOther.trim()
+          : modelSelect.trim();
+    return { displayMake: makeFinal, displayModel: modelFinal };
+  }, [makeSelect, makeOther, modelSelect, modelOther]);
+
   const showVinFirstPanel =
     entryMode === 'vin'
     && flowMax >= FLOW.vin
@@ -464,6 +481,7 @@ export default function G2GOffer() {
     setVin('');
     setDecodeError('');
     setVinStepAcknowledged(false);
+    setLastDecodedVin('');
     setYear('');
     setMakeSelect('');
     setMakeOther('');
@@ -517,6 +535,7 @@ export default function G2GOffer() {
     setVin('');
     setDecodeError('');
     setVinStepAcknowledged(false);
+    setLastDecodedVin('');
     setYear('');
     setMakeSelect('');
     setMakeOther('');
@@ -581,9 +600,12 @@ export default function G2GOffer() {
       }
       setBodyClass(data.bodyClass || '');
       setEngineNote(data.engine || '');
-      setVinStepAcknowledged(true);
+      setLastDecodedVin(v);
+      setVinStepAcknowledged(false);
     } catch (e) {
       setDecodeError(e.message || 'Decode failed.');
+      setLastDecodedVin('');
+      setVinStepAcknowledged(false);
     } finally {
       setDecoding(false);
     }
@@ -817,7 +839,15 @@ export default function G2GOffer() {
                       placeholder="e.g. 1HGBH41JXMN109186"
                       value={vin}
                       maxLength={17}
-                      onChange={(ev) => setVin(ev.target.value.toUpperCase())}
+                      onChange={(ev) => {
+                        const next = ev.target.value.toUpperCase();
+                        setVin(next);
+                        const n = normalizeVin(next);
+                        if (n !== lastDecodedVin) {
+                          setLastDecodedVin('');
+                          setVinStepAcknowledged(false);
+                        }
+                      }}
                     />
                   </div>
                   <button type="button" className="g2g-btn g2g-btn--ghost" disabled={decoding} onClick={handleDecode}>
@@ -836,7 +866,40 @@ export default function G2GOffer() {
                   {engineNote ? <div>Engine (from VIN): {engineNote}</div> : null}
                 </div>
               ) : null}
-              {vinStepAcknowledged && !ymmComplete ? (
+              {vinDecodedMatchesInput ? (
+                <div className="g2g-vin-decode-summary">
+                  <div className="g2g-vin-decode-summary__title">Vehicle from this VIN</div>
+                  <p className="g2g-vin-decode-summary__lead">
+                    Confirm these details before continuing. If something looks wrong, edit the VIN and decode again, or enter the vehicle manually.
+                  </p>
+                  <dl className="g2g-vin-decode-summary__list">
+                    <div className="g2g-vin-decode-summary__row">
+                      <dt>Year</dt>
+                      <dd>{String(year || '').trim() || '—'}</dd>
+                    </div>
+                    <div className="g2g-vin-decode-summary__row">
+                      <dt>Make</dt>
+                      <dd>{displayMake || '—'}</dd>
+                    </div>
+                    <div className="g2g-vin-decode-summary__row">
+                      <dt>Model</dt>
+                      <dd>{displayModel || '—'}</dd>
+                    </div>
+                  </dl>
+                  {ymmComplete && !vinStepAcknowledged ? (
+                    <div className="g2g-flow-actions" style={{ marginTop: '1rem' }}>
+                      <button
+                        type="button"
+                        className="g2g-btn g2g-btn--primary"
+                        onClick={() => setVinStepAcknowledged(true)}
+                      >
+                        Continue — looks correct
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {vinDecodedMatchesInput && !ymmComplete ? (
                 <div className="g2g-field-hint" style={{ marginTop: '0.75rem' }}>
                   We couldn&apos;t match all fields from this VIN.{' '}
                   <button type="button" className="g2g-link-btn" onClick={switchToManualEntry}>
