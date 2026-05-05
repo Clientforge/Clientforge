@@ -61,6 +61,7 @@ a:hover {
 }
 
 .g2g-header-inner {
+  position: relative;
   max-width: 1100px;
   margin: 0 auto;
   padding: 0.85rem 1.25rem;
@@ -437,6 +438,110 @@ a.g2g-nav-cta.g2g-nav--active {
   outline-offset: 2px;
 }
 
+.g2g-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--g2g-border);
+  border-radius: 8px;
+  background: var(--g2g-elevated);
+  color: var(--g2g-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.g2g-nav-toggle:hover {
+  opacity: 0.92;
+}
+
+.g2g-nav-backdrop {
+  display: none;
+}
+
+.g2g-nav-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .g2g-nav-toggle {
+    display: inline-flex;
+  }
+
+  .g2g-header-inner {
+    flex-wrap: nowrap;
+  }
+
+  .g2g-nav--desktop {
+    display: none !important;
+  }
+
+  .g2g-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+  }
+
+  .g2g-nav-mobile {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 46;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.35rem 0;
+    margin: 0;
+    background: var(--g2g-surface);
+    border-bottom: 1px solid var(--g2g-border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    max-height: min(70vh, 22rem);
+    overflow-y: auto;
+  }
+
+  .g2g-nav-mobile--open {
+    display: flex !important;
+  }
+
+  .g2g-nav-mobile a {
+    padding: 0.85rem 1.25rem;
+    font-size: 0.95rem;
+    border-bottom: 1px solid var(--g2g-border);
+    text-decoration: none;
+  }
+
+  .g2g-nav-mobile a:last-child {
+    border-bottom: none;
+  }
+
+  .g2g-nav-mobile a.g2g-nav-cta {
+    margin: 0.5rem 1rem 0.75rem;
+    text-align: center;
+    border-bottom: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .g2g-nav-mobile,
+  .g2g-nav-mobile--open {
+    display: none !important;
+  }
+
+  .g2g-nav-backdrop {
+    display: none !important;
+  }
+}
+
 .g2g-home {
   padding-bottom: 0;
 }
@@ -780,7 +885,7 @@ a.g2g-nav-cta.g2g-nav--active {
 }
 
 @media (min-width: 900px) {
-  .g2g-header-inner .g2g-nav {
+  .g2g-header-inner .g2g-nav--desktop {
     gap: 0.5rem 0.85rem;
   }
 

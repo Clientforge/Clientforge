@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useLayoutEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { BRAND } from './constants';
 import {
   CTA_REPEAT,
@@ -95,9 +95,19 @@ function StarRow({ n }) {
 }
 
 export default function G2GHome() {
+  const { pathname, hash } = useLocation();
+
   useEffect(() => {
     document.title = `${BRAND} — Vehicle cash offers`;
   }, []);
+
+  useLayoutEffect(() => {
+    if (!hash || hash === '#') return;
+    const id = decodeURIComponent(hash.replace(/^#/, ''));
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [pathname, hash]);
 
   return (
     <div className="g2g-home">
