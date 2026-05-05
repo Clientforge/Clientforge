@@ -541,6 +541,12 @@ a.g2g-logo:focus-visible {
   color: var(--g2g-text);
 }
 
+.g2g-alert--info {
+  background: rgba(79, 124, 168, 0.12);
+  border: 1px solid rgba(79, 124, 168, 0.38);
+  color: var(--g2g-text);
+}
+
 .g2g-sell-panel {
   margin-top: 1.25rem;
   padding-top: 1.25rem;

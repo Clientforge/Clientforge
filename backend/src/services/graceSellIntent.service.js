@@ -75,6 +75,8 @@ function validatePayload(body) {
     }
   }
 
+  const manualReviewRequired = body.manualReviewRequired === true;
+
   return {
     customerName,
     address,
@@ -88,6 +90,7 @@ function validatePayload(body) {
     conditionLabel: conditionLabel || null,
     estimateLow,
     estimateHigh,
+    manualReviewRequired,
   };
 }
 
@@ -99,6 +102,7 @@ function buildNotifySmsBody(v) {
     v.estimateLow != null && v.estimateHigh != null
       ? `$${v.estimateLow.toLocaleString()}–$${v.estimateHigh.toLocaleString()}`
       : '—';
+  const reviewPart = v.manualReviewRequired ? `\nReview: MANUAL (confirm custom quote)` : '';
   return (
     `[G2G] Ready to sell\n` +
     `Name: ${v.customerName}\n` +
@@ -109,7 +113,8 @@ function buildNotifySmsBody(v) {
     `Condition: ${condPart}\n` +
     `ZIP: ${v.zip}\n` +
     `Mileage: ${miPart}\n` +
-    `Est. range: ${estPart}`
+    `Est. range: ${estPart}` +
+    reviewPart
   ).slice(0, 1500);
 }
 

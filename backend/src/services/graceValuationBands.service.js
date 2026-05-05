@@ -10,6 +10,7 @@
 
 const db = require('../db/connection');
 const { getStartDrive, isNo } = require('./graceCamryRule.service');
+const { resolvePricingBandModelAlias } = require('./modelPricingAlias.service');
 
 const START = {
   starts_drives: 'starts_drives',
@@ -208,10 +209,39 @@ function interpolateBand(row, s) {
 /**
  * @param {string} make
  * @param {string} model
+ * @returns {{ model: string, pricingMatchTier: 'exact' | 'base_model' }[]}
+ */
+function buildBandLookupCandidates(make, model) {
+  const seen = new Set();
+  /** @type {{ model: string, pricingMatchTier: 'exact' | 'base_model' }[]} */
+  const out = [];
+
+  const push = (raw, pricingMatchTier) => {
+    const t = String(raw || '').trim();
+    if (!t) return;
+    const n = norm(t);
+    if (!n || seen.has(n)) return;
+    seen.add(n);
+    out.push({ model: t, pricingMatchTier });
+  };
+
+  push(model, 'exact');
+  const alias = resolvePricingBandModelAlias(make, model);
+  if (alias) push(alias, 'base_model');
+  const mb = modelBaseName(model);
+  if (mb) push(mb, 'base_model');
+
+  return out;
+}
+
+/**
+ * One band lookup for a single candidate model string (exact + base + LIKE semantics).
+ * @param {string} make
+ * @param {string} model
  * @param {string|number} year
  * @returns {Promise<object|null>}
  */
-async function findValuationBand(make, model, year) {
+async function queryValuationBandRow(make, model, year) {
   const y = parseInt(String(year || ''), 10);
   if (Number.isNaN(y) || y < 1900) return null;
   const mk = norm(make);
@@ -237,17 +267,43 @@ async function findValuationBand(make, model, year) {
 }
 
 /**
+ * @param {string} make
+ * @param {string} model
+ * @param {string|number} year
+ * @returns {Promise<{ row: object, pricingMatchTier: 'exact' | 'base_model' }|null>}
+ */
+async function findValuationBandWithTier(make, model, year) {
+  for (const { model: candidate, pricingMatchTier } of buildBandLookupCandidates(make, model)) {
+    const row = await queryValuationBandRow(make, candidate, year);
+    if (row) return { row, pricingMatchTier };
+  }
+  return null;
+}
+
+/**
+ * @param {string} make
+ * @param {string} model
+ * @param {string|number} year
+ * @returns {Promise<object|null>}
+ */
+async function findValuationBand(make, model, year) {
+  const hit = await findValuationBandWithTier(make, model, year);
+  return hit ? hit.row : null;
+}
+
+/**
  * @param {object} validated - validateEstimateBody output
  * @returns {Promise<object|null>}
  */
 async function tryComputeValuationBandEstimate(validated) {
-  const row = await findValuationBand(
+  const hit = await findValuationBandWithTier(
     validated.make,
     validated.model,
     validated.year,
   );
-  if (!row) return null;
+  if (!hit) return null;
 
+  const { row, pricingMatchTier } = hit;
   const t = scoreConditionTier(validated.assessment, validated.titleStatus, validated.mileageMidpoint);
   const { low, high, pointOffer } = interpolateBand(row, t);
 
@@ -268,12 +324,16 @@ async function tryComputeValuationBandEstimate(validated) {
       conditionTierScore: Number(t.toFixed(4)),
       titleStatus: String(validated.titleStatus || 'clean'),
       vehicleClass: 'band_table',
+      pricingMatchTier,
+      userModel: validated.model,
+      manualReviewRequired: false,
     },
   };
 }
 
 module.exports = {
   findValuationBand,
+  findValuationBandWithTier,
   tryComputeValuationBandEstimate,
   scoreConditionTier,
   interpolateBand,

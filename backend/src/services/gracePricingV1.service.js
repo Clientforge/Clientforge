@@ -247,7 +247,14 @@ async function computeGraceEstimate(body) {
   }
   const camry = await tryComputeCamryRuleEstimate(validated);
   if (camry) {
-    return camry;
+    return {
+      ...camry,
+      meta: {
+        ...camry.meta,
+        manualReviewRequired: false,
+        pricingMatchTier: 'camry_rule',
+      },
+    };
   }
   const metal = await getMetalCommodityBlend();
   const metalMeta = {
@@ -256,11 +263,20 @@ async function computeGraceEstimate(body) {
     detail: metal.detail,
     symbols: metal.symbols,
   };
-  return computeOfferRangeInternal({
+  const fallback = computeOfferRangeInternal({
     ...validated,
     metalCommodityBlend: metal.blendMultiplier,
     metalMeta,
   });
+  return {
+    ...fallback,
+    meta: {
+      ...fallback.meta,
+      manualReviewRequired: true,
+      pricingMatchTier: 'generic_v1',
+      userModel: validated.model,
+    },
+  };
 }
 
 module.exports = {
