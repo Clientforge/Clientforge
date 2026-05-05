@@ -1608,5 +1608,3645 @@
     "worst_max": 1750,
     "best_min": 9410,
     "best_max": 9585
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 95,
+    "worst_max": 95,
+    "best_min": 500,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 95,
+    "worst_max": 95,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 95,
+    "worst_max": 100,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 100,
+    "worst_max": 115,
+    "best_min": 540,
+    "best_max": 1080
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 105,
+    "worst_max": 110,
+    "best_min": 1080,
+    "best_max": 1695
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 115,
+    "worst_max": 230,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Hyundai",
+    "model": "Accent",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 290,
+    "worst_max": 390,
+    "best_min": 2155,
+    "best_max": 2600
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 115,
+    "worst_max": 115,
+    "best_min": 500,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 115,
+    "worst_max": 115,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 115,
+    "worst_max": 120,
+    "best_min": 540,
+    "best_max": 745
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 120,
+    "worst_max": 135,
+    "best_min": 580,
+    "best_max": 1085
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 195,
+    "worst_max": 220,
+    "best_min": 1115,
+    "best_max": 1695
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 220,
+    "worst_max": 375,
+    "best_min": 1695,
+    "best_max": 2160
+  },
+  {
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 465,
+    "worst_max": 630,
+    "best_min": 2160,
+    "best_max": 3000
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 140,
+    "worst_max": 145,
+    "best_min": 500,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 150,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 140,
+    "worst_max": 150,
+    "best_min": 540,
+    "best_max": 1080
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 145,
+    "worst_max": 155,
+    "best_min": 1080,
+    "best_max": 1695
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 175,
+    "worst_max": 340,
+    "best_min": 1695,
+    "best_max": 2160
+  },
+  {
+    "make": "Hyundai",
+    "model": "Sonata",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 440,
+    "worst_max": 605,
+    "best_min": 2160,
+    "best_max": 3065
+  },
+  {
+    "make": "Hyundai",
+    "model": "Azera",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 545,
+    "best_max": 545
+  },
+  {
+    "make": "Hyundai",
+    "model": "Azera",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 725,
+    "best_max": 1080
+  },
+  {
+    "make": "Hyundai",
+    "model": "Azera",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 1080,
+    "best_max": 1695
+  },
+  {
+    "make": "Hyundai",
+    "model": "Azera",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 175,
+    "worst_max": 255,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Hyundai",
+    "model": "XG350",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "XG350",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Equus",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 195,
+    "worst_max": 215,
+    "best_min": 1130,
+    "best_max": 1265
+  },
+  {
+    "make": "Hyundai",
+    "model": "Equus",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 215,
+    "worst_max": 225,
+    "best_min": 1380,
+    "best_max": 1695
+  },
+  {
+    "make": "Hyundai",
+    "model": "Equus",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 215,
+    "worst_max": 215,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 165,
+    "worst_max": 165,
+    "best_min": 500,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 165,
+    "worst_max": 165,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 165,
+    "worst_max": 170,
+    "best_min": 540,
+    "best_max": 825
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 705,
+    "best_max": 1555
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 250,
+    "worst_max": 395,
+    "best_min": 1695,
+    "best_max": 1805
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 375,
+    "worst_max": 480,
+    "best_min": 1700,
+    "best_max": 2160
+  },
+  {
+    "make": "Hyundai",
+    "model": "Santa Fe",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 835,
+    "worst_max": 980,
+    "best_min": 4145,
+    "best_max": 4800
+  },
+  {
+    "make": "Hyundai",
+    "model": "Tucson",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 150,
+    "worst_max": 155,
+    "best_min": 540,
+    "best_max": 1030
+  },
+  {
+    "make": "Hyundai",
+    "model": "Tucson",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 150,
+    "worst_max": 200,
+    "best_min": 725,
+    "best_max": 2090
+  },
+  {
+    "make": "Hyundai",
+    "model": "Tucson",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 280,
+    "worst_max": 400,
+    "best_min": 2145,
+    "best_max": 2725
+  },
+  {
+    "make": "Hyundai",
+    "model": "Tucson",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 575,
+    "worst_max": 710,
+    "best_min": 3000,
+    "best_max": 3770
+  },
+  {
+    "make": "Hyundai",
+    "model": "Tucson",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 755,
+    "worst_max": 1525,
+    "best_min": 4220,
+    "best_max": 5000
+  },
+  {
+    "make": "Hyundai",
+    "model": "Veracruz",
+    "year_from": 2007,
+    "year_to": 2008,
+    "worst_min": 200,
+    "worst_max": 200,
+    "best_min": 580,
+    "best_max": 1145
+  },
+  {
+    "make": "Hyundai",
+    "model": "Veracruz",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 200,
+    "worst_max": 200,
+    "best_min": 915,
+    "best_max": 1230
+  },
+  {
+    "make": "Hyundai",
+    "model": "Kona",
+    "year_from": 2018,
+    "year_to": 2018,
+    "worst_min": 420,
+    "worst_max": 420,
+    "best_min": 2935,
+    "best_max": 2935
+  },
+  {
+    "make": "Hyundai",
+    "model": "Kona",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 525,
+    "worst_max": 745,
+    "best_min": 2710,
+    "best_max": 3500
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 105,
+    "worst_max": 105,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 105,
+    "worst_max": 105,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 100,
+    "worst_max": 105,
+    "best_min": 500,
+    "best_max": 545
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 100,
+    "worst_max": 105,
+    "best_min": 530,
+    "best_max": 845
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 105,
+    "worst_max": 115,
+    "best_min": 845,
+    "best_max": 1155
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 110,
+    "worst_max": 340,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Kia",
+    "model": "Rio",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 340,
+    "worst_max": 375,
+    "best_min": 2155,
+    "best_max": 2990
+  },
+  {
+    "make": "Kia",
+    "model": "Forte",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 120,
+    "worst_max": 120,
+    "best_min": 655,
+    "best_max": 845
+  },
+  {
+    "make": "Kia",
+    "model": "Forte",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 120,
+    "worst_max": 125,
+    "best_min": 845,
+    "best_max": 1695
+  },
+  {
+    "make": "Kia",
+    "model": "Forte",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 125,
+    "worst_max": 255,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Kia",
+    "model": "Forte",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 370,
+    "worst_max": 580,
+    "best_min": 2730,
+    "best_max": 3500
+  },
+  {
+    "make": "Kia",
+    "model": "Spectra",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 110,
+    "worst_max": 120,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Spectra",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 120,
+    "worst_max": 125,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Spectra",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 125,
+    "worst_max": 130,
+    "best_min": 500,
+    "best_max": 505
+  },
+  {
+    "make": "Kia",
+    "model": "Spectra",
+    "year_from": 2009,
+    "year_to": 2009,
+    "worst_min": 120,
+    "worst_max": 120,
+    "best_min": 500,
+    "best_max": 700
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 140,
+    "worst_max": 150,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 150,
+    "worst_max": 150,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 150,
+    "best_min": 500,
+    "best_max": 540
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 505,
+    "best_max": 905
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 150,
+    "worst_max": 205,
+    "best_min": 920,
+    "best_max": 1695
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 200,
+    "worst_max": 290,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Kia",
+    "model": "Optima",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 230,
+    "worst_max": 400,
+    "best_min": 2155,
+    "best_max": 3200
+  },
+  {
+    "make": "Kia",
+    "model": "K5",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 230,
+    "worst_max": 400,
+    "best_min": 2155,
+    "best_max": 3200
+  },
+  {
+    "make": "Kia",
+    "model": "Amanti",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 190,
+    "worst_max": 190,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Amanti",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 175,
+    "worst_max": 190,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Amanti",
+    "year_from": 2009,
+    "year_to": 2009,
+    "worst_min": 175,
+    "worst_max": 175,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Cadenza",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 170,
+    "worst_max": 175,
+    "best_min": 1695,
+    "best_max": 2010
+  },
+  {
+    "make": "Kia",
+    "model": "Cadenza",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 170,
+    "worst_max": 355,
+    "best_min": 1695,
+    "best_max": 2570
+  },
+  {
+    "make": "Kia",
+    "model": "Cadenza",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 175,
+    "worst_max": 185,
+    "best_min": 3220,
+    "best_max": 5425
+  },
+  {
+    "make": "Kia",
+    "model": "K900",
+    "year_from": 2015,
+    "year_to": 2015,
+    "worst_min": 250,
+    "worst_max": 250,
+    "best_min": 1695,
+    "best_max": 1695
+  },
+  {
+    "make": "Kia",
+    "model": "K900",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 205,
+    "worst_max": 295,
+    "best_min": 1695,
+    "best_max": 2740
+  },
+  {
+    "make": "Kia",
+    "model": "K900",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 225,
+    "worst_max": 225,
+    "best_min": 6080,
+    "best_max": 6080
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 500,
+    "best_max": 780
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 145,
+    "worst_max": 245,
+    "best_min": 770,
+    "best_max": 1675
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 275,
+    "worst_max": 275,
+    "best_min": 1695,
+    "best_max": 1825
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 405,
+    "worst_max": 540,
+    "best_min": 1695,
+    "best_max": 2615
+  },
+  {
+    "make": "Kia",
+    "model": "Sportage",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 650,
+    "worst_max": 930,
+    "best_min": 2915,
+    "best_max": 4000
+  },
+  {
+    "make": "Kia",
+    "model": "Sorento",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 190,
+    "worst_max": 195,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Kia",
+    "model": "Sorento",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 190,
+    "worst_max": 195,
+    "best_min": 500,
+    "best_max": 505
+  },
+  {
+    "make": "Kia",
+    "model": "Sorento",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 175,
+    "worst_max": 190,
+    "best_min": 505,
+    "best_max": 1415
+  },
+  {
+    "make": "Kia",
+    "model": "Sorento",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 180,
+    "worst_max": 220,
+    "best_min": 1120,
+    "best_max": 1695
+  },
+  {
+    "make": "Kia",
+    "model": "Sorento",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 395,
+    "worst_max": 400,
+    "best_min": 1695,
+    "best_max": 2160
+  },
+  {
+    "make": "Kia",
+    "model": "Sorento",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 385,
+    "worst_max": 710,
+    "best_min": 2155,
+    "best_max": 3500
+  },
+  {
+    "make": "Kia",
+    "model": "Soul",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 120,
+    "worst_max": 125,
+    "best_min": 700,
+    "best_max": 845
+  },
+  {
+    "make": "Kia",
+    "model": "Soul",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 120,
+    "worst_max": 170,
+    "best_min": 845,
+    "best_max": 1695
+  },
+  {
+    "make": "Kia",
+    "model": "Soul",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 125,
+    "worst_max": 270,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Kia",
+    "model": "Soul",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 255,
+    "worst_max": 505,
+    "best_min": 2155,
+    "best_max": 3200
+  },
+  {
+    "make": "Kia",
+    "model": "Borrego",
+    "year_from": 2009,
+    "year_to": 2011,
+    "worst_min": 200,
+    "worst_max": 200,
+    "best_min": 915,
+    "best_max": 950
+  },
+  {
+    "make": "Kia",
+    "model": "Rondo",
+    "year_from": 2007,
+    "year_to": 2008,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 505,
+    "best_max": 645
+  },
+  {
+    "make": "Kia",
+    "model": "Rondo",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 155,
+    "worst_max": 165,
+    "best_min": 645,
+    "best_max": 845
+  },
+  {
+    "make": "Kia",
+    "model": "Sedona",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 225,
+    "worst_max": 230,
+    "best_min": 540,
+    "best_max": 540
+  },
+  {
+    "make": "Kia",
+    "model": "Sedona",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 210,
+    "worst_max": 230,
+    "best_min": 540,
+    "best_max": 920
+  },
+  {
+    "make": "Kia",
+    "model": "Sedona",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 210,
+    "worst_max": 210,
+    "best_min": 645,
+    "best_max": 1050
+  },
+  {
+    "make": "Kia",
+    "model": "Sedona",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 210,
+    "worst_max": 220,
+    "best_min": 845,
+    "best_max": 1645
+  },
+  {
+    "make": "Kia",
+    "model": "Sedona",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 210,
+    "worst_max": 360,
+    "best_min": 1695,
+    "best_max": 2155
+  },
+  {
+    "make": "Kia",
+    "model": "Sedona",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 275,
+    "worst_max": 620,
+    "best_min": 2160,
+    "best_max": 3500
+  },
+  {
+    "make": "Infiniti",
+    "model": "G20",
+    "year_from": 2000,
+    "year_to": 2002,
+    "worst_min": 135,
+    "worst_max": 135,
+    "best_min": 450,
+    "best_max": 450
+  },
+  {
+    "make": "Infiniti",
+    "model": "G35",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 575,
+    "best_max": 965
+  },
+  {
+    "make": "Infiniti",
+    "model": "G35",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 155,
+    "worst_max": 160,
+    "best_min": 915,
+    "best_max": 965
+  },
+  {
+    "make": "Infiniti",
+    "model": "G37",
+    "year_from": 2008,
+    "year_to": 2012,
+    "worst_min": 160,
+    "worst_max": 170,
+    "best_min": 1440,
+    "best_max": 1960
+  },
+  {
+    "make": "Infiniti",
+    "model": "G37",
+    "year_from": 2013,
+    "year_to": 2013,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 1695,
+    "best_max": 1960
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q40",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 200,
+    "worst_max": 200,
+    "best_min": 2080,
+    "best_max": 2080
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q50",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 265,
+    "worst_max": 455,
+    "best_min": 2085,
+    "best_max": 2180
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q50",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 240,
+    "worst_max": 400,
+    "best_min": 2080,
+    "best_max": 3460
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q50",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 580,
+    "worst_max": 755,
+    "best_min": 3775,
+    "best_max": 5465
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q60",
+    "year_from": 2017,
+    "year_to": 2018,
+    "worst_min": 365,
+    "worst_max": 760,
+    "best_min": 3770,
+    "best_max": 4170
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q60",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 580,
+    "worst_max": 1345,
+    "best_min": 6215,
+    "best_max": 6340
+  },
+  {
+    "make": "Infiniti",
+    "model": "M",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 170,
+    "worst_max": 185,
+    "best_min": 575,
+    "best_max": 765
+  },
+  {
+    "make": "Infiniti",
+    "model": "M",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 185,
+    "worst_max": 205,
+    "best_min": 710,
+    "best_max": 1885
+  },
+  {
+    "make": "Infiniti",
+    "model": "M",
+    "year_from": 2013,
+    "year_to": 2013,
+    "worst_min": 200,
+    "worst_max": 200,
+    "best_min": 2040,
+    "best_max": 2040
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q70",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 180,
+    "worst_max": 380,
+    "best_min": 2080,
+    "best_max": 2570
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q70",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 435,
+    "worst_max": 455,
+    "best_min": 2890,
+    "best_max": 3365
+  },
+  {
+    "make": "Infiniti",
+    "model": "Q70",
+    "year_from": 2019,
+    "year_to": 2019,
+    "worst_min": 525,
+    "worst_max": 525,
+    "best_min": 3420,
+    "best_max": 3420
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX4",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 185,
+    "worst_max": 200,
+    "best_min": 450,
+    "best_max": 575
+  },
+  {
+    "make": "Infiniti",
+    "model": "FX",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 80,
+    "worst_max": 200,
+    "best_min": 575,
+    "best_max": 575
+  },
+  {
+    "make": "Infiniti",
+    "model": "FX",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 200,
+    "worst_max": 215,
+    "best_min": 575,
+    "best_max": 575
+  },
+  {
+    "make": "Infiniti",
+    "model": "FX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 195,
+    "worst_max": 215,
+    "best_min": 1740,
+    "best_max": 3335
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX70",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 200,
+    "worst_max": 380,
+    "best_min": 2080,
+    "best_max": 2085
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX70",
+    "year_from": 2016,
+    "year_to": 2017,
+    "worst_min": 395,
+    "worst_max": 400,
+    "best_min": 3250,
+    "best_max": 3600
+  },
+  {
+    "make": "Infiniti",
+    "model": "EX",
+    "year_from": 2008,
+    "year_to": 2012,
+    "worst_min": 175,
+    "worst_max": 175,
+    "best_min": 865,
+    "best_max": 1695
+  },
+  {
+    "make": "Infiniti",
+    "model": "EX",
+    "year_from": 2013,
+    "year_to": 2013,
+    "worst_min": 175,
+    "worst_max": 175,
+    "best_min": 1695,
+    "best_max": 1695
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX50",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 165,
+    "worst_max": 190,
+    "best_min": 2080,
+    "best_max": 2085
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX50",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 230,
+    "worst_max": 235,
+    "best_min": 2080,
+    "best_max": 2845
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX50",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 790,
+    "worst_max": 840,
+    "best_min": 4670,
+    "best_max": 5500
+  },
+  {
+    "make": "Infiniti",
+    "model": "JX",
+    "year_from": 2013,
+    "year_to": 2014,
+    "worst_min": 205,
+    "worst_max": 300,
+    "best_min": 1695,
+    "best_max": 2085
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX60",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 205,
+    "worst_max": 300,
+    "best_min": 1695,
+    "best_max": 2085
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX60",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 255,
+    "worst_max": 540,
+    "best_min": 2080,
+    "best_max": 2850
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX60",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 610,
+    "worst_max": 790,
+    "best_min": 3850,
+    "best_max": 3930
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX56",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 245,
+    "worst_max": 250,
+    "best_min": 575,
+    "best_max": 635
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX56",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 245,
+    "worst_max": 275,
+    "best_min": 635,
+    "best_max": 730
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX56",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 275,
+    "worst_max": 355,
+    "best_min": 680,
+    "best_max": 2310
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX56",
+    "year_from": 2013,
+    "year_to": 2013,
+    "worst_min": 385,
+    "worst_max": 685,
+    "best_min": 2310,
+    "best_max": 3700
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX80",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 385,
+    "worst_max": 685,
+    "best_min": 2310,
+    "best_max": 3700
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX80",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 685,
+    "worst_max": 1145,
+    "best_min": 3985,
+    "best_max": 6655
+  },
+  {
+    "make": "Infiniti",
+    "model": "QX80",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 840,
+    "worst_max": 1490,
+    "best_min": 6240,
+    "best_max": 7500
+  },
+  {
+    "make": "Acura",
+    "model": "TL",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 160,
+    "worst_max": 160,
+    "best_min": 335,
+    "best_max": 455
+  },
+  {
+    "make": "Acura",
+    "model": "TL",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 160,
+    "worst_max": 160,
+    "best_min": 455,
+    "best_max": 865
+  },
+  {
+    "make": "Acura",
+    "model": "TL",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 160,
+    "worst_max": 170,
+    "best_min": 695,
+    "best_max": 865
+  },
+  {
+    "make": "Acura",
+    "model": "TL",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 1125,
+    "best_max": 1670
+  },
+  {
+    "make": "Acura",
+    "model": "TL",
+    "year_from": 2013,
+    "year_to": 2014,
+    "worst_min": 210,
+    "worst_max": 210,
+    "best_min": 1540,
+    "best_max": 1800
+  },
+  {
+    "make": "Acura",
+    "model": "TSX",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 685,
+    "best_max": 845
+  },
+  {
+    "make": "Acura",
+    "model": "TSX",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 150,
+    "best_min": 685,
+    "best_max": 1360
+  },
+  {
+    "make": "Acura",
+    "model": "TSX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 1405,
+    "best_max": 1810
+  },
+  {
+    "make": "Acura",
+    "model": "TSX",
+    "year_from": 2013,
+    "year_to": 2014,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 1870,
+    "best_max": 2200
+  },
+  {
+    "make": "Acura",
+    "model": "RL",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 180,
+    "worst_max": 185,
+    "best_min": 450,
+    "best_max": 575
+  },
+  {
+    "make": "Acura",
+    "model": "RL",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 185,
+    "worst_max": 185,
+    "best_min": 575,
+    "best_max": 575
+  },
+  {
+    "make": "Acura",
+    "model": "RL",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 185,
+    "worst_max": 185,
+    "best_min": 575,
+    "best_max": 575
+  },
+  {
+    "make": "Acura",
+    "model": "RL",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 190,
+    "worst_max": 200,
+    "best_min": 575,
+    "best_max": 1545
+  },
+  {
+    "make": "Acura",
+    "model": "RLX",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 345,
+    "worst_max": 420,
+    "best_min": 2140,
+    "best_max": 2620
+  },
+  {
+    "make": "Acura",
+    "model": "RLX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 620,
+    "worst_max": 825,
+    "best_min": 3555,
+    "best_max": 4545
+  },
+  {
+    "make": "Acura",
+    "model": "RLX",
+    "year_from": 2019,
+    "year_to": 2020,
+    "worst_min": 185,
+    "worst_max": 1025,
+    "best_min": 3810,
+    "best_max": 4295
+  },
+  {
+    "make": "Acura",
+    "model": "ILX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 135,
+    "worst_max": 205,
+    "best_min": 1725,
+    "best_max": 1870
+  },
+  {
+    "make": "Acura",
+    "model": "ILX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 290,
+    "worst_max": 520,
+    "best_min": 2355,
+    "best_max": 3725
+  },
+  {
+    "make": "Acura",
+    "model": "ILX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 345,
+    "worst_max": 470,
+    "best_min": 5000,
+    "best_max": 5265
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2001,
+    "year_to": 2003,
+    "worst_min": 210,
+    "worst_max": 210,
+    "best_min": 455,
+    "best_max": 575
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 210,
+    "worst_max": 215,
+    "best_min": 575,
+    "best_max": 675
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 215,
+    "worst_max": 215,
+    "best_min": 675,
+    "best_max": 1015
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 215,
+    "worst_max": 220,
+    "best_min": 1000,
+    "best_max": 3355
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 220,
+    "worst_max": 435,
+    "best_min": 1620,
+    "best_max": 3330
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 605,
+    "worst_max": 1230,
+    "best_min": 3330,
+    "best_max": 5595
+  },
+  {
+    "make": "Acura",
+    "model": "MDX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 565,
+    "worst_max": 915,
+    "best_min": 5460,
+    "best_max": 6470
+  },
+  {
+    "make": "Acura",
+    "model": "RDX",
+    "year_from": 2007,
+    "year_to": 2008,
+    "worst_min": 185,
+    "worst_max": 185,
+    "best_min": 630,
+    "best_max": 630
+  },
+  {
+    "make": "Acura",
+    "model": "RDX",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 175,
+    "worst_max": 185,
+    "best_min": 875,
+    "best_max": 1895
+  },
+  {
+    "make": "Acura",
+    "model": "RDX",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 200,
+    "worst_max": 225,
+    "best_min": 2600,
+    "best_max": 3115
+  },
+  {
+    "make": "Acura",
+    "model": "RDX",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 370,
+    "worst_max": 1020,
+    "best_min": 3460,
+    "best_max": 3700
+  },
+  {
+    "make": "Acura",
+    "model": "RDX",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 630,
+    "worst_max": 1170,
+    "best_min": 7225,
+    "best_max": 7590
+  },
+  {
+    "make": "Acura",
+    "model": "ZDX",
+    "year_from": 2010,
+    "year_to": 2012,
+    "worst_min": 235,
+    "worst_max": 355,
+    "best_min": 2470,
+    "best_max": 3260
+  },
+  {
+    "make": "Acura",
+    "model": "ZDX",
+    "year_from": 2013,
+    "year_to": 2013,
+    "worst_min": 235,
+    "worst_max": 235,
+    "best_min": 2780,
+    "best_max": 2780
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cavalier",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 120,
+    "worst_max": 120,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cavalier",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 120,
+    "worst_max": 120,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cobalt",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cobalt",
+    "year_from": 2009,
+    "year_to": 2010,
+    "worst_min": 125,
+    "worst_max": 125,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cruze",
+    "year_from": 2011,
+    "year_to": 2012,
+    "worst_min": 140,
+    "worst_max": 140,
+    "best_min": 685,
+    "best_max": 995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cruze",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 140,
+    "worst_max": 140,
+    "best_min": 595,
+    "best_max": 995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cruze",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 130,
+    "worst_max": 145,
+    "best_min": 995,
+    "best_max": 1770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Cruze",
+    "year_from": 2019,
+    "year_to": 2019,
+    "worst_min": 200,
+    "worst_max": 200,
+    "best_min": 1770,
+    "best_max": 1770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 140,
+    "worst_max": 140,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 140,
+    "worst_max": 145,
+    "best_min": 500,
+    "best_max": 505
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 150,
+    "best_min": 500,
+    "best_max": 505
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 505,
+    "best_max": 705
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 685,
+    "best_max": 995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 190,
+    "worst_max": 230,
+    "best_min": 1180,
+    "best_max": 1770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Malibu",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 275,
+    "worst_max": 365,
+    "best_min": 2745,
+    "best_max": 3500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 410,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 155,
+    "worst_max": 155,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 155,
+    "worst_max": 165,
+    "best_min": 500,
+    "best_max": 580
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 165,
+    "worst_max": 165,
+    "best_min": 500,
+    "best_max": 580
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 165,
+    "worst_max": 170,
+    "best_min": 665,
+    "best_max": 1305
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 1130,
+    "best_max": 2075
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Impala",
+    "year_from": 2019,
+    "year_to": 2020,
+    "worst_min": 305,
+    "worst_max": 305,
+    "best_min": 2075,
+    "best_max": 2500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Sonic",
+    "year_from": 2012,
+    "year_to": 2012,
+    "worst_min": 120,
+    "worst_max": 120,
+    "best_min": 575,
+    "best_max": 580
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Sonic",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 120,
+    "worst_max": 130,
+    "best_min": 580,
+    "best_max": 995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Sonic",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 120,
+    "worst_max": 125,
+    "best_min": 995,
+    "best_max": 1770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Sonic",
+    "year_from": 2019,
+    "year_to": 2020,
+    "worst_min": 150,
+    "worst_max": 150,
+    "best_min": 1770,
+    "best_max": 1770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Spark",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 95,
+    "worst_max": 150,
+    "best_min": 750,
+    "best_max": 995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Spark",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 210,
+    "worst_max": 230,
+    "best_min": 1225,
+    "best_max": 1770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Spark",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 200,
+    "worst_max": 275,
+    "best_min": 1770,
+    "best_max": 1995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Aveo",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 100,
+    "worst_max": 100,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Aveo",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 100,
+    "worst_max": 110,
+    "best_min": 500,
+    "best_max": 500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Aveo",
+    "year_from": 2009,
+    "year_to": 2011,
+    "worst_min": 110,
+    "worst_max": 110,
+    "best_min": 500,
+    "best_max": 700
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Trailblazer",
+    "year_from": 2002,
+    "year_to": 2005,
+    "worst_min": 205,
+    "worst_max": 210,
+    "best_min": 500,
+    "best_max": 505
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Trailblazer",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 205,
+    "worst_max": 210,
+    "best_min": 505,
+    "best_max": 635
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Trailblazer",
+    "year_from": 2009,
+    "year_to": 2009,
+    "worst_min": 205,
+    "worst_max": 205,
+    "best_min": 510,
+    "best_max": 650
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Equinox",
+    "year_from": 2005,
+    "year_to": 2008,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 500,
+    "best_max": 505
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Equinox",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 170,
+    "worst_max": 175,
+    "best_min": 500,
+    "best_max": 905
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Equinox",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 175,
+    "worst_max": 175,
+    "best_min": 850,
+    "best_max": 1000
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Equinox",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 265,
+    "worst_max": 300,
+    "best_min": 1280,
+    "best_max": 2855
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Equinox",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 420,
+    "worst_max": 470,
+    "best_min": 3180,
+    "best_max": 4000
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Traverse",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 220,
+    "worst_max": 230,
+    "best_min": 505,
+    "best_max": 675
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Traverse",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 220,
+    "worst_max": 220,
+    "best_min": 740,
+    "best_max": 995
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Traverse",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 220,
+    "worst_max": 450,
+    "best_min": 995,
+    "best_max": 2145
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Traverse",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 415,
+    "worst_max": 645,
+    "best_min": 2195,
+    "best_max": 3500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 245,
+    "worst_max": 260,
+    "best_min": 555,
+    "best_max": 910
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 245,
+    "worst_max": 250,
+    "best_min": 910,
+    "best_max": 935
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 250,
+    "worst_max": 255,
+    "best_min": 935,
+    "best_max": 1670
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 270,
+    "worst_max": 305,
+    "best_min": 1525,
+    "best_max": 2385
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 445,
+    "worst_max": 800,
+    "best_min": 2850,
+    "best_max": 4895
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 980,
+    "worst_max": 1065,
+    "best_min": 6395,
+    "best_max": 7870
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Tahoe",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1325,
+    "worst_max": 3645,
+    "best_min": 7060,
+    "best_max": 8500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 245,
+    "worst_max": 245,
+    "best_min": 530,
+    "best_max": 990
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 245,
+    "worst_max": 265,
+    "best_min": 665,
+    "best_max": 990
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 265,
+    "worst_max": 280,
+    "best_min": 665,
+    "best_max": 1085
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 280,
+    "worst_max": 285,
+    "best_min": 1245,
+    "best_max": 2385
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 285,
+    "worst_max": 760,
+    "best_min": 2590,
+    "best_max": 4275
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 915,
+    "worst_max": 1000,
+    "best_min": 5860,
+    "best_max": 6770
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Suburban",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 770,
+    "worst_max": 2845,
+    "best_min": 6545,
+    "best_max": 8000
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Blazer",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 645,
+    "worst_max": 915,
+    "best_min": 3860,
+    "best_max": 6405
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Trax",
+    "year_from": 2015,
+    "year_to": 2015,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 1000,
+    "best_max": 1000
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Trax",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 140,
+    "worst_max": 290,
+    "best_min": 1000,
+    "best_max": 1890
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Trax",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 160,
+    "worst_max": 385,
+    "best_min": 1770,
+    "best_max": 2600
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 185,
+    "worst_max": 185,
+    "best_min": 775,
+    "best_max": 1185
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 185,
+    "worst_max": 200,
+    "best_min": 855,
+    "best_max": 1185
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 200,
+    "worst_max": 270,
+    "best_min": 855,
+    "best_max": 1300
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 215,
+    "worst_max": 290,
+    "best_min": 1810,
+    "best_max": 1885
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 285,
+    "worst_max": 1055,
+    "best_min": 2080,
+    "best_max": 3495
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 745,
+    "worst_max": 770,
+    "best_min": 3305,
+    "best_max": 3950
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Silverado 1500",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 315,
+    "worst_max": 1255,
+    "best_min": 6385,
+    "best_max": 7500
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Colorado",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 140,
+    "worst_max": 140,
+    "best_min": 540,
+    "best_max": 1000
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Colorado",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 140,
+    "worst_max": 150,
+    "best_min": 1000,
+    "best_max": 1435
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Colorado",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 155,
+    "worst_max": 165,
+    "best_min": 995,
+    "best_max": 1200
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Colorado",
+    "year_from": 2015,
+    "year_to": 2015,
+    "worst_min": 815,
+    "worst_max": 1050,
+    "best_min": 5100,
+    "best_max": 5100
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Colorado",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1050,
+    "worst_max": 1130,
+    "best_min": 4765,
+    "best_max": 6145
+  },
+  {
+    "make": "Chevrolet",
+    "model": "Colorado",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 910,
+    "worst_max": 1130,
+    "best_min": 5585,
+    "best_max": 7025
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 140,
+    "worst_max": 145,
+    "best_min": 515,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 145,
+    "worst_max": 145,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 145,
+    "worst_max": 170,
+    "best_min": 730,
+    "best_max": 775
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 205,
+    "worst_max": 245,
+    "best_min": 735,
+    "best_max": 1515
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 515,
+    "worst_max": 605,
+    "best_min": 1550,
+    "best_max": 2080
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 660,
+    "worst_max": 885,
+    "best_min": 2665,
+    "best_max": 4260
+  },
+  {
+    "make": "BMW",
+    "model": "3 Series",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1460,
+    "worst_max": 1640,
+    "best_min": 8595,
+    "best_max": 9680
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 160,
+    "worst_max": 160,
+    "best_min": 515,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 160,
+    "worst_max": 465,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 160,
+    "worst_max": 170,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 170,
+    "worst_max": 220,
+    "best_min": 730,
+    "best_max": 1625
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 285,
+    "worst_max": 375,
+    "best_min": 1235,
+    "best_max": 2080
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 615,
+    "worst_max": 1705,
+    "best_min": 2545,
+    "best_max": 5850
+  },
+  {
+    "make": "BMW",
+    "model": "5 Series",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1365,
+    "worst_max": 3115,
+    "best_min": 7360,
+    "best_max": 11960
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 200,
+    "worst_max": 230,
+    "best_min": 730,
+    "best_max": 1115
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 210,
+    "worst_max": 230,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 210,
+    "worst_max": 215,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 215,
+    "worst_max": 220,
+    "best_min": 800,
+    "best_max": 1300
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 220,
+    "worst_max": 395,
+    "best_min": 1870,
+    "best_max": 2750
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1260,
+    "worst_max": 1905,
+    "best_min": 5665,
+    "best_max": 6315
+  },
+  {
+    "make": "BMW",
+    "model": "7 Series",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1065,
+    "worst_max": 3735,
+    "best_min": 9465,
+    "best_max": 15500
+  },
+  {
+    "make": "BMW",
+    "model": "1 Series",
+    "year_from": 2008,
+    "year_to": 2012,
+    "worst_min": 190,
+    "worst_max": 430,
+    "best_min": 730,
+    "best_max": 1310
+  },
+  {
+    "make": "BMW",
+    "model": "1 Series",
+    "year_from": 2013,
+    "year_to": 2013,
+    "worst_min": 535,
+    "worst_max": 535,
+    "best_min": 1345,
+    "best_max": 1345
+  },
+  {
+    "make": "BMW",
+    "model": "2 Series",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 145,
+    "worst_max": 435,
+    "best_min": 2605,
+    "best_max": 3310
+  },
+  {
+    "make": "BMW",
+    "model": "2 Series",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 230,
+    "worst_max": 645,
+    "best_min": 2940,
+    "best_max": 5000
+  },
+  {
+    "make": "BMW",
+    "model": "2 Series",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 585,
+    "worst_max": 900,
+    "best_min": 4735,
+    "best_max": 6085
+  },
+  {
+    "make": "BMW",
+    "model": "4 Series",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 490,
+    "worst_max": 520,
+    "best_min": 2675,
+    "best_max": 2775
+  },
+  {
+    "make": "BMW",
+    "model": "4 Series",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 690,
+    "worst_max": 795,
+    "best_min": 2905,
+    "best_max": 4790
+  },
+  {
+    "make": "BMW",
+    "model": "4 Series",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1040,
+    "worst_max": 2570,
+    "best_min": 5915,
+    "best_max": 10290
+  },
+  {
+    "make": "BMW",
+    "model": "6 Series",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 175,
+    "worst_max": 175,
+    "best_min": 775,
+    "best_max": 1165
+  },
+  {
+    "make": "BMW",
+    "model": "6 Series",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 175,
+    "worst_max": 180,
+    "best_min": 1165,
+    "best_max": 1435
+  },
+  {
+    "make": "BMW",
+    "model": "6 Series",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 180,
+    "worst_max": 185,
+    "best_min": 1445,
+    "best_max": 3250
+  },
+  {
+    "make": "BMW",
+    "model": "6 Series",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 355,
+    "worst_max": 620,
+    "best_min": 2725,
+    "best_max": 4245
+  },
+  {
+    "make": "BMW",
+    "model": "6 Series",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1030,
+    "worst_max": 1320,
+    "best_min": 6830,
+    "best_max": 8835
+  },
+  {
+    "make": "BMW",
+    "model": "6 Series",
+    "year_from": 2019,
+    "year_to": 2019,
+    "worst_min": 1490,
+    "worst_max": 1490,
+    "best_min": 6370,
+    "best_max": 6370
+  },
+  {
+    "make": "BMW",
+    "model": "X3",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 185,
+    "worst_max": 190,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "X3",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 185,
+    "worst_max": 190,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "X3",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 185,
+    "worst_max": 250,
+    "best_min": 730,
+    "best_max": 1370
+  },
+  {
+    "make": "BMW",
+    "model": "X3",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 195,
+    "worst_max": 490,
+    "best_min": 1495,
+    "best_max": 2620
+  },
+  {
+    "make": "BMW",
+    "model": "X3",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 390,
+    "worst_max": 1450,
+    "best_min": 2890,
+    "best_max": 6460
+  },
+  {
+    "make": "BMW",
+    "model": "X3",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1245,
+    "worst_max": 1990,
+    "best_min": 6945,
+    "best_max": 8930
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 215,
+    "worst_max": 230,
+    "best_min": 515,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 215,
+    "worst_max": 220,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 220,
+    "worst_max": 235,
+    "best_min": 730,
+    "best_max": 735
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 235,
+    "worst_max": 240,
+    "best_min": 730,
+    "best_max": 1295
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 240,
+    "worst_max": 1005,
+    "best_min": 1570,
+    "best_max": 3425
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 835,
+    "worst_max": 1385,
+    "best_min": 4145,
+    "best_max": 5930
+  },
+  {
+    "make": "BMW",
+    "model": "X5",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 3505,
+    "worst_max": 4120,
+    "best_min": 13635,
+    "best_max": 15135
+  },
+  {
+    "make": "BMW",
+    "model": "X1",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 170,
+    "worst_max": 215,
+    "best_min": 1515,
+    "best_max": 2080
+  },
+  {
+    "make": "BMW",
+    "model": "X1",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 635,
+    "worst_max": 675,
+    "best_min": 2845,
+    "best_max": 4590
+  },
+  {
+    "make": "BMW",
+    "model": "X1",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 660,
+    "worst_max": 1125,
+    "best_min": 5280,
+    "best_max": 7200
+  },
+  {
+    "make": "BMW",
+    "model": "X6",
+    "year_from": 2008,
+    "year_to": 2012,
+    "worst_min": 345,
+    "worst_max": 380,
+    "best_min": 1270,
+    "best_max": 2655
+  },
+  {
+    "make": "BMW",
+    "model": "X6",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 395,
+    "worst_max": 1265,
+    "best_min": 2935,
+    "best_max": 5575
+  },
+  {
+    "make": "BMW",
+    "model": "X6",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1635,
+    "worst_max": 2105,
+    "best_min": 5445,
+    "best_max": 6165
+  },
+  {
+    "make": "BMW",
+    "model": "X6",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1740,
+    "worst_max": 5300,
+    "best_min": 10370,
+    "best_max": 21690
+  },
+  {
+    "make": "BMW",
+    "model": "X4",
+    "year_from": 2015,
+    "year_to": 2015,
+    "worst_min": 775,
+    "worst_max": 795,
+    "best_min": 3540,
+    "best_max": 3540
+  },
+  {
+    "make": "BMW",
+    "model": "X4",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 775,
+    "worst_max": 840,
+    "best_min": 3980,
+    "best_max": 4445
+  },
+  {
+    "make": "BMW",
+    "model": "X4",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1590,
+    "worst_max": 3270,
+    "best_min": 9185,
+    "best_max": 12820
+  },
+  {
+    "make": "BMW",
+    "model": "X7",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 4510,
+    "worst_max": 4520,
+    "best_min": 16440,
+    "best_max": 18705
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 140,
+    "worst_max": 145,
+    "best_min": 520,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 145,
+    "worst_max": 150,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 150,
+    "worst_max": 170,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 155,
+    "worst_max": 165,
+    "best_min": 840,
+    "best_max": 1540
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 225,
+    "worst_max": 620,
+    "best_min": 1540,
+    "best_max": 3230
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 595,
+    "worst_max": 1150,
+    "best_min": 3125,
+    "best_max": 4880
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1180,
+    "worst_max": 1245,
+    "best_min": 5550,
+    "best_max": 7615
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 155,
+    "worst_max": 170,
+    "best_min": 535,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 170,
+    "worst_max": 170,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 170,
+    "worst_max": 185,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 175,
+    "worst_max": 325,
+    "best_min": 940,
+    "best_max": 1615
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 340,
+    "worst_max": 580,
+    "best_min": 1930,
+    "best_max": 3305
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 955,
+    "worst_max": 1455,
+    "best_min": 3465,
+    "best_max": 6745
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1440,
+    "worst_max": 3015,
+    "best_min": 7785,
+    "best_max": 14225
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 185,
+    "worst_max": 200,
+    "best_min": 515,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 195,
+    "worst_max": 200,
+    "best_min": 730,
+    "best_max": 735
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 195,
+    "worst_max": 215,
+    "best_min": 735,
+    "best_max": 1385
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 215,
+    "worst_max": 365,
+    "best_min": 1130,
+    "best_max": 3005
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 725,
+    "worst_max": 1485,
+    "best_min": 3745,
+    "best_max": 7680
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1810,
+    "worst_max": 3275,
+    "best_min": 7490,
+    "best_max": 11180
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 3540,
+    "worst_max": 7155,
+    "best_min": 12940,
+    "best_max": 30615
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLA",
+    "year_from": 2014,
+    "year_to": 2015,
+    "worst_min": 385,
+    "worst_max": 395,
+    "best_min": 2595,
+    "best_max": 2715
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLA",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 375,
+    "worst_max": 850,
+    "best_min": 2560,
+    "best_max": 3080
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLA",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 475,
+    "worst_max": 1825,
+    "best_min": 4390,
+    "best_max": 7295
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLS",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 185,
+    "worst_max": 190,
+    "best_min": 855,
+    "best_max": 1140
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLS",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 190,
+    "worst_max": 515,
+    "best_min": 1560,
+    "best_max": 3765
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLS",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 645,
+    "worst_max": 1185,
+    "best_min": 2900,
+    "best_max": 3815
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLS",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 890,
+    "worst_max": 1405,
+    "best_min": 4075,
+    "best_max": 6845
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "CLS",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 2910,
+    "worst_max": 4375,
+    "best_min": 12695,
+    "best_max": 13315
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2000,
+    "year_to": 2003,
+    "worst_min": 200,
+    "worst_max": 220,
+    "best_min": 515,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2004,
+    "year_to": 2005,
+    "worst_min": 220,
+    "worst_max": 230,
+    "best_min": 730,
+    "best_max": 730
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 225,
+    "worst_max": 230,
+    "best_min": 730,
+    "best_max": 820
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 220,
+    "worst_max": 865,
+    "best_min": 1030,
+    "best_max": 3580
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 1030,
+    "worst_max": 1165,
+    "best_min": 4570,
+    "best_max": 4655
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 1455,
+    "worst_max": 1505,
+    "best_min": 6450,
+    "best_max": 7800
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "M-Class",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1245,
+    "worst_max": 3855,
+    "best_min": 8070,
+    "best_max": 16455
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLS",
+    "year_from": 2007,
+    "year_to": 2008,
+    "worst_min": 255,
+    "worst_max": 255,
+    "best_min": 1155,
+    "best_max": 1355
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLS",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 255,
+    "worst_max": 260,
+    "best_min": 750,
+    "best_max": 1675
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLS",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 610,
+    "worst_max": 790,
+    "best_min": 3050,
+    "best_max": 4070
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLS",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 835,
+    "worst_max": 1500,
+    "best_min": 4485,
+    "best_max": 6875
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLS",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1020,
+    "worst_max": 5190,
+    "best_min": 8920,
+    "best_max": 18705
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLC",
+    "year_from": 2010,
+    "year_to": 2012,
+    "worst_min": 405,
+    "worst_max": 435,
+    "best_min": 1945,
+    "best_max": 2535
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLC",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 775,
+    "worst_max": 800,
+    "best_min": 3200,
+    "best_max": 3825
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLC",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 760,
+    "worst_max": 1800,
+    "best_min": 4690,
+    "best_max": 5705
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLC",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 1500,
+    "worst_max": 2010,
+    "best_min": 7545,
+    "best_max": 9000
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_from": 2003,
+    "year_to": 2005,
+    "worst_min": 2670,
+    "worst_max": 2670,
+    "best_min": 14560,
+    "best_max": 15700
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_from": 2006,
+    "year_to": 2008,
+    "worst_min": 655,
+    "worst_max": 2670,
+    "best_min": 13565,
+    "best_max": 15700
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_from": 2009,
+    "year_to": 2012,
+    "worst_min": 275,
+    "worst_max": 755,
+    "best_min": 14180,
+    "best_max": 14750
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_from": 2013,
+    "year_to": 2015,
+    "worst_min": 4485,
+    "worst_max": 5850,
+    "best_min": 20180,
+    "best_max": 22545
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 6005,
+    "worst_max": 7240,
+    "best_min": 28890,
+    "best_max": 30600
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 13745,
+    "worst_max": 20835,
+    "best_min": 43915,
+    "best_max": 68650
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLA",
+    "year_from": 2015,
+    "year_to": 2015,
+    "worst_min": 580,
+    "worst_max": 580,
+    "best_min": 3015,
+    "best_max": 3015
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLA",
+    "year_from": 2016,
+    "year_to": 2018,
+    "worst_min": 680,
+    "worst_max": 685,
+    "best_min": 3490,
+    "best_max": 4585
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "GLA",
+    "year_from": 2019,
+    "year_to": 2021,
+    "worst_min": 670,
+    "worst_max": 1630,
+    "best_min": 6420,
+    "best_max": 7600
   }
 ]

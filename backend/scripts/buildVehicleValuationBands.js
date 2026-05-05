@@ -1,6 +1,8 @@
 /**
  * Build src/data/vehicleValuationBands.json from compact tuples.
  * Tuple: [year_from, year_to, w1, w2, b1, b2] — min/max normalized in pack().
+ * Toyota / Honda / Lexus blocks below are frozen; additional makes live in
+ * valuationBandsAdditionalMakes.js.
  * Run: node scripts/buildVehicleValuationBands.js
  */
 const fs = require('fs');
@@ -247,7 +249,9 @@ const lexus = [
   ]),
 ];
 
-const all = [...toyota, ...honda, ...lexus];
+const additionalMakes = require('./valuationBandsAdditionalMakes');
+
+const all = [...toyota, ...honda, ...lexus, ...additionalMakes];
 const out = path.join(__dirname, '../src/data/vehicleValuationBands.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, `${JSON.stringify(all, null, 2)}\n`, 'utf8');
