@@ -547,6 +547,11 @@ a.g2g-logo:focus-visible {
   color: var(--g2g-text);
 }
 
+.g2g-no-estimate-copy {
+  margin: 0;
+  line-height: 1.45;
+}
+
 .g2g-sell-panel {
   margin-top: 1.25rem;
   padding-top: 1.25rem;

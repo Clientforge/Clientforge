@@ -1287,13 +1287,6 @@ export default function G2GOffer() {
       {result && displayOfferUsd(result) != null ? (
         <div className="g2g-result">
           <h2>Here&apos;s what your car could be worth</h2>
-          {result.meta?.manualReviewRequired ? (
-            <div className="g2g-alert g2g-alert--info g2g-mt" role="status">
-              We couldn&apos;t match this exact vehicle in our pricing reference. The amount below is a broad guide
-              only — our team will review your listing and contact you with a tailored quote. You can still start a
-              sell request so we have your details.
-            </div>
-          ) : null}
           <p className="g2g-offer-range">${displayOfferUsd(result).toLocaleString()}</p>
           <button
             type="button"
@@ -1423,6 +1416,16 @@ export default function G2GOffer() {
             This amount is an estimate based on what you shared. Your final offer may change after we confirm the
             vehicle, title, and pickup details.
           </p>
+        </div>
+      ) : result && result.meta?.noEstimate ? (
+        <div className="g2g-result">
+          <h2>We don&apos;t have an instant estimate for this vehicle</h2>
+          <div className="g2g-alert g2g-alert--info g2g-mt" role="status">
+            <p className="g2g-no-estimate-copy">
+              That year, make, and model aren&apos;t in our pricing reference yet, so we can&apos;t show a dollar
+              range. Check the spelling, or contact Grace to Grace — we can still put together a custom quote for you.
+            </p>
+          </div>
         </div>
       ) : null}
     </>

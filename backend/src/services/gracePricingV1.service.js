@@ -1,14 +1,12 @@
 /**
- * Grace to Grace — v1 pricing (server source of truth).
+ * Grace to Grace — server estimate (source of truth).
  *
- * Models:
- * - Title status: seller-reported category multipliers.
- * - Regional scrap: ZIP-derived index (local crush/export density proxy).
- * - Metal ETF blend (optional): Alpha Vantage daily series for SLX / DBB / CPER → trend vs 20d mean.
- * - Market proxy: class + ZIP3 + model-year blend (wholesale-style proxy until a vehicle value API is wired).
+ * Public `/grace-estimate` uses valuation bands (curated table) first, then the Camry rule
+ * table for eligible Toyotas. There is no generic class-based dollar fallback: vehicles
+ * outside those sources return an explicit no-estimate payload.
+ *
+ * `computeOfferRangeInternal` remains exported for tests or future internal use.
  */
-
-const { getMetalCommodityBlend } = require('./alphaVantage.service');
 const {
   tryComputeCamryRuleEstimate,
   computeV1DrivabilityFactor,
@@ -256,25 +254,22 @@ async function computeGraceEstimate(body) {
       },
     };
   }
-  const metal = await getMetalCommodityBlend();
-  const metalMeta = {
-    status: metal.status,
-    fetchedAt: metal.fetchedAt,
-    detail: metal.detail,
-    symbols: metal.symbols,
-  };
-  const fallback = computeOfferRangeInternal({
-    ...validated,
-    metalCommodityBlend: metal.blendMultiplier,
-    metalMeta,
-  });
   return {
-    ...fallback,
+    low: null,
+    high: null,
+    pointOffer: null,
     meta: {
-      ...fallback.meta,
+      modelVersion: 'bands_only',
+      estimator: 'none',
       manualReviewRequired: true,
-      pricingMatchTier: 'generic_v1',
+      pricingMatchTier: 'none',
+      noEstimate: true,
+      noEstimateReason: 'not_in_valuation_bands',
       userModel: validated.model,
+      make: validated.make,
+      year: validated.year,
+      vehicleClass: 'unknown',
+      titleStatus: String(validated.titleStatus || 'clean'),
     },
   };
 }
