@@ -88,3 +88,12 @@ export function computeOfferRange(input) {
     },
   };
 }
+
+/** Single dollar amount for customer-facing UI; `low`/`high` stay for internal use. */
+export function displayOfferUsd(result) {
+  if (!result || result.low == null || result.high == null) return null;
+  const lo = Number(result.low);
+  const hi = Number(result.high);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
+  return Math.round((lo + hi) / 2);
+}

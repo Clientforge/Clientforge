@@ -143,7 +143,7 @@ export default function G2GHome() {
 
       <section id="how-it-works" className="g2g-section g2g-section--surface">
         <h2 className="g2g-section-heading">How it works</h2>
-        <p className="g2g-section-lead">Four steps from vehicle details to an estimated range.</p>
+        <p className="g2g-section-lead">Four quick steps from your details to your offer.</p>
         <ol className="g2g-steps">
           {HOW_IT_WORKS_STEPS.map((step, i) => (
             <li key={step.title} className="g2g-step">
@@ -187,7 +187,7 @@ export default function G2GHome() {
 
       <section id="trust" className="g2g-section g2g-section--surface">
         <h2 className="g2g-section-heading">Why use {BRAND}?</h2>
-        <p className="g2g-section-lead">Built for clarity — especially when the car isn&apos;t showroom fresh.</p>
+        <p className="g2g-section-lead">Built for clarity — especially when your car isn&apos;t showroom fresh.</p>
         <div className="g2g-trust-grid">
           {TRUST_BAND.map((item) => (
             <div key={item.title} className="g2g-trust-item">
@@ -203,7 +203,7 @@ export default function G2GHome() {
 
       <section id="faq" className="g2g-section">
         <h2 className="g2g-section-heading">FAQ</h2>
-        <p className="g2g-section-lead">Straight answers about estimates, VIN data, and sell flow.</p>
+        <p className="g2g-section-lead">Common questions about your offer and how we follow up.</p>
         <div className="g2g-faq-list">
           {FAQ_ITEMS.map((item) => (
             <details key={item.q} className="g2g-faq-item">

@@ -23,6 +23,7 @@ import {
   matchModelToCatalog,
   coerceDecodedYear,
 } from './vehicleCatalog';
+import { displayOfferUsd } from './displayOffer';
 
 const FLOW = {
   year: 1,
@@ -335,7 +336,7 @@ export default function G2GOffer() {
   const vinDeepLinkApplied = useRef(false);
 
   useEffect(() => {
-    document.title = 'Get offer — Grace to Grace';
+    document.title = 'See what your car is worth — Grace to Grace';
   }, []);
 
   const [vin, setVin] = useState('');
@@ -680,7 +681,8 @@ export default function G2GOffer() {
       setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
       return;
     }
-    if (!result || result.low == null || result.high == null) return;
+    const offerDisplay = displayOfferUsd(result);
+    if (!result || offerDisplay == null) return;
 
     const miLabel =
       MILEAGE_SELECT_OPTIONS.find((o) => o.value === mileageBracket)?.label || mileageBracket;
@@ -713,8 +715,8 @@ export default function G2GOffer() {
         vin: normalizeVin(vin) || undefined,
         mileage: miLabel || undefined,
         conditionLabel,
-        estimateLow: result.low,
-        estimateHigh: result.high,
+        estimateLow: result.low != null ? result.low : offerDisplay,
+        estimateHigh: result.high != null ? result.high : offerDisplay,
       });
       setSellOk(true);
       setSellOpen(false);
@@ -735,11 +737,11 @@ export default function G2GOffer() {
 
   return (
     <>
-      <h1 className="g2g-page-title">Get your estimate</h1>
+      <h1 className="g2g-page-title">See what your car is worth</h1>
       <p className="g2g-page-lead">
         {entryMode === null
-          ? 'Start with your VIN (we look up year, make, and model from NHTSA) or enter those details yourself — then answer a few questions for your range.'
-          : 'Answer each question as it appears. Your previous answers stay on screen — like a short conversation — until you see your range. Not a binding offer.'}
+          ? 'Start with your VIN or enter year, make, and model yourself — then answer a few quick questions. You’ll get one clear offer amount to help you decide what’s next.'
+          : 'Answer each question as it appears. Your previous answers stay on screen until you see your offer.'}
       </p>
 
       {entryMode === null ? (
@@ -769,7 +771,7 @@ export default function G2GOffer() {
             <FlowBlock step={FLOW.vin} flowMax={flowMax}>
               <div className="g2g-flow-block-title">What&apos;s your VIN?</div>
               <p className="g2g-flow-block-lead">
-                We&apos;ll decode it and fill year, make, and model automatically so you can skip those questions.
+                Enter your VIN and we&apos;ll fill in year, make, and model when we can, so you can skip those steps.
               </p>
               <div className="g2g-field">
                 <label htmlFor="g2g-vin-first">17-character VIN</label>
@@ -946,7 +948,7 @@ export default function G2GOffer() {
             <FlowBlock step={FLOW.vin} flowMax={flowMax}>
               <div className="g2g-flow-block-title">VIN (optional)</div>
               <p className="g2g-flow-block-lead">
-                Add a VIN to fill details from NHTSA, or skip to continue with what you entered.
+                Add a VIN to pull in details automatically, or skip and continue with what you entered.
               </p>
               <div className="g2g-field">
                 <label htmlFor="g2g-vin">17-character VIN</label>
@@ -1212,38 +1214,17 @@ export default function G2GOffer() {
 
           {canSubmitEstimate ? (
             <button type="submit" className="g2g-btn g2g-btn--primary g2g-submit-sticky" disabled={submitting}>
-              {submitting ? 'Calculating…' : 'Show estimated range'}
+              {submitting ? 'Calculating…' : 'See what your car is worth'}
             </button>
           ) : null}
         </form>
       </div>
       )}
 
-      {result && result.low != null && result.high != null ? (
+      {result && displayOfferUsd(result) != null ? (
         <div className="g2g-result">
-          <h2>Your estimated range</h2>
-          {result.pointOffer != null && Number.isFinite(Number(result.pointOffer)) ? (
-            <p className="g2g-offer-typical" style={{ margin: '0.35rem 0 0.25rem', fontSize: '1.1rem' }}>
-              Typical offer: <strong>${Number(result.pointOffer).toLocaleString()}</strong>
-              {result.meta?.estimator === 'camry_rule_table' ? (
-                <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
-                  {' '}
-                  (from the reference band, then condition multipliers; floor is scrap value, not the table
-                  minimum)
-                </span>
-              ) : null}
-              {result.meta?.estimator === 'valuation_bands' ? (
-                <span style={{ color: 'var(--g2g-muted)', fontWeight: 400, fontSize: '0.92rem' }}>
-                  {' '}
-                  (tier score blends worst vs best band anchors — severe issues pull toward the lowest band more
-                  sharply)
-                </span>
-              ) : null}
-            </p>
-          ) : null}
-          <p className="g2g-offer-range">
-            ${Number(result.low).toLocaleString()} — ${Number(result.high).toLocaleString()}
-          </p>
+          <h2>Here&apos;s what your car could be worth</h2>
+          <p className="g2g-offer-range">${displayOfferUsd(result).toLocaleString()}</p>
           <button
             type="button"
             className="g2g-btn g2g-btn--primary g2g-mt"
@@ -1264,7 +1245,7 @@ export default function G2GOffer() {
             <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
               <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
                 Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and
-                estimate details.
+                offer details.
               </p>
               <div className="g2g-field">
                 <label htmlFor="g2g-sell-name">Your name</label>
@@ -1323,152 +1304,9 @@ export default function G2GOffer() {
               </button>
             </form>
           ) : null}
-          {result.meta?.estimator === 'camry_rule_table' ? (
-            <div style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-              <p style={{ margin: '0 0 0.4rem' }}>
-                Rule band: <strong>{result.meta?.yearBand ?? '—'}</strong> · Base row:{' '}
-                <strong>{result.meta?.baseRule ?? 'running'}</strong> · Assessment:{' '}
-                <strong>{result.meta?.ruleCondition ?? '—'}</strong>
-                {result.meta?.ruleConditionReason ? <> ({result.meta.ruleConditionReason})</> : null} · Reference
-                (running) min/max: ${result.meta?.priceLow != null ? Number(result.meta.priceLow).toLocaleString() : '—'}{' '}
-                – ${result.meta?.priceHigh != null ? Number(result.meta.priceHigh).toLocaleString() : '—'}
-                {result.meta?.scrapFloor != null && result.meta?.priceLow != null
-                && Number(result.meta.scrapFloor) < Number(result.meta.priceLow) ? (
-                  <> · Hard floor (scrap): ${Number(result.meta.scrapFloor).toLocaleString()}</>
-                ) : result.meta?.scrapFloor != null ? (
-                  <> · Hard floor: ${Number(result.meta.scrapFloor).toLocaleString()}</>
-                ) : null}
-                {result.meta?.scrapSource ? <> · Floor source: {result.meta.scrapSource}</> : null}
-              </p>
-              {result.meta?.multipliers ? (
-                <p style={{ margin: '0 0 0.4rem' }}>
-                  Multipliers — mileage: {result.meta.multipliers.mileage ?? '—'} · title:{' '}
-                  {result.meta.multipliers.title ?? '—'} · mileage/title:{' '}
-                  <strong>
-                    {result.meta.multipliers.appliedMileageTitle != null
-                      ? result.meta.multipliers.appliedMileageTitle
-                      : (result.meta.multipliers.applied ?? '—')}
-                  </strong>
-                  {result.meta.multipliers.drivability != null
-                    && result.meta.multipliers.drivability < 1 ? (
-                    <> · start/drive: {result.meta.multipliers.drivability}</>
-                  ) : null}
-                  {result.meta.multipliers.tires != null && result.meta.multipliers.tires < 1 ? (
-                    <>
-                      {' '}
-                      · tires: {result.meta.multipliers.tires}
-                      {result.meta.multipliers.tireMode && result.meta.multipliers.tireMode !== 'ok' ? (
-                        <> ({result.meta.multipliers.tireMode})</>
-                      ) : null}
-                    </>
-                  ) : null}
-                  {result.meta.multipliers.conditionStack != null
-                    && result.meta.multipliers.conditionStack < 1 ? (
-                    <> · other condition: {result.meta.multipliers.conditionStack}</>
-                  ) : null}
-                  {result.meta.multipliers.damage != null && result.meta.multipliers.damage < 1 ? (
-                    <> · body damage: {result.meta.multipliers.damage}</>
-                  ) : null}
-                  {result.meta?.cleanBoostApplied ? (
-                    <> · clean: {result.meta.multipliers?.cleanBoost ?? 1.05}</>
-                  ) : null}
-                  {result.meta.multipliers.combinedPreClamp != null ? (
-                    <> · combined: {result.meta.multipliers.combinedPreClamp}</>
-                  ) : null}
-                </p>
-              ) : null}
-              {result.meta?.damagePenalties && Object.keys(result.meta.damagePenalties).length > 0 ? (
-                <p style={{ margin: '0 0 0.4rem' }}>
-                  Damage factors:{' '}
-                  {Object.entries(result.meta.damagePenalties)
-                    .map(([k, v]) => `${k} ×${v}`)
-                    .join(' · ')}
-                </p>
-              ) : null}
-              {result.meta?.deductions && Number(result.meta.deductions.total) > 0 ? (
-                <p style={{ margin: '0 0 0.4rem' }}>
-                  Deductions: -${Number(result.meta.deductions.total).toLocaleString()}
-                  {result.meta.deductions.tiresAttachedNo ? <> · tires loose</> : null}
-                  {result.meta.deductions.tiresInflatedNo ? <> · tires flat</> : null}
-                  {result.meta.deductions.glassSome ? <> · glass</> : null}
-                  {result.meta.deductions.airbagSome ? <> · airbag</> : null}
-                  {result.meta.deductions.panelsSomeKeys?.length ? (
-                    <> · body panels: {result.meta.deductions.panelsSomeKeys.join(', ')}</>
-                  ) : null}
-                </p>
-              ) : null}
-              {result.meta?.clamped ? (
-                <p style={{ margin: 0 }}>Offer clamped to the rule band min/max.</p>
-              ) : null}
-            </div>
-          ) : result.meta?.estimator === 'valuation_bands' ? (
-            <div style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-              <p style={{ margin: '0 0 0.4rem' }}>
-                Band table: <strong>{result.meta?.make ?? '—'}</strong> {result.meta?.model ?? '—'} · Model years{' '}
-                <strong>
-                  {result.meta?.yearFrom != null ? result.meta.yearFrom : '—'}–
-                  {result.meta?.yearTo != null ? result.meta.yearTo : '—'}
-                </strong>
-                {result.meta?.conditionTierScore != null ? (
-                  <>
-                    {' '}
-                    · Condition score (0=worst tier, 1=best): <strong>{result.meta.conditionTierScore}</strong>
-                  </>
-                ) : null}
-              </p>
-              <p style={{ margin: '0 0 0.4rem' }}>
-                Worst band: $
-                {result.meta?.worst?.min != null ? Number(result.meta.worst.min).toLocaleString() : '—'} – $
-                {result.meta?.worst?.max != null ? Number(result.meta.worst.max).toLocaleString() : '—'} · Best band: $
-                {result.meta?.best?.min != null ? Number(result.meta.best.min).toLocaleString() : '—'} – $
-                {result.meta?.best?.max != null ? Number(result.meta.best.max).toLocaleString() : '—'}
-              </p>
-            </div>
-          ) : result.meta && typeof result.meta === 'object' ? (
-            <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-              Base before condition: ~$
-              {result.meta.baseBeforeCondition != null
-                ? Number(result.meta.baseBeforeCondition).toLocaleString()
-                : '—'}{' '}
-              · Condition:{' '}
-              {result.meta.conditionFactor != null && Number.isFinite(Number(result.meta.conditionFactor))
-                ? Number(result.meta.conditionFactor).toFixed(3)
-                : '—'}{' '}
-              · Class: {result.meta.vehicleClass ?? '—'} · Scrap floor: $
-              {result.meta.scrapFloor != null ? Number(result.meta.scrapFloor).toLocaleString() : '—'}
-              {result.meta.marketCompsProxy != null ? (
-                <>
-                  {' '}
-                  · Market proxy: {result.meta.marketCompsProxy} · ZIP scrap: {result.meta.scrapRegionalIndex}
-                  {result.meta.metalCommodityBlend != null ? (
-                    <> · Metal ETF blend: {result.meta.metalCommodityBlend}</>
-                  ) : null}
-                  {result.meta.scrapCombinedIndex != null ? (
-                    <> · Combined scrap: {result.meta.scrapCombinedIndex}</>
-                  ) : null}
-                  {result.meta.alphaVantage?.status != null ? (
-                    <> · Alpha Vantage: {result.meta.alphaVantage.status}</>
-                  ) : null}
-                  {result.meta.titleFactor != null ? (
-                    <>
-                      {' · '}
-                      Title: {result.meta.titleFactor}
-                    </>
-                  ) : null}
-                </>
-              ) : null}
-            </p>
-          ) : (
-            <p style={{ margin: 0, color: 'var(--g2g-muted)', fontSize: '0.92rem' }}>
-              Estimated range is shown above. Detail metadata was not available for this response.
-            </p>
-          )}
           <p className="g2g-disclaimer">
-            {result.meta?.estimator === 'camry_rule_table'
-              ? 'This 2005–2017 Toyota Camry estimate uses a fixed internal rule table and a deterministic point offer (60% from min to max in the band). It is not a market valuation. Title verification, local scrap, and pickup are not included. Not a guaranteed purchase price.'
-              : result.meta?.estimator === 'valuation_bands'
-                ? 'This estimate uses internal worst/best dollar bands for your make, model, and year range, then maps your answers to a position between those bands. It is not a market valuation. Verified title, local sales, and pickup are not included. Not a guaranteed purchase price.'
-                : 'Estimates use server v1: seller-reported title, ZIP regional scrap, optional Alpha Vantage ETF metal proxies (SLX / DBB / CPER — not spot $/lb), and a wholesale-style market proxy. Live auction feeds, verified title pulls, and pickup routing are not included yet. Not a guaranteed purchase price.'}
+            This amount is an estimate based on what you shared. Your final offer may change after we confirm the
+            vehicle, title, and pickup details.
           </p>
         </div>
       ) : null}

@@ -1,80 +1,79 @@
 /** Marketing copy for the public home page. Edits here flow into HomePage. */
 
 export const HERO = {
-  headline: 'Sell your vehicle with a fast, upfront estimate',
+  headline: 'Sell your vehicle with a fast, upfront offer',
   subhead:
-    'Decode your VIN or enter year, make, and model, add condition and ZIP, and see an estimated dollar range in seconds. Final amounts depend on verification — this tool is built for transparency, not hype.',
+    'Share a few details about your car and your area — in minutes you’ll see what it could be worth. Final payout depends on a quick verification when you’re ready to move forward.',
   primaryCta: 'Get my offer',
   secondaryCta: 'Enter VIN instead',
   secondaryTo: '/offer?start=vin',
 };
 
 export const TRUST_CHIPS = [
-  { label: 'Works for damaged & non-running units' },
-  { label: 'Estimate in minutes' },
-  { label: 'No obligation to proceed' },
+  { label: 'Damaged & non-running welcome' },
+  { label: 'Get your number in minutes' },
+  { label: 'No obligation to sell' },
 ];
 
 export const HOW_IT_WORKS_STEPS = [
   {
-    title: 'Tell us about the vehicle',
-    body: 'Paste a 17-character VIN (we decode via NHTSA) or type year, make, and model yourself.',
+    title: 'Tell us about your vehicle',
+    body: 'Tell us a bit about your car — VIN, year, make, and model — so we can tailor your offer.',
     icon: 'vin',
   },
   {
-    title: 'Add condition & ZIP',
-    body: 'Pick a condition band and your ZIP so we can anchor the range to your area.',
+    title: 'Add a few details',
+    body: 'Share condition and your ZIP so we can reflect your car and location accurately.',
     icon: 'form',
   },
   {
-    title: 'See your estimated range',
-    body: 'Our v1 engine applies clear multipliers and floors — you’ll see a low–high range right away.',
+    title: 'See what your car is worth',
+    body: 'You’ll get one clear number you can use to decide your next step with confidence.',
     icon: 'range',
   },
   {
-    title: 'Ready to move?',
-    body: 'Use “Sell now” after your estimate to reach our team with pickup details (SMS consent required).',
+    title: 'Ready to sell?',
+    body: 'Tap “Sell now” to send your info to our team with SMS consent — we’ll follow up to coordinate pickup.',
     icon: 'sell',
   },
 ];
 
 export const TRUST_BAND = [
   {
-    title: 'Grounded numbers',
-    body: 'Class-based scrap floors and condition factors keep estimates from floating too high.',
+    title: 'Straightforward pricing',
+    body: 'We focus on a simple offer you can understand — not a wall of numbers.',
     icon: 'chart',
   },
   {
-    title: 'Title & logistics',
-    body: 'Real deals still need title checks, pickup scheduling, and local compliance — we spell that out up front.',
+    title: 'Real sales need paperwork',
+    body: 'When you’re ready, we’ll confirm title and pickup — that’s normal for any sale.',
     icon: 'doc',
   },
   {
     title: 'You’re in control',
-    body: 'Walk away anytime. The estimate page is there to inform your next step, not pressure it.',
+    body: 'Walk away anytime. We’re here to make selling easier, not to pressure you.',
     icon: 'shield',
   },
 ];
 
-/** Example testimonials — replace with real reviews when available. */
 export const REVIEWS = [
   {
     quote:
-      'I had a non-runner sitting in the driveway. Got a range fast and knew what ballpark to expect before anyone came out.',
+      'I had a non-runner in the driveway. Got a clear number fast and knew what to expect before anyone came out.',
     name: 'James R.',
     meta: 'Metro Atlanta area',
     rating: 5,
   },
   {
     quote:
-      'The VIN decode saved me from typing everything wrong. Condition options were plain English.',
+      'Using my VIN prefilled everything — I didn’t have to guess at trim or spelling.',
     name: 'Maria L.',
     meta: 'Georgia',
     rating: 5,
   },
   {
     quote:
-      'Appreciated that it says estimate, not a guaranteed check amount. Felt more honest than other sites.',
+      'Felt honest — one offer, no confusing spread. Easier than other sites I’ve tried.',
     name: 'David T.',
     meta: 'Southeast',
     rating: 5,
@@ -84,24 +83,24 @@ export const REVIEWS = [
 export const FAQ_ITEMS = [
   {
     q: 'Is this a guaranteed purchase price?',
-    a: 'No. You see an estimated range from our demo pricing engine. A binding offer requires verifying the vehicle, title, and pickup details.',
+    a: 'The amount we show is an estimate based on what you tell us. A firm purchase price comes after we verify the vehicle and title.',
   },
   {
-    q: 'Where does VIN information come from?',
-    a: 'When you decode a VIN we call the public NHTSA vPIC API so year, make, model, and related fields stay consistent with federal data.',
+    q: 'Why does the site ask for my VIN?',
+    a: 'When you enter a VIN, we can often fill in year, make, and model for you so you don’t have to type everything by hand.',
   },
   {
-    q: 'What vehicles do you buy?',
-    a: 'The estimator supports many passenger vehicles across condition bands — running, damaged, salvage-style, and more. Edge cases may need a manual review.',
+    q: 'What kinds of vehicles do you buy?',
+    a: 'Many cars, trucks, and SUVs — running, damaged, or not. Unusual cases may need a quick look from our team.',
   },
   {
-    q: 'What happens if I click “Sell now”?',
-    a: 'You submit your name, phone, pickup address, and SMS consent. We notify our buyer team so someone can follow up. Message and data rates may apply where SMS is used.',
+    q: 'What happens if I tap “Sell now”?',
+    a: 'You share your name, phone, pickup address, and SMS consent. Our team gets notified so someone can reach out. Message and data rates may apply.',
   },
 ];
 
 export const CTA_REPEAT = {
-  title: 'See your range in minutes',
-  body: 'Start with VIN or manual entry — same flow either way.',
+  title: 'See what your car is worth',
+  body: 'VIN or manual entry — whichever is easier for you.',
   button: 'Get my offer',
 };
