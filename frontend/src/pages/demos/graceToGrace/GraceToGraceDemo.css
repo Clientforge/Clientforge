@@ -256,6 +256,36 @@ a.g2g-logo:focus-visible {
   max-width: 42rem;
 }
 
+.g2g-entry-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  max-width: 42rem;
+  margin-bottom: 1rem;
+}
+
+.g2g-entry-choice__btn {
+  flex: 1;
+  min-width: 11rem;
+}
+
+.g2g-link-btn {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--g2g-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.g2g-link-btn:hover {
+  color: var(--g2g-accent-dark);
+}
+
 .g2g-form {
   display: flex;
   flex-direction: column;

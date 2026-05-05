@@ -198,6 +198,7 @@ function isModelComplete(makeSelect, makeOther, modelSelect, modelOther) {
 }
 
 function computeUnlockedStep({
+  entryMode,
   year,
   makeSelect,
   makeOther,
@@ -217,6 +218,44 @@ function computeUnlockedStep({
   catalytic,
   interiorQuality,
 }) {
+  if (entryMode == null) {
+    return 0;
+  }
+  if (entryMode === 'vin') {
+    const ymmOk =
+      String(year || '').trim()
+      && isModelComplete(makeSelect, makeOther, modelSelect, modelOther);
+    if (!vinStepAcknowledged || !ymmOk) {
+      return FLOW.vin;
+    }
+    let m = FLOW.zipTitle;
+    if (String(zip || '').replace(/\D/g, '').length < 5) return m;
+    m = FLOW.mileage;
+    if (!mileageBracket) return m;
+    m = FLOW.battery;
+    if (battery == null) return m;
+    m = FLOW.key;
+    if (key == null) return m;
+    m = FLOW.startDrive;
+    if (startDrive == null) return m;
+    m = FLOW.tiresInflated;
+    if (tiresInflated == null) return m;
+    m = FLOW.tiresAttached;
+    if (tiresAttached == null) return m;
+    m = FLOW.exterior;
+    if (exterior == null) return m;
+    m = FLOW.exteriorComplete;
+    if (exteriorComplete == null) return m;
+    m = FLOW.glass;
+    if (glass == null) return m;
+    m = FLOW.catalytic;
+    if (catalytic == null) return m;
+    m = FLOW.interior;
+    if (interiorQuality == null) return m;
+    m = FLOW.body;
+    return m;
+  }
+
   let m = FLOW.year;
   if (!String(year || '').trim()) return m;
   m = FLOW.make;
@@ -298,6 +337,7 @@ export default function G2GOffer() {
   const [vin, setVin] = useState('');
   const [decoding, setDecoding] = useState(false);
   const [decodeError, setDecodeError] = useState('');
+  const [entryMode, setEntryMode] = useState(null);
 
   const [year, setYear] = useState('');
   const [makeSelect, setMakeSelect] = useState('');
@@ -339,6 +379,7 @@ export default function G2GOffer() {
   const unlocked = useMemo(
     () =>
       computeUnlockedStep({
+        entryMode,
         year,
         makeSelect,
         makeOther,
@@ -359,6 +400,7 @@ export default function G2GOffer() {
         interiorQuality,
       }),
     [
+      entryMode,
       year,
       makeSelect,
       makeOther,
@@ -380,7 +422,7 @@ export default function G2GOffer() {
     ],
   );
 
-  const [flowMax, setFlowMax] = useState(1);
+  const [flowMax, setFlowMax] = useState(0);
 
   useEffect(() => {
     setFlowMax((f) => Math.max(f, unlocked));
@@ -391,6 +433,76 @@ export default function G2GOffer() {
       flowEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [flowMax]);
+
+  const ymmComplete = isModelComplete(makeSelect, makeOther, modelSelect, modelOther);
+  const showVinFirstPanel =
+    entryMode === 'vin'
+    && flowMax >= FLOW.vin
+    && (!vinStepAcknowledged || !String(year || '').trim() || !ymmComplete);
+
+  const startVinPath = () => {
+    setEntryMode('vin');
+    setVin('');
+    setDecodeError('');
+    setVinStepAcknowledged(false);
+    setYear('');
+    setMakeSelect('');
+    setMakeOther('');
+    setModelSelect('');
+    setModelOther('');
+    setBodyClass('');
+    setEngineNote('');
+    setZip('');
+    setTitleStatus('clean');
+    setMileageBracket('');
+    setBattery(null);
+    setKey(null);
+    setStartDrive(null);
+    setTiresInflated(null);
+    setTiresAttached(null);
+    setExterior(null);
+    setExteriorComplete(null);
+    setCatalytic(null);
+    setInteriorQuality(null);
+    setBodyDamage(initialBody());
+    setFormError('');
+    setResult(null);
+    setSellOk(false);
+    setSellOpen(false);
+    setFlowMax(0);
+  };
+
+  const switchToManualEntry = () => {
+    setEntryMode('manual');
+    setVin('');
+    setDecodeError('');
+    setVinStepAcknowledged(false);
+    setYear('');
+    setMakeSelect('');
+    setMakeOther('');
+    setModelSelect('');
+    setModelOther('');
+    setBodyClass('');
+    setEngineNote('');
+    setZip('');
+    setTitleStatus('clean');
+    setMileageBracket('');
+    setBattery(null);
+    setKey(null);
+    setStartDrive(null);
+    setTiresInflated(null);
+    setTiresAttached(null);
+    setExterior(null);
+    setExteriorComplete(null);
+    setCatalytic(null);
+    setInteriorQuality(null);
+    setBodyDamage(initialBody());
+    setFormError('');
+    setResult(null);
+    setSellOk(false);
+    setSellOpen(false);
+    setFlowMax(0);
+  };
 
   const handleDecode = async () => {
     setDecodeError('');
@@ -600,13 +712,87 @@ export default function G2GOffer() {
     <>
       <h1 className="g2g-page-title">Get your estimate</h1>
       <p className="g2g-page-lead">
-        Answer each question as it appears. Your previous answers stay on screen — like a short conversation — until
-        you see your range. Not a binding offer.
+        {entryMode === null
+          ? 'Start with your VIN (we look up year, make, and model from NHTSA) or enter those details yourself — then answer a few questions for your range.'
+          : 'Answer each question as it appears. Your previous answers stay on screen — like a short conversation — until you see your range. Not a binding offer.'}
       </p>
 
+      {entryMode === null ? (
+        <div className="g2g-entry-choice">
+          <button
+            type="button"
+            className="g2g-btn g2g-btn--primary g2g-entry-choice__btn"
+            onClick={() => {
+              setEntryMode('manual');
+              setFlowMax(0);
+            }}
+          >
+            Enter year, make &amp; model
+          </button>
+          <button
+            type="button"
+            className="g2g-btn g2g-btn--ghost g2g-entry-choice__btn"
+            onClick={startVinPath}
+          >
+            Enter VIN
+          </button>
+        </div>
+      ) : (
       <div className="g2g-flow" aria-live="polite">
         <form className="g2g-form g2g-form--offer g2g-form--flow" onSubmit={handleEstimate}>
-          {flowMax >= FLOW.year ? (
+          {showVinFirstPanel ? (
+            <FlowBlock step={FLOW.vin} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">What&apos;s your VIN?</div>
+              <p className="g2g-flow-block-lead">
+                We&apos;ll decode it and fill year, make, and model automatically so you can skip those questions.
+              </p>
+              <div className="g2g-field">
+                <label htmlFor="g2g-vin-first">17-character VIN</label>
+                <div className="g2g-row">
+                  <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
+                    <input
+                      id="g2g-vin-first"
+                      name="vin"
+                      autoComplete="off"
+                      placeholder="e.g. 1HGBH41JXMN109186"
+                      value={vin}
+                      maxLength={17}
+                      onChange={(ev) => setVin(ev.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <button type="button" className="g2g-btn g2g-btn--ghost" disabled={decoding} onClick={handleDecode}>
+                    {decoding ? 'Decoding…' : 'Decode VIN'}
+                  </button>
+                </div>
+                {decodeError ? (
+                  <p className="g2g-field-hint" style={{ color: 'var(--g2g-danger)' }}>
+                    {decodeError}
+                  </p>
+                ) : null}
+              </div>
+              {engineNote || bodyClass ? (
+                <div className="g2g-decode-meta">
+                  {bodyClass ? <div>Body class (from VIN): {bodyClass}</div> : null}
+                  {engineNote ? <div>Engine (from VIN): {engineNote}</div> : null}
+                </div>
+              ) : null}
+              {vinStepAcknowledged && !ymmComplete ? (
+                <div className="g2g-field-hint" style={{ marginTop: '0.75rem' }}>
+                  We couldn&apos;t match all fields from this VIN.{' '}
+                  <button type="button" className="g2g-link-btn" onClick={switchToManualEntry}>
+                    Enter vehicle manually
+                  </button>
+                </div>
+              ) : null}
+              <div className="g2g-field-hint" style={{ marginTop: '0.75rem' }}>
+                <button type="button" className="g2g-link-btn" onClick={switchToManualEntry}>
+                  Prefer to enter year, make, and model instead?
+                </button>
+              </div>
+            </FlowBlock>
+          ) : null}
+
+          {entryMode === 'manual' && flowMax >= FLOW.year ? (
             <FlowBlock step={FLOW.year} flowMax={flowMax}>
               <div className="g2g-flow-block-title">What year is your vehicle?</div>
               <div className="g2g-field">
@@ -628,7 +814,7 @@ export default function G2GOffer() {
             </FlowBlock>
           ) : null}
 
-          {flowMax >= FLOW.make ? (
+          {entryMode === 'manual' && flowMax >= FLOW.make ? (
             <FlowBlock step={FLOW.make} flowMax={flowMax}>
               <div className="g2g-flow-block-title">What make?</div>
               <div className="g2g-field">
@@ -659,7 +845,7 @@ export default function G2GOffer() {
             </FlowBlock>
           ) : null}
 
-          {flowMax >= FLOW.model ? (
+          {entryMode === 'manual' && flowMax >= FLOW.model ? (
             <FlowBlock step={FLOW.model} flowMax={flowMax}>
               <div className="g2g-flow-block-title">What model?</div>
               {makeSelect && makeSelect !== OTHER_VALUE ? (
@@ -730,7 +916,7 @@ export default function G2GOffer() {
             </FlowBlock>
           ) : null}
 
-          {flowMax >= FLOW.vin ? (
+          {entryMode === 'manual' && flowMax >= FLOW.vin ? (
             <FlowBlock step={FLOW.vin} flowMax={flowMax}>
               <div className="g2g-flow-block-title">VIN (optional)</div>
               <p className="g2g-flow-block-lead">
@@ -1005,6 +1191,7 @@ export default function G2GOffer() {
           ) : null}
         </form>
       </div>
+      )}
 
       {result && result.low != null && result.high != null ? (
         <div className="g2g-result">
