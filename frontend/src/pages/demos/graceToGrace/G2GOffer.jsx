@@ -1321,8 +1321,8 @@ export default function G2GOffer() {
             {hasCustomOfferFlow
               ? sellOpen
                 ? 'Hide form'
-                : 'Enter your details — we&apos;ll text you'
-              : `${sellOpen ? 'Hide' : 'Sell'} now — we&apos;ll text you`}
+                : "Enter your details — we'll text you"
+              : `${sellOpen ? 'Hide' : 'Sell'} now — we'll text you`}
           </button>
           {sellOk ? (
             <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
@@ -1333,7 +1333,7 @@ export default function G2GOffer() {
             <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
               <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
                 {hasCustomOfferFlow
-                  ? 'Share your contact info and pickup address. We&apos;ll text our buyer team so someone can follow up with your custom offer.'
+                  ? "Share your contact info and pickup address. We'll text our buyer team so someone can follow up with your custom offer."
                   : 'Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and offer details.'}
               </p>
               <div className="g2g-field">
