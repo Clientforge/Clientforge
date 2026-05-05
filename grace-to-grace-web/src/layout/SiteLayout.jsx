@@ -17,11 +17,20 @@ export default function SiteLayout() {
             <NavLink to="/" end className={navClass}>
               Home
             </NavLink>
-            <NavLink to="/offer" className={navClass}>
-              Get offer
-            </NavLink>
+            <Link to="/#how-it-works" className="g2g-nav-hash">
+              How it works
+            </Link>
+            <Link to="/#reviews" className="g2g-nav-hash">
+              Reviews
+            </Link>
+            <Link to="/#faq" className="g2g-nav-hash">
+              FAQ
+            </Link>
             <NavLink to="/contact" className={navClass}>
               Contact
+            </NavLink>
+            <NavLink to="/offer" className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
+              Get offer
             </NavLink>
           </nav>
         </div>

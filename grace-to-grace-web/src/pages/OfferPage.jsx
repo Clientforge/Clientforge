@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { computeOfferRange, CONDITION_OPTIONS } from '../lib/pricingEngine.js';
 import { decodeVin, isValidVinFormat, normalizeVin } from '../lib/vinDecode.js';
 import { BRAND } from '../constants.js';
@@ -6,9 +7,23 @@ import { postGraceSellIntent } from '../lib/sellIntentApi.js';
 import { getOrCreateG2gSessionId, postGraceEstimateSnapshot } from '../lib/estimateSnapshotApi.js';
 
 export default function OfferPage() {
+  const vinInputRef = useRef(null);
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
     document.title = 'Get offer — Grace to Grace';
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('start') !== 'vin') return undefined;
+    const id = requestAnimationFrame(() => {
+      const el = vinInputRef.current;
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [searchParams]);
 
   const [vin, setVin] = useState('');
   const [decoding, setDecoding] = useState(false);
@@ -161,6 +176,7 @@ export default function OfferPage() {
           <div className="g2g-row">
             <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
               <input
+                ref={vinInputRef}
                 id="vin"
                 name="vin"
                 autoComplete="off"
