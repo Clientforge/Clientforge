@@ -88,11 +88,13 @@ function interiorTier(assessment) {
 function mileageTierScore(mileageMidpoint) {
   const n = parseInt(String(mileageMidpoint || '').replace(/\D/g, ''), 10);
   if (!Number.isFinite(n) || n <= 0) return 1;
+  if (n >= 325000) return 0.52;
+  if (n >= 275000) return 0.55;
   if (n >= 225000) return 0.58;
   if (n >= 175000) return 0.68;
   if (n >= 125000) return 0.78;
   if (n >= 75000) return 0.88;
-  if (n >= 35000) return 0.95;
+  if (n >= 25000) return 0.95;
   return 1;
 }
 

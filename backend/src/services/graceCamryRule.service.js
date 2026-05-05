@@ -37,7 +37,10 @@ const MILEAGE_MULTIPLIERS = [
   { maxMid: 100000, factor: 1.0 },
   { maxMid: 150000, factor: 0.94 },
   { maxMid: 200000, factor: 0.88 },
-  { maxMid: Infinity, factor: 0.82 },
+  { maxMid: 250000, factor: 0.84 },
+  { maxMid: 275000, factor: 0.82 },
+  { maxMid: 325000, factor: 0.78 },
+  { maxMid: Infinity, factor: 0.75 },
 ];
 
 const TITLE_MULTIPLIERS = {

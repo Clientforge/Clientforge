@@ -24,11 +24,13 @@ export const TITLE_STATUS_OPTIONS = [
 /** Select values = odometer midpoint for depreciation */
 export const MILEAGE_SELECT_OPTIONS = [
   { value: '', label: 'Select mileage' },
-  { value: '35000', label: 'Under 50,000' },
+  { value: '25000', label: '0 – 50,000' },
   { value: '75000', label: '50,000 – 100,000' },
   { value: '125000', label: '100,000 – 150,000' },
   { value: '175000', label: '150,000 – 200,000' },
-  { value: '225000', label: '200,000+' },
+  { value: '225000', label: '200,000 – 250,000' },
+  { value: '275000', label: '250,000 – 300,000' },
+  { value: '325000', label: '300,000+' },
 ];
 
 export const BODY_PANEL_KEYS = [

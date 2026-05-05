@@ -86,7 +86,7 @@ function YesNoRow({ label, value, onChange, groupId, hint }) {
   );
 }
 
-function StartDriveRow({ value, onChange, groupId }) {
+function StartDriveRow({ value, onChange, groupId, locked, lockHint }) {
   return (
     <div className="g2g-damage-row">
       <span className="g2g-damage-label" id={`${groupId}-label`}>
@@ -100,25 +100,33 @@ function StartDriveRow({ value, onChange, groupId }) {
         <button
           type="button"
           className={value === START_DRIVE.starts_drives ? 'g2g-segment--active' : ''}
-          onClick={() => onChange(START_DRIVE.starts_drives)}
+          disabled={locked}
+          onClick={() => !locked && onChange(START_DRIVE.starts_drives)}
         >
           Yes — starts and drives
         </button>
         <button
           type="button"
           className={value === START_DRIVE.starts_not_drives ? 'g2g-segment--active' : ''}
-          onClick={() => onChange(START_DRIVE.starts_not_drives)}
+          disabled={locked}
+          onClick={() => !locked && onChange(START_DRIVE.starts_not_drives)}
         >
           Starts but does not drive
         </button>
         <button
           type="button"
           className={value === START_DRIVE.does_not_start ? 'g2g-segment--active' : ''}
-          onClick={() => onChange(START_DRIVE.does_not_start)}
+          disabled={locked}
+          onClick={() => !locked && onChange(START_DRIVE.does_not_start)}
         >
           Does not start (or requires a jump)
         </button>
       </div>
+      {lockHint ? (
+        <p className="g2g-field-hint" style={{ width: '100%', margin: '0.35rem 0 0' }}>
+          {lockHint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -264,8 +272,6 @@ function computeUnlockedStep({
   if (!makeSelect) return m;
   m = FLOW.model;
   if (!isModelComplete(makeSelect, makeOther, modelSelect, modelOther)) return m;
-  m = FLOW.vin;
-  if (!vinStepAcknowledged) return m;
   m = FLOW.zipTitle;
   if (String(zip || '').replace(/\D/g, '').length < 5) return m;
   m = FLOW.mileage;
@@ -944,56 +950,6 @@ export default function G2GOffer() {
             </FlowBlock>
           ) : null}
 
-          {entryMode === 'manual' && flowMax >= FLOW.vin ? (
-            <FlowBlock step={FLOW.vin} flowMax={flowMax}>
-              <div className="g2g-flow-block-title">VIN (optional)</div>
-              <p className="g2g-flow-block-lead">
-                Add a VIN to pull in details automatically, or skip and continue with what you entered.
-              </p>
-              <div className="g2g-field">
-                <label htmlFor="g2g-vin">17-character VIN</label>
-                <div className="g2g-row">
-                  <div className="g2g-field" style={{ flex: 2, minWidth: '200px' }}>
-                    <input
-                      id="g2g-vin"
-                      name="vin"
-                      autoComplete="off"
-                      placeholder="If you don’t have it, skip below"
-                      value={vin}
-                      maxLength={17}
-                      onChange={(ev) => setVin(ev.target.value.toUpperCase())}
-                    />
-                  </div>
-                  <button type="button" className="g2g-btn g2g-btn--ghost" disabled={decoding} onClick={handleDecode}>
-                    {decoding ? 'Decoding…' : 'Decode VIN'}
-                  </button>
-                </div>
-                {decodeError ? (
-                  <p className="g2g-field-hint" style={{ color: 'var(--g2g-danger)' }}>
-                    {decodeError}
-                  </p>
-                ) : null}
-              </div>
-              {engineNote || bodyClass ? (
-                <div className="g2g-decode-meta">
-                  {bodyClass ? <div>Body class (from VIN): {bodyClass}</div> : null}
-                  {engineNote ? <div>Engine (from VIN): {engineNote}</div> : null}
-                </div>
-              ) : null}
-              {!vinStepAcknowledged ? (
-                <div className="g2g-flow-actions">
-                  <button
-                    type="button"
-                    className="g2g-btn g2g-btn--primary"
-                    onClick={() => setVinStepAcknowledged(true)}
-                  >
-                    Continue
-                  </button>
-                </div>
-              ) : null}
-            </FlowBlock>
-          ) : null}
-
           {flowMax >= FLOW.zipTitle ? (
             <FlowBlock step={FLOW.zipTitle} flowMax={flowMax}>
               <div className="g2g-flow-block-title">Where is the vehicle &amp; what title status?</div>
@@ -1068,7 +1024,14 @@ export default function G2GOffer() {
               <YesNoRow
                 label="Key availability"
                 value={key}
-                onChange={setKey}
+                onChange={(v) => {
+                  setKey(v);
+                  if (v === 'no') {
+                    setStartDrive(START_DRIVE.does_not_start);
+                  } else if (v === 'yes') {
+                    setStartDrive(null);
+                  }
+                }}
                 groupId="g2g-key"
                 hint="Yes = key is available. No = no key."
               />
@@ -1077,7 +1040,17 @@ export default function G2GOffer() {
 
           {flowMax >= FLOW.startDrive ? (
             <FlowBlock step={FLOW.startDrive} flowMax={flowMax}>
-              <StartDriveRow value={startDrive} onChange={setStartDrive} groupId="g2g-start-drive" />
+              <StartDriveRow
+                value={startDrive}
+                onChange={setStartDrive}
+                groupId="g2g-start-drive"
+                locked={key === 'no'}
+                lockHint={
+                  key === 'no'
+                    ? 'Without a key the vehicle can’t be started, so we set this to “does not start” for pricing.'
+                    : undefined
+                }
+              />
             </FlowBlock>
           ) : null}
 

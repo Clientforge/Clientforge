@@ -351,6 +351,9 @@ a.g2g-logo:focus-visible {
   padding-left: 0.85rem;
   padding-right: 0.85rem;
   font-size: 0.82rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 .g2g-segment--triple {
@@ -365,6 +368,9 @@ a.g2g-logo:focus-visible {
   font-size: 0.78rem;
   line-height: 1.25;
   padding: 0.45rem 0.6rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-align: center;
 }
 
 .g2g-segment button {
@@ -401,6 +407,16 @@ a.g2g-logo:focus-visible {
   z-index: 1;
 }
 
+.g2g-segment button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.g2g-segment button:disabled:hover {
+  background: transparent;
+  color: var(--g2g-muted);
+}
+
 .g2g-damage-list {
   display: flex;
   flex-direction: column;
@@ -410,11 +426,36 @@ a.g2g-logo:focus-visible {
 .g2g-damage-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.65rem 1rem;
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--g2g-border);
+}
+
+.g2g-damage-row .g2g-damage-label {
+  padding-top: 0.35rem;
+  max-width: 100%;
+}
+
+/* Keep pill controls inside the card; long option copy wraps instead of overflowing */
+.g2g-damage-row .g2g-segment {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.g2g-damage-row .g2g-segment--wide:not(.g2g-segment--triple) {
+  flex: 1 1 15rem;
+}
+
+.g2g-damage-row .g2g-segment--wide:not(.g2g-segment--triple) button {
+  flex: 1 1 40%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.32;
+  text-align: center;
 }
 
 .g2g-damage-row:last-child {
@@ -1176,4 +1217,52 @@ a.g2g-nav-cta.g2g-nav--active {
   .g2g-nav-hash {
     font-size: 0.82rem;
   }
+}
+
+.g2g-contact-grid {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 36rem;
+}
+
+@media (min-width: 600px) {
+  .g2g-contact-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: none;
+  }
+}
+
+.g2g-contact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 100%;
+}
+
+.g2g-contact-card__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g2g-muted);
+}
+
+.g2g-contact-card__link {
+  font-size: 1rem;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.g2g-contact-card__address {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--g2g-text);
+}
+
+.g2g-contact-card__maps {
+  margin-top: auto;
+  font-size: 0.88rem;
+  padding: 0.55rem 1.1rem;
 }
