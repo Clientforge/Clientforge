@@ -150,9 +150,13 @@ function orderPair(min, max) {
   return min <= max ? [min, max] : [max, min];
 }
 
+/** Treat tier as “fully best” when s clamps to ~1 (floating-point safe). */
+const PERFECT_TIER_SCORE_EPS = 1e-9;
+
 /**
  * @param {object} row
  * @param {number} s
+ * @returns {{ low: number, high: number, pointOffer: number, pointBasis: 'best_high' | 'envelope_mid' }}
  */
 function interpolateBand(row, s) {
   const [wMin, wMax] = orderPair(row.worst_min, row.worst_max);
@@ -162,10 +166,20 @@ function interpolateBand(row, s) {
   const high = Math.round(wMax + t * (bMax - wMax));
   const wMid = (wMin + wMax) / 2;
   const bMid = (bMin + bMax) / 2;
-  const point = Math.round(wMid + t * (bMid - wMid));
   const outLow = low <= high ? low : high;
   const outHigh = low <= high ? high : low;
-  return { low: outLow, high: outHigh, pointOffer: point };
+
+  const isPerfectTier = t >= 1 - PERFECT_TIER_SCORE_EPS;
+  const pointOffer = isPerfectTier
+    ? outHigh
+    : Math.round(wMid + t * (bMid - wMid));
+
+  return {
+    low: outLow,
+    high: outHigh,
+    pointOffer,
+    pointBasis: isPerfectTier ? 'best_high' : 'envelope_mid',
+  };
 }
 
 /**
@@ -267,7 +281,7 @@ async function tryComputeValuationBandEstimate(validated) {
 
   const { row, pricingMatchTier } = hit;
   const t = scoreConditionTier(validated.assessment, validated.titleStatus);
-  const { low, high, pointOffer } = interpolateBand(row, t);
+  const { low, high, pointOffer, pointBasis } = interpolateBand(row, t);
   const opMult = operationalPriceMultiplier(validated.assessment);
   const opDetail = operationalPricingDetail(validated.assessment);
   const mileageMult = mileagePriceMultiplier(validated.mileageMidpoint);
@@ -303,6 +317,7 @@ async function tryComputeValuationBandEstimate(validated) {
       pricingMatchTier,
       userModel: validated.model,
       manualReviewRequired: false,
+      pointOfferBasis: pointBasis,
     },
   };
 }
