@@ -99,7 +99,7 @@ function tierEase(s) {
 
 /**
  * 0 = matches “worst tier” more, 1 = matches “best tier” more.
- * Mileage is applied as `× mileagePriceMultiplier` after interpolation.
+ * Mileage is applied as `× mileagePriceMultiplier(exact odometer)` after interpolation (×1 below 100k mi).
  * Key / start–drive use `× operationalPriceMultiplier` (same as Camry) so they are not double-counted here.
  * Catalytic, deployed airbag, exterior panel damage, and battery missing (×0.995) are **not**
  * scored in pillars; multipliers run after operational + mileage.

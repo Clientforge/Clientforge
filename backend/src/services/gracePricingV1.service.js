@@ -13,7 +13,7 @@ const {
   computeConditionStackMultiplier,
 } = require('./graceCamryRule.service');
 const { tryComputeValuationBandEstimate } = require('./graceValuationBands.service');
-const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
+const { mileagePriceMultiplier, parseMileageOdometer } = require('./graceMileageMultiplier.service');
 const { operationalPriceMultiplier, isNo } = require('./graceOperationalPricing.service');
 const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
@@ -271,8 +271,16 @@ function validateEstimateBody(body) {
   if (z.length < 5) {
     throw new Error('A 5-digit ZIP is required.');
   }
-  if (!mileageMidpoint || String(mileageMidpoint).trim() === '') {
-    throw new Error('mileageMidpoint (mileage bracket value) is required.');
+  const rawMileage =
+    mileageMidpoint != null && String(mileageMidpoint).trim() !== ''
+      ? mileageMidpoint
+      : body.mileage;
+  if (rawMileage == null || String(rawMileage).trim() === '') {
+    throw new Error('mileage (exact odometer miles) is required.');
+  }
+  const miles = parseMileageOdometer(rawMileage);
+  if (!Number.isFinite(miles) || miles <= 0) {
+    throw new Error('mileage must be a positive number of miles.');
   }
   if (assessment == null || typeof assessment !== 'object') {
     throw new Error('assessment object is required.');
@@ -284,7 +292,7 @@ function validateEstimateBody(body) {
     model: String(model).trim(),
     bodyClass: body.bodyClass != null ? String(body.bodyClass) : '',
     zip: z.slice(0, 5),
-    mileageMidpoint: String(mileageMidpoint).trim(),
+    mileageMidpoint: String(rawMileage).trim(),
     mileage: body.mileage,
     assessment,
     titleStatus: titleStatus != null ? String(titleStatus).trim() : 'clean',

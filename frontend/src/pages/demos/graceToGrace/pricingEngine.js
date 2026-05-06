@@ -21,17 +21,21 @@ export const TITLE_STATUS_OPTIONS = [
   { id: 'lien_reported', label: 'Lien or loan reported (disclosed)' },
 ];
 
-/** Select values = odometer midpoint for depreciation */
-export const MILEAGE_SELECT_OPTIONS = [
-  { value: '', label: 'Select mileage' },
-  { value: '25000', label: '0 – 50,000' },
-  { value: '75000', label: '50,000 – 100,000' },
-  { value: '125000', label: '100,000 – 150,000' },
-  { value: '175000', label: '150,000 – 200,000' },
-  { value: '225000', label: '200,000 – 250,000' },
-  { value: '275000', label: '250,000 – 300,000' },
-  { value: '325000', label: '300,000+' },
-];
+/**
+ * Exact odometer (miles) for API + display. Server accepts digits-only strings.
+ */
+export const MAX_ODOMETER_MILES = 999999;
+
+export function parseMileageInput(raw) {
+  const n = parseInt(String(raw ?? '').replace(/\D/g, ''), 10);
+  if (!Number.isFinite(n) || n <= 0 || n > MAX_ODOMETER_MILES) return null;
+  return n;
+}
+
+export function formatMileageDisplay(miles) {
+  if (miles == null || !Number.isFinite(miles)) return '—';
+  return `${Number(miles).toLocaleString()} mi`;
+}
 
 export const BODY_PANEL_KEYS = [
   'front',

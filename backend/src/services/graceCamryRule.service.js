@@ -10,7 +10,7 @@
  *   2) DB lookup (running)      → reference priceLow / priceHigh for the base only.
  *      Lookup (non_running)    → `price_low` = scrap floor (true minimum, below running band min).
  *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow) from the running row.
- *   4) Multipliers (mileage × title) → mileage uses shared bracket table; clamped to [0.35, 1.10] (after base, before drivability).
+ *   4) Multipliers (mileage × title) → mileage uses exact odometer curve (×1 below 100k); clamped to [0.35, 1.10] (after base, before operational).
  *   5) Operational (key + start/drive) → shared multiplier (no key ≈ −20%; does not start + key ≈ −2%; starts not drives ≈ −10%).
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
  *   7) Condition stack        → key (skipped when no key), exterior, completeness (catalytic: applied last as % on final).

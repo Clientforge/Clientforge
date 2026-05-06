@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  MILEAGE_SELECT_OPTIONS,
+  parseMileageInput,
+  formatMileageDisplay,
+  MAX_ODOMETER_MILES,
   BODY_STRUCTURAL_KEYS,
   BODY_PANEL_LABELS,
   TITLE_STATUS_OPTIONS,
@@ -221,7 +223,7 @@ function computeUnlockedStep({
   modelOther,
   vinStepAcknowledged,
   zip,
-  mileageBracket,
+  mileageOdometer,
   battery,
   key,
   startDrive,
@@ -246,7 +248,7 @@ function computeUnlockedStep({
     let m = FLOW.zipTitle;
     if (String(zip || '').replace(/\D/g, '').length < 5) return m;
     m = FLOW.mileage;
-    if (!mileageBracket) return m;
+    if (parseMileageInput(mileageOdometer) == null) return m;
     m = FLOW.battery;
     if (battery == null) return m;
     m = FLOW.key;
@@ -280,7 +282,7 @@ function computeUnlockedStep({
   m = FLOW.zipTitle;
   if (String(zip || '').replace(/\D/g, '').length < 5) return m;
   m = FLOW.mileage;
-  if (!mileageBracket) return m;
+  if (parseMileageInput(mileageOdometer) == null) return m;
   m = FLOW.battery;
   if (battery == null) return m;
   m = FLOW.key;
@@ -307,7 +309,7 @@ function computeUnlockedStep({
 
 function buildSellConditionSummary({
   titleStatus,
-  mileageBracket,
+  mileageOdometer,
   battery,
   key,
   startDrive,
@@ -319,7 +321,8 @@ function buildSellConditionSummary({
   interiorQuality,
   bodyDamage,
 }) {
-  const mi = MILEAGE_SELECT_OPTIONS.find((o) => o.value === mileageBracket)?.label || mileageBracket || '—';
+  const parsedMi = parseMileageInput(mileageOdometer);
+  const mi = parsedMi != null ? formatMileageDisplay(parsedMi) : '—';
   const damagedPanels = BODY_STRUCTURAL_KEYS.filter((k) => bodyDamage[k] === 'some')
     .map((k) => BODY_PANEL_LABELS[k])
     .join(', ');
@@ -363,7 +366,7 @@ export default function G2GOffer() {
   const [bodyClass, setBodyClass] = useState('');
   const [engineNote, setEngineNote] = useState('');
 
-  const [mileageBracket, setMileageBracket] = useState('');
+  const [mileageOdometer, setMileageOdometer] = useState('');
   const [zip, setZip] = useState('');
   const [titleStatus, setTitleStatus] = useState('clean');
 
@@ -408,7 +411,7 @@ export default function G2GOffer() {
         modelOther,
         vinStepAcknowledged,
         zip,
-        mileageBracket,
+        mileageOdometer,
         battery,
         key,
         startDrive,
@@ -429,7 +432,7 @@ export default function G2GOffer() {
       modelOther,
       vinStepAcknowledged,
       zip,
-      mileageBracket,
+      mileageOdometer,
       battery,
       key,
       startDrive,
@@ -631,8 +634,9 @@ export default function G2GOffer() {
       setFormError('Complete the vehicle steps: year, make, and model.');
       return;
     }
-    if (!mileageBracket) {
-      setFormError('Select a mileage range.');
+    const mileageMiles = parseMileageInput(mileageOdometer);
+    if (mileageMiles == null) {
+      setFormError(`Enter odometer miles (1–${MAX_ODOMETER_MILES.toLocaleString()}).`);
       return;
     }
     if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
@@ -664,7 +668,7 @@ export default function G2GOffer() {
         model: modelFinal,
         bodyClass,
         zip: zip.trim().replace(/\D/g, '').slice(0, 5),
-        mileageMidpoint: mileageBracket,
+        mileageMidpoint: String(mileageMiles),
         titleStatus,
         vin: normalizeVin(vin) || undefined,
         assessment: {
@@ -739,11 +743,11 @@ export default function G2GOffer() {
     const customOfferFlow = Boolean(result?.meta?.noEstimate);
     if (!result || (offerDisplay == null && !customOfferFlow)) return;
 
-    const miLabel =
-      MILEAGE_SELECT_OPTIONS.find((o) => o.value === mileageBracket)?.label || mileageBracket;
+    const miParsed = parseMileageInput(mileageOdometer);
+    const miLabel = miParsed != null ? formatMileageDisplay(miParsed) : undefined;
     const conditionLabel = buildSellConditionSummary({
       titleStatus,
-      mileageBracket,
+      mileageOdometer,
       battery,
       key,
       startDrive,
@@ -1086,19 +1090,20 @@ export default function G2GOffer() {
             <FlowBlock step={FLOW.mileage} flowMax={flowMax}>
               <div className="g2g-flow-block-title">What&apos;s the mileage?</div>
               <div className="g2g-field">
-                <label htmlFor="g2g-mileage-select">Mileage range</label>
-                <select
-                  id="g2g-mileage-select"
-                  name="mileageBracket"
-                  value={mileageBracket}
-                  onChange={(e) => setMileageBracket(e.target.value)}
-                >
-                  {MILEAGE_SELECT_OPTIONS.map((o) => (
-                    <option key={o.label} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <label htmlFor="g2g-mileage">Odometer miles</label>
+                <input
+                  id="g2g-mileage"
+                  name="mileageOdometer"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="e.g. 87420"
+                  maxLength={7}
+                  value={mileageOdometer}
+                  onChange={(e) => setMileageOdometer(e.target.value)}
+                />
+                <p className="g2g-field-hint">
+                  Enter the exact reading (commas optional). No mileage adjustment below 100,000 mi.
+                </p>
               </div>
             </FlowBlock>
           ) : null}
