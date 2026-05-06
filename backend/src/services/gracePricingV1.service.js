@@ -15,6 +15,7 @@ const {
 const { tryComputeValuationBandEstimate } = require('./graceValuationBands.service');
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
 const { operationalPriceMultiplier, isNo } = require('./graceOperationalPricing.service');
+const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -131,7 +132,10 @@ function deriveConditionFactor(assessment) {
   f *= computeV1DrivabilityFactor(assessment);
   if (tiresInflated === 'no') f *= 0.88;
   if (tiresAttached === 'no') f *= 0.82;
-  f *= computeConditionStackMultiplier(assessment, { omitKey: isNo(assessment?.key) }).factor;
+  f *= computeConditionStackMultiplier(assessment, {
+    omitKey: isNo(assessment?.key),
+    omitCatalytic: true,
+  }).factor;
 
   for (const k of ['front', 'rear', 'left', 'right']) {
     if (body[k] === 'some') f *= 0.94;
@@ -194,6 +198,15 @@ function computeOfferRangeInternal(input) {
     }
   }
 
+  const catMult =
+    input.assessment && typeof input.assessment === 'object'
+      ? catalyticFinalMultiplier(input.assessment)
+      : 1;
+  if (catMult !== 1) {
+    low = Math.round(low * catMult);
+    high = Math.round(high * catMult);
+  }
+
   return {
     low,
     high,
@@ -206,6 +219,7 @@ function computeOfferRangeInternal(input) {
       modelVersion: 'v1',
       mileagePriceMultiplier: mileageMult,
       operationalPriceMultiplier: opMultMeta,
+      catalyticFinalMultiplier: catMult,
       v1OperationalBridge:
         input.assessment && operationalBridge !== 1 ? Number(operationalBridge.toFixed(4)) : null,
       marketCompsProxy: Number(marketPx.toFixed(4)),

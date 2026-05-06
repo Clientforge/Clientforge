@@ -13,11 +13,12 @@
  *   4) Multipliers (mileage × title) → mileage uses shared bracket table; clamped to [0.35, 1.10] (after base, before drivability).
  *   5) Operational (key + start/drive) → shared multiplier (no key ≈ −20%; does not start + key ≈ −2%; starts not drives ≈ −10%).
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
- *   7) Condition stack        → battery, key (skipped when no key — already in operational), exterior, parts, cat (see computeConditionStackMultiplier).
+ *   7) Condition stack        → battery, key (skipped when no key), exterior, completeness (catalytic: applied last as % on final).
  *   8) Body/damage penalties  → per-field when body[field] === 'some'.
  *   9) Clean boost            → 1.05 when fully “clean” (no body issues + new fields + starts & drives).
- *  10) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
- *  11) Persist pricing_requests and return meta for the UI.
+ *  10) Catalytic missing      → × (1 − 3.74%) on pre-clamp price (after all other multipliers).
+ *  11) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
+ *  12) Persist pricing_requests and return meta for the UI.
  *
  * `mapAssessmentToCondition` is kept for labels / logging only (assessment
  * category), not for which DB row is used in pricing.
@@ -29,6 +30,7 @@ const {
   MILEAGE_PRICE_BRACKETS,
 } = require('./graceMileageMultiplier.service');
 const { operationalPriceMultiplier } = require('./graceOperationalPricing.service');
+const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 
 const BANDS = [
   { band: '2005-2008', min: 2005, max: 2008 },
@@ -131,13 +133,15 @@ function computeV1DrivabilityFactor(assessment) {
 }
 
 /**
- * Battery, key, exterior, completeness, catalytic — applied after tires, before body damage product.
+ * Battery, key, exterior, completeness — applied after tires, before body damage product.
  * @param {object} assessment
- * @param {{ omitKey?: boolean }} [options] When `omitKey`, skip key penalty (e.g. no-key already handled by `operationalPriceMultiplier`).
+ * @param {{ omitKey?: boolean; omitCatalytic?: boolean }} [options]
+ *   `omitCatalytic` — skip cat in stack when it is applied as `catalyticFinalMultiplier` at end.
  * @returns {{ factor: number, applied: Record<string, number> }}
  */
 function computeConditionStackMultiplier(assessment, options = {}) {
   const omitKey = options.omitKey === true;
+  const omitCatalytic = options.omitCatalytic === true;
   const a = assessment && typeof assessment === 'object' ? assessment : {};
   let factor = 1;
   const applied = {};
@@ -157,7 +161,7 @@ function computeConditionStackMultiplier(assessment, options = {}) {
     applied.exteriorComplete = 0.94;
     factor *= 0.94;
   }
-  if (a.catalytic === 'missing') {
+  if (!omitCatalytic && a.catalytic === 'missing') {
     applied.catalytic = 0.78;
     factor *= 0.78;
   }
@@ -379,7 +383,7 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   const { factor: conditionStackMult, applied: conditionStackApplied } = computeConditionStackMultiplier(
     validated.assessment,
-    { omitKey: isNo(validated.assessment?.key) },
+    { omitKey: isNo(validated.assessment?.key), omitCatalytic: true },
   );
   if (conditionStackMult < 1) {
     price *= conditionStackMult;
@@ -397,6 +401,9 @@ async function tryComputeCamryRuleEstimate(validated) {
   if (cleanBoostMult > 1) {
     price *= cleanBoostMult;
   }
+
+  const catMult = catalyticFinalMultiplier(validated.assessment);
+  price *= catMult;
 
   const rawOffer = Math.round(price);
   const finalOffer = clamp(rawOffer, scrapFloor, priceHigh);
@@ -449,6 +456,7 @@ async function tryComputeCamryRuleEstimate(validated) {
         conditionStack: Number(conditionStackMult.toFixed(4)),
         damage: Number(damageFactor.toFixed(4)),
         cleanBoost: cleanBoostMult,
+        catalyticFinal: Number(catMult.toFixed(6)),
         combinedPreClamp: Number(
           (
             appliedMileageTitle
@@ -457,6 +465,7 @@ async function tryComputeCamryRuleEstimate(validated) {
             * conditionStackMult
             * damageFactor
             * cleanBoostMult
+            * catMult
           ).toFixed(4),
         ),
       },

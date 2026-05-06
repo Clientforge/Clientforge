@@ -12,6 +12,7 @@ const db = require('../db/connection');
 const { isNo, operationalPriceMultiplier, operationalPricingDetail } = require('./graceOperationalPricing.service');
 const { resolvePricingBandModelAlias } = require('./modelPricingAlias.service');
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
+const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 
 function norm(s) {
   return String(s || '')
@@ -97,6 +98,7 @@ function tierEase(s) {
  * 0 = matches “worst tier” more, 1 = matches “best tier” more.
  * Mileage is applied as `× mileagePriceMultiplier` after interpolation.
  * Key / start–drive use `× operationalPriceMultiplier` (same as Camry) so they are not double-counted here.
+ * Catalytic is **not** in pillars; `× catalyticFinalMultiplier` runs on final band dollars (after operational + mileage).
  * @param {object} assessment
  * @param {string} [titleStatus]
  */
@@ -112,7 +114,6 @@ function scoreConditionTier(assessment, titleStatus) {
   const tExt =
     a.exterior === 'rust_or_damage' ? 0.22 : 1;
   const tComp = a.exteriorComplete === 'incomplete' ? 0.28 : 1;
-  const tCat = a.catalytic === 'missing' ? 0.1 : 1;
 
   const panelKeys = ['front', 'rear', 'left', 'right'];
   const panelParts = panelKeys.map((k) => (body[k] === 'some' ? 0.42 : 1));
@@ -132,7 +133,6 @@ function scoreConditionTier(assessment, titleStatus) {
     tTire,
     tExt,
     tComp,
-    tCat,
     tPanels,
     tEngine,
     tFlood,
@@ -277,11 +277,12 @@ async function tryComputeValuationBandEstimate(validated) {
   const opMult = operationalPriceMultiplier(validated.assessment);
   const opDetail = operationalPricingDetail(validated.assessment);
   const mileageMult = mileagePriceMultiplier(validated.mileageMidpoint);
+  const catMult = catalyticFinalMultiplier(validated.assessment);
 
   return {
-    low: Math.round(low * opMult * mileageMult),
-    high: Math.round(high * opMult * mileageMult),
-    pointOffer: Math.round(pointOffer * opMult * mileageMult),
+    low: Math.round(low * opMult * mileageMult * catMult),
+    high: Math.round(high * opMult * mileageMult * catMult),
+    pointOffer: Math.round(pointOffer * opMult * mileageMult * catMult),
     meta: {
       modelVersion: 'valuation_bands_v2',
       estimator: 'valuation_bands',
@@ -296,6 +297,7 @@ async function tryComputeValuationBandEstimate(validated) {
       operationalPriceMultiplier: opMult,
       operationalPricingReason: opDetail.reason,
       mileagePriceMultiplier: mileageMult,
+      catalyticFinalMultiplier: catMult,
       titleStatus: String(validated.titleStatus || 'clean'),
       vehicleClass: 'band_table',
       pricingMatchTier,
