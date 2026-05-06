@@ -11,9 +11,9 @@
  *      Lookup (non_running)    → `price_low` = scrap floor (true minimum, below running band min).
  *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow) from the running row.
  *   4) Multipliers (mileage × title) → mileage uses shared bracket table; clamped to [0.35, 1.10] (after base, before drivability).
- *   5) Start & drive         → 0.75 if starts but does not drive; 0.6 if does not start; else 1.0
+ *   5) Operational (key + start/drive) → shared multiplier (no key ≈ −20%; does not start + key ≈ −2%; starts not drives ≈ −10%).
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
- *   7) Condition stack        → battery, key, exterior, parts, cat (see computeConditionStackMultiplier).
+ *   7) Condition stack        → battery, key (skipped when no key — already in operational), exterior, parts, cat (see computeConditionStackMultiplier).
  *   8) Body/damage penalties  → per-field when body[field] === 'some'.
  *   9) Clean boost            → 1.05 when fully “clean” (no body issues + new fields + starts & drives).
  *  10) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
@@ -28,6 +28,7 @@ const {
   mileagePriceMultiplier,
   MILEAGE_PRICE_BRACKETS,
 } = require('./graceMileageMultiplier.service');
+const { operationalPriceMultiplier } = require('./graceOperationalPricing.service');
 
 const BANDS = [
   { band: '2005-2008', min: 2005, max: 2008 },
@@ -131,9 +132,12 @@ function computeV1DrivabilityFactor(assessment) {
 
 /**
  * Battery, key, exterior, completeness, catalytic — applied after tires, before body damage product.
+ * @param {object} assessment
+ * @param {{ omitKey?: boolean }} [options] When `omitKey`, skip key penalty (e.g. no-key already handled by `operationalPriceMultiplier`).
  * @returns {{ factor: number, applied: Record<string, number> }}
  */
-function computeConditionStackMultiplier(assessment) {
+function computeConditionStackMultiplier(assessment, options = {}) {
+  const omitKey = options.omitKey === true;
   const a = assessment && typeof assessment === 'object' ? assessment : {};
   let factor = 1;
   const applied = {};
@@ -141,7 +145,7 @@ function computeConditionStackMultiplier(assessment) {
     applied.battery = 0.94;
     factor *= 0.94;
   }
-  if (isNo(a.key)) {
+  if (!omitKey && isNo(a.key)) {
     applied.key = 0.9;
     factor *= 0.9;
   }
@@ -365,10 +369,8 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   let price = basePrice * appliedMileageTitle;
 
-  const drivabilityMult = computeCamryDrivabilityMultiplier(validated.assessment);
-  if (drivabilityMult < 1) {
-    price *= drivabilityMult;
-  }
+  const opMult = operationalPriceMultiplier(validated.assessment);
+  price *= opMult;
 
   const { factor: tiresMult, mode: tireMode } = computeTireMultiplier(validated.assessment);
   if (tiresMult < 1) {
@@ -377,6 +379,7 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   const { factor: conditionStackMult, applied: conditionStackApplied } = computeConditionStackMultiplier(
     validated.assessment,
+    { omitKey: isNo(validated.assessment?.key) },
   );
   if (conditionStackMult < 1) {
     price *= conditionStackMult;
@@ -439,7 +442,8 @@ async function tryComputeCamryRuleEstimate(validated) {
         title: Number(titleMult.toFixed(3)),
         rawMileageTitle: Number(rawMileageTitle.toFixed(3)),
         appliedMileageTitle: Number(appliedMileageTitle.toFixed(3)),
-        drivability: drivabilityMult,
+        operationalPricing: Number(opMult.toFixed(4)),
+        drivability: 1,
         tires: Number(tiresMult.toFixed(4)),
         tireMode,
         conditionStack: Number(conditionStackMult.toFixed(4)),
@@ -448,7 +452,7 @@ async function tryComputeCamryRuleEstimate(validated) {
         combinedPreClamp: Number(
           (
             appliedMileageTitle
-            * drivabilityMult
+            * opMult
             * tiresMult
             * conditionStackMult
             * damageFactor

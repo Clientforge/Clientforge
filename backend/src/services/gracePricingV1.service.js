@@ -14,6 +14,7 @@ const {
 } = require('./graceCamryRule.service');
 const { tryComputeValuationBandEstimate } = require('./graceValuationBands.service');
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
+const { operationalPriceMultiplier, isNo } = require('./graceOperationalPricing.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -130,7 +131,7 @@ function deriveConditionFactor(assessment) {
   f *= computeV1DrivabilityFactor(assessment);
   if (tiresInflated === 'no') f *= 0.88;
   if (tiresAttached === 'no') f *= 0.82;
-  f *= computeConditionStackMultiplier(assessment).factor;
+  f *= computeConditionStackMultiplier(assessment, { omitKey: isNo(assessment?.key) }).factor;
 
   for (const k of ['front', 'rear', 'left', 'right']) {
     if (body[k] === 'some') f *= 0.94;
@@ -173,8 +174,25 @@ function computeOfferRangeInternal(input) {
   scrapFloor *= scrapCombined;
 
   const mileageMult = mileagePriceMultiplier(input.mileageMidpoint ?? input.mileage);
-  const low = Math.max(Math.round(scrapFloor * mileageMult), Math.round(adjusted * 0.72 * mileageMult));
-  const high = Math.max(low + 75, Math.round(adjusted * 1.12 * mileageMult));
+  let low = Math.max(Math.round(scrapFloor * mileageMult), Math.round(adjusted * 0.72 * mileageMult));
+  let high = Math.max(low + 75, Math.round(adjusted * 1.12 * mileageMult));
+
+  let operationalBridge = 1;
+  let opMultMeta = 1;
+  if (input.assessment && typeof input.assessment === 'object') {
+    const op = operationalPriceMultiplier(input.assessment);
+    opMultMeta = op;
+    const v1d = computeV1DrivabilityFactor(input.assessment);
+    if (v1d > 0 && v1d !== 1) {
+      operationalBridge = op / v1d;
+    } else if (op !== 1) {
+      operationalBridge = op;
+    }
+    if (operationalBridge !== 1) {
+      low = Math.round(low * operationalBridge);
+      high = Math.round(high * operationalBridge);
+    }
+  }
 
   return {
     low,
@@ -187,6 +205,9 @@ function computeOfferRangeInternal(input) {
       adjustedBeforeRound: adjusted,
       modelVersion: 'v1',
       mileagePriceMultiplier: mileageMult,
+      operationalPriceMultiplier: opMultMeta,
+      v1OperationalBridge:
+        input.assessment && operationalBridge !== 1 ? Number(operationalBridge.toFixed(4)) : null,
       marketCompsProxy: Number(marketPx.toFixed(4)),
       scrapRegionalIndex: Number(scrapIdx.toFixed(4)),
       metalCommodityBlend: Number(metalB.toFixed(4)),

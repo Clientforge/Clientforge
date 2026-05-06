@@ -9,15 +9,9 @@
  */
 
 const db = require('../db/connection');
-const { getStartDrive, isNo } = require('./graceCamryRule.service');
+const { isNo, operationalPriceMultiplier, operationalPricingDetail } = require('./graceOperationalPricing.service');
 const { resolvePricingBandModelAlias } = require('./modelPricingAlias.service');
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
-
-const START = {
-  starts_drives: 'starts_drives',
-  starts_not_drives: 'starts_not_drives',
-  does_not_start: 'does_not_start',
-};
 
 function norm(s) {
   return String(s || '')
@@ -56,13 +50,6 @@ function titleScore(titleStatus) {
     missing_unknown: 0.38,
   };
   return map[t] ?? 0.43;
-}
-
-function startDriveScore(assessment) {
-  const sd = getStartDrive(assessment);
-  if (sd === START.does_not_start) return 0.06;
-  if (sd === START.starts_not_drives) return 0.48;
-  return 1;
 }
 
 function mean(nums) {
@@ -108,7 +95,8 @@ function tierEase(s) {
 
 /**
  * 0 = matches “worst tier” more, 1 = matches “best tier” more.
- * Mileage is not included here; it is applied as `× mileagePriceMultiplier` after band interpolation.
+ * Mileage is applied as `× mileagePriceMultiplier` after interpolation.
+ * Key / start–drive use `× operationalPriceMultiplier` (same as Camry) so they are not double-counted here.
  * @param {object} assessment
  * @param {string} [titleStatus]
  */
@@ -117,9 +105,7 @@ function scoreConditionTier(assessment, titleStatus) {
   const body = a.body && typeof a.body === 'object' ? a.body : {};
 
   const tTitle = titleScore(titleStatus);
-  const tStart = startDriveScore(a);
   const tBatt = isNo(a.battery) ? 0.12 : 1;
-  const tKey = isNo(a.key) ? 0.1 : 1;
   const tTireA = isNo(a.tiresAttached) ? 0.2 : 1;
   const tTireI = isNo(a.tiresInflated) ? 0.4 : 1;
   const tTire = tTireA * tTireI < 0.5 ? 0.35 : mean([tTireA, tTireI]);
@@ -142,9 +128,7 @@ function scoreConditionTier(assessment, titleStatus) {
 
   const pillarWeights = [
     tTitle,
-    tStart,
     tBatt,
-    tKey,
     tTire,
     tExt,
     tComp,
@@ -290,12 +274,14 @@ async function tryComputeValuationBandEstimate(validated) {
   const { row, pricingMatchTier } = hit;
   const t = scoreConditionTier(validated.assessment, validated.titleStatus);
   const { low, high, pointOffer } = interpolateBand(row, t);
+  const opMult = operationalPriceMultiplier(validated.assessment);
+  const opDetail = operationalPricingDetail(validated.assessment);
   const mileageMult = mileagePriceMultiplier(validated.mileageMidpoint);
 
   return {
-    low: Math.round(low * mileageMult),
-    high: Math.round(high * mileageMult),
-    pointOffer: Math.round(pointOffer * mileageMult),
+    low: Math.round(low * opMult * mileageMult),
+    high: Math.round(high * opMult * mileageMult),
+    pointOffer: Math.round(pointOffer * opMult * mileageMult),
     meta: {
       modelVersion: 'valuation_bands_v2',
       estimator: 'valuation_bands',
@@ -307,6 +293,8 @@ async function tryComputeValuationBandEstimate(validated) {
       worst: { min: row.worst_min, max: row.worst_max },
       best: { min: row.best_min, max: row.best_max },
       conditionTierScore: Number(t.toFixed(4)),
+      operationalPriceMultiplier: opMult,
+      operationalPricingReason: opDetail.reason,
       mileagePriceMultiplier: mileageMult,
       titleStatus: String(validated.titleStatus || 'clean'),
       vehicleClass: 'band_table',
@@ -327,6 +315,7 @@ module.exports = {
   norm,
   interiorTier,
   mileagePriceMultiplier,
+  operationalPriceMultiplier,
   blendTierScore,
   tierEase,
 };
