@@ -13,6 +13,7 @@ const {
   computeConditionStackMultiplier,
 } = require('./graceCamryRule.service');
 const { tryComputeValuationBandEstimate } = require('./graceValuationBands.service');
+const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -149,14 +150,6 @@ function computeOfferRangeInternal(input) {
   base *= ageFactor(input.year);
   base *= zipVariance(input.zip);
 
-  const mid = parseInt(String(input.mileageMidpoint ?? ''), 10);
-  const fromFree = parseInt(String(input.mileage || '').replace(/\D/g, ''), 10);
-  const mileage = !Number.isNaN(mid) && mid > 0 ? mid : fromFree;
-  if (!Number.isNaN(mileage) && mileage > 0) {
-    const milesFactor = Math.max(0.65, 1 - Math.min(mileage, 250000) / 500000);
-    base *= milesFactor;
-  }
-
   const scrapIdx = scrapRegionalIndex(input.zip);
   const metalB =
     typeof input.metalCommodityBlend === 'number' && input.metalCommodityBlend > 0
@@ -179,8 +172,9 @@ function computeOfferRangeInternal(input) {
   let scrapFloor = SCRAP_FLOOR_BY_CLASS[cls] ?? SCRAP_FLOOR_BY_CLASS.default;
   scrapFloor *= scrapCombined;
 
-  const low = Math.max(Math.round(scrapFloor), Math.round(adjusted * 0.72));
-  const high = Math.max(low + 75, Math.round(adjusted * 1.12));
+  const mileageMult = mileagePriceMultiplier(input.mileageMidpoint ?? input.mileage);
+  const low = Math.max(Math.round(scrapFloor * mileageMult), Math.round(adjusted * 0.72 * mileageMult));
+  const high = Math.max(low + 75, Math.round(adjusted * 1.12 * mileageMult));
 
   return {
     low,
@@ -192,6 +186,7 @@ function computeOfferRangeInternal(input) {
       baseBeforeCondition: Math.round(base),
       adjustedBeforeRound: adjusted,
       modelVersion: 'v1',
+      mileagePriceMultiplier: mileageMult,
       marketCompsProxy: Number(marketPx.toFixed(4)),
       scrapRegionalIndex: Number(scrapIdx.toFixed(4)),
       metalCommodityBlend: Number(metalB.toFixed(4)),

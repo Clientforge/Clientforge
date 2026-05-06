@@ -10,7 +10,7 @@
  *   2) DB lookup (running)      → reference priceLow / priceHigh for the base only.
  *      Lookup (non_running)    → `price_low` = scrap floor (true minimum, below running band min).
  *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow) from the running row.
- *   4) Multipliers (mileage × title) → clamped to [0.35, 1.10] (after base, before drivability).
+ *   4) Multipliers (mileage × title) → mileage uses shared bracket table; clamped to [0.35, 1.10] (after base, before drivability).
  *   5) Start & drive         → 0.75 if starts but does not drive; 0.6 if does not start; else 1.0
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
  *   7) Condition stack        → battery, key, exterior, parts, cat (see computeConditionStackMultiplier).
@@ -24,6 +24,10 @@
  */
 
 const db = require('../db/connection');
+const {
+  mileagePriceMultiplier,
+  MILEAGE_PRICE_BRACKETS,
+} = require('./graceMileageMultiplier.service');
 
 const BANDS = [
   { band: '2005-2008', min: 2005, max: 2008 },
@@ -32,16 +36,11 @@ const BANDS = [
   { band: '2016-2017', min: 2016, max: 2017 },
 ];
 
-const MILEAGE_MULTIPLIERS = [
-  { maxMid: 50000, factor: 1.06 },
-  { maxMid: 100000, factor: 1.0 },
-  { maxMid: 150000, factor: 0.94 },
-  { maxMid: 200000, factor: 0.88 },
-  { maxMid: 250000, factor: 0.84 },
-  { maxMid: 275000, factor: 0.82 },
-  { maxMid: 325000, factor: 0.78 },
-  { maxMid: Infinity, factor: 0.75 },
-];
+/** @deprecated Use `MILEAGE_PRICE_BRACKETS` from graceMileageMultiplier.service; kept for exports compatibility ({ maxMid }). */
+const MILEAGE_MULTIPLIERS = MILEAGE_PRICE_BRACKETS.map(({ maxMiles, factor }) => ({
+  maxMid: maxMiles,
+  factor,
+}));
 
 const TITLE_MULTIPLIERS = {
   clean: 1.0,
@@ -224,10 +223,7 @@ function finalOfferFromBand(priceLow, priceHigh) {
 }
 
 function mileageMultiplier(mileageMidpoint) {
-  const n = parseInt(String(mileageMidpoint || ''), 10);
-  if (!Number.isFinite(n) || n <= 0) return 1;
-  const row = MILEAGE_MULTIPLIERS.find((r) => n <= r.maxMid);
-  return row ? row.factor : 1;
+  return mileagePriceMultiplier(mileageMidpoint);
 }
 
 function titleMultiplier(titleStatus) {
@@ -491,6 +487,7 @@ module.exports = {
   computeTireMultiplier,
   isNo,
   MILEAGE_MULTIPLIERS,
+  MILEAGE_PRICE_BRACKETS,
   TITLE_MULTIPLIERS,
   DAMAGE_PENALTIES,
   BASE_RULE_CONDITION,
