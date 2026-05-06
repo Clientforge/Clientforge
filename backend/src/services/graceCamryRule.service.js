@@ -13,12 +13,14 @@
  *   4) Multipliers (mileage × title) → mileage uses shared bracket table; clamped to [0.35, 1.10] (after base, before drivability).
  *   5) Operational (key + start/drive) → shared multiplier (no key ≈ −20%; does not start + key ≈ −2%; starts not drives ≈ −10%).
  *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
- *   7) Condition stack        → battery, key (skipped when no key), exterior, completeness (catalytic: applied last as % on final).
- *   8) Body/damage penalties  → per-field when body[field] === 'some'.
+ *   7) Condition stack        → key (skipped when no key), exterior, completeness (catalytic: applied last as % on final).
+ *      Battery missing         → ×0.995 once (not stacked in condition stack).
+ *   8) Body/damage penalties  → per-field when body[field] === 'some' (exterior panels: single ×0.88 step, not stacked per side).
  *   9) Clean boost            → 1.05 when fully “clean” (no body issues + new fields + starts & drives).
- *  10) Catalytic missing      → × (1 − 3.74%) on pre-clamp price (after all other multipliers).
- *  11) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
- *  12) Persist pricing_requests and return meta for the UI.
+ *  10) Catalytic missing      → × (1 − 3.74%) on pre-clamp price.
+ *  11) Airbag deployed        → × (1 − 13.8%) on pre-clamp price.
+ *  12) Clamp                  → [scrapFloor, priceHigh] — scrap is NOT the running row’s `price_low`.
+ *  13) Persist pricing_requests and return meta for the UI.
  *
  * `mapAssessmentToCondition` is kept for labels / logging only (assessment
  * category), not for which DB row is used in pricing.
@@ -31,6 +33,9 @@ const {
 } = require('./graceMileageMultiplier.service');
 const { operationalPriceMultiplier } = require('./graceOperationalPricing.service');
 const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
+const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
+const { exteriorPanelDamageMultiplier } = require('./graceExteriorPanelPricing.service');
+const { batteryMissingFinalMultiplier } = require('./graceBatteryPricing.service');
 
 const BANDS = [
   { band: '2005-2008', min: 2005, max: 2008 },
@@ -63,27 +68,17 @@ const SCRAP_RULE_CONDITION = 'non_running';
 
 /** When assessment body[field] === 'some', multiply by this (always < 1 for damage). */
 const DAMAGE_PENALTIES = {
-  front: 0.95,
-  rear: 0.97,
-  left_side: 0.97,
-  right_side: 0.97,
   engine: 0.7,
   flood: 0.5,
   fire: 0.4,
   glass: 0.95,
-  airbag: 0.85,
 };
 
 const ASSESSMENT_TO_PENALTY = {
-  front: 'front',
-  rear: 'rear',
-  left: 'left_side',
-  right: 'right_side',
   engine: 'engine',
   flood: 'flood',
   fire: 'fire',
   glass: 'glass',
-  airbag: 'airbag',
 };
 
 const PANEL_KEYS = ['front', 'rear', 'left', 'right'];
@@ -133,7 +128,8 @@ function computeV1DrivabilityFactor(assessment) {
 }
 
 /**
- * Battery, key, exterior, completeness — applied after tires, before body damage product.
+ * Key, exterior, completeness — applied after tires, before body damage product.
+ * (Battery uses `batteryMissingFinalMultiplier` separately.)
  * @param {object} assessment
  * @param {{ omitKey?: boolean; omitCatalytic?: boolean }} [options]
  *   `omitCatalytic` — skip cat in stack when it is applied as `catalyticFinalMultiplier` at end.
@@ -145,10 +141,6 @@ function computeConditionStackMultiplier(assessment, options = {}) {
   const a = assessment && typeof assessment === 'object' ? assessment : {};
   let factor = 1;
   const applied = {};
-  if (isNo(a.battery)) {
-    applied.battery = 0.94;
-    factor *= 0.94;
-  }
   if (!omitKey && isNo(a.key)) {
     applied.key = 0.9;
     factor *= 0.9;
@@ -262,6 +254,10 @@ function computeDamageMultiplierProduct(assessment) {
 }
 
 function hasNoBodyDamage(assessment) {
+  const a = assessment && typeof assessment === 'object' ? assessment : {};
+  const body = a.body && typeof a.body === 'object' ? a.body : {};
+  if (body.airbag === 'some') return false;
+  if (PANEL_KEYS.some((k) => body[k] === 'some')) return false;
   return computeDamageMultiplierProduct(assessment).factor === 1;
 }
 
@@ -389,11 +385,21 @@ async function tryComputeCamryRuleEstimate(validated) {
     price *= conditionStackMult;
   }
 
+  const batMult = batteryMissingFinalMultiplier(validated.assessment);
+  if (batMult < 1) {
+    price *= batMult;
+  }
+
   const { factor: damageFactor, applied: damageApplied } = computeDamageMultiplierProduct(
     validated.assessment,
   );
   if (damageFactor < 1) {
     price *= damageFactor;
+  }
+
+  const extPanelMult = exteriorPanelDamageMultiplier(validated.assessment);
+  if (extPanelMult < 1) {
+    price *= extPanelMult;
   }
 
   const cleanBoostEligible = isCleanBoostEligible(validated.assessment);
@@ -404,6 +410,9 @@ async function tryComputeCamryRuleEstimate(validated) {
 
   const catMult = catalyticFinalMultiplier(validated.assessment);
   price *= catMult;
+
+  const bagMult = airbagDeployedFinalMultiplier(validated.assessment);
+  price *= bagMult;
 
   const rawOffer = Math.round(price);
   const finalOffer = clamp(rawOffer, scrapFloor, priceHigh);
@@ -454,18 +463,24 @@ async function tryComputeCamryRuleEstimate(validated) {
         tires: Number(tiresMult.toFixed(4)),
         tireMode,
         conditionStack: Number(conditionStackMult.toFixed(4)),
+        batteryMissingFinal: Number(batMult.toFixed(6)),
         damage: Number(damageFactor.toFixed(4)),
+        exteriorPanelDamageFinal: Number(extPanelMult.toFixed(6)),
         cleanBoost: cleanBoostMult,
         catalyticFinal: Number(catMult.toFixed(6)),
+        airbagDeployedFinal: Number(bagMult.toFixed(6)),
         combinedPreClamp: Number(
           (
             appliedMileageTitle
             * opMult
             * tiresMult
             * conditionStackMult
+            * batMult
             * damageFactor
+            * extPanelMult
             * cleanBoostMult
             * catMult
+            * bagMult
           ).toFixed(4),
         ),
       },

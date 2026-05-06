@@ -16,6 +16,9 @@ const { tryComputeValuationBandEstimate } = require('./graceValuationBands.servi
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
 const { operationalPriceMultiplier, isNo } = require('./graceOperationalPricing.service');
 const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
+const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
+const { exteriorPanelDamageMultiplier } = require('./graceExteriorPanelPricing.service');
+const { batteryMissingFinalMultiplier } = require('./graceBatteryPricing.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -137,14 +140,16 @@ function deriveConditionFactor(assessment) {
     omitCatalytic: true,
   }).factor;
 
-  for (const k of ['front', 'rear', 'left', 'right']) {
-    if (body[k] === 'some') f *= 0.94;
-  }
+  const batMult = batteryMissingFinalMultiplier(assessment);
+  if (batMult !== 1) f *= batMult;
+
+  const extPanel = exteriorPanelDamageMultiplier(assessment);
+  if (extPanel !== 1) f *= extPanel;
+
   if (body.engine === 'some') f *= 0.72;
   if (body.flood === 'some') f *= 0.42;
   if (body.fire === 'some') f *= 0.38;
   if (body.glass === 'some') f *= 0.9;
-  if (body.airbag === 'some') f *= 0.86;
 
   return Math.max(0.12, Math.min(1, f));
 }
@@ -207,6 +212,24 @@ function computeOfferRangeInternal(input) {
     high = Math.round(high * catMult);
   }
 
+  const bagMult =
+    input.assessment && typeof input.assessment === 'object'
+      ? airbagDeployedFinalMultiplier(input.assessment)
+      : 1;
+  if (bagMult !== 1) {
+    low = Math.round(low * bagMult);
+    high = Math.round(high * bagMult);
+  }
+
+  const extPanelMultMeta =
+    input.assessment && typeof input.assessment === 'object'
+      ? exteriorPanelDamageMultiplier(input.assessment)
+      : 1;
+  const batMultMeta =
+    input.assessment && typeof input.assessment === 'object'
+      ? batteryMissingFinalMultiplier(input.assessment)
+      : 1;
+
   return {
     low,
     high,
@@ -220,6 +243,9 @@ function computeOfferRangeInternal(input) {
       mileagePriceMultiplier: mileageMult,
       operationalPriceMultiplier: opMultMeta,
       catalyticFinalMultiplier: catMult,
+      airbagDeployedFinalMultiplier: bagMult,
+      exteriorPanelDamageMultiplier: extPanelMultMeta,
+      batteryMissingFinalMultiplier: batMultMeta,
       v1OperationalBridge:
         input.assessment && operationalBridge !== 1 ? Number(operationalBridge.toFixed(4)) : null,
       marketCompsProxy: Number(marketPx.toFixed(4)),

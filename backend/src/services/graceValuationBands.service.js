@@ -13,6 +13,9 @@ const { isNo, operationalPriceMultiplier, operationalPricingDetail } = require('
 const { resolvePricingBandModelAlias } = require('./modelPricingAlias.service');
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
 const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
+const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
+const { exteriorPanelDamageMultiplier } = require('./graceExteriorPanelPricing.service');
+const { batteryMissingFinalMultiplier } = require('./graceBatteryPricing.service');
 
 function norm(s) {
   return String(s || '')
@@ -98,7 +101,8 @@ function tierEase(s) {
  * 0 = matches “worst tier” more, 1 = matches “best tier” more.
  * Mileage is applied as `× mileagePriceMultiplier` after interpolation.
  * Key / start–drive use `× operationalPriceMultiplier` (same as Camry) so they are not double-counted here.
- * Catalytic is **not** in pillars; `× catalyticFinalMultiplier` runs on final band dollars (after operational + mileage).
+ * Catalytic, deployed airbag, exterior panel damage, and battery missing (×0.995) are **not**
+ * scored in pillars; multipliers run after operational + mileage.
  * @param {object} assessment
  * @param {string} [titleStatus]
  */
@@ -107,7 +111,6 @@ function scoreConditionTier(assessment, titleStatus) {
   const body = a.body && typeof a.body === 'object' ? a.body : {};
 
   const tTitle = titleScore(titleStatus);
-  const tBatt = isNo(a.battery) ? 0.12 : 1;
   const tTireA = isNo(a.tiresAttached) ? 0.2 : 1;
   const tTireI = isNo(a.tiresInflated) ? 0.4 : 1;
   const tTire = tTireA * tTireI < 0.5 ? 0.35 : mean([tTireA, tTireI]);
@@ -115,30 +118,21 @@ function scoreConditionTier(assessment, titleStatus) {
     a.exterior === 'rust_or_damage' ? 0.22 : 1;
   const tComp = a.exteriorComplete === 'incomplete' ? 0.28 : 1;
 
-  const panelKeys = ['front', 'rear', 'left', 'right'];
-  const panelParts = panelKeys.map((k) => (body[k] === 'some' ? 0.42 : 1));
-  /** Worst-panel severity (matches “panels present” stacking for worst-tier vehicles vs diluting by averaging). */
-  const tPanels = Math.min(...panelParts);
-
   let tEngine = body.engine === 'some' ? 0.25 : 1;
   let tFlood = body.flood === 'some' ? 0.02 : 1;
   let tFire = body.fire === 'some' ? 0.04 : 1;
   const tGlass = body.glass === 'some' ? 0.55 : 1;
-  const tAir = body.airbag === 'some' ? 0.4 : 1;
   const tInt = interiorTier(a);
 
   const pillarWeights = [
     tTitle,
-    tBatt,
     tTire,
     tExt,
     tComp,
-    tPanels,
     tEngine,
     tFlood,
     tFire,
     tGlass,
-    tAir,
     ...(tInt != null ? [tInt] : []),
   ];
 
@@ -278,11 +272,14 @@ async function tryComputeValuationBandEstimate(validated) {
   const opDetail = operationalPricingDetail(validated.assessment);
   const mileageMult = mileagePriceMultiplier(validated.mileageMidpoint);
   const catMult = catalyticFinalMultiplier(validated.assessment);
+  const bagMult = airbagDeployedFinalMultiplier(validated.assessment);
+  const extPanelMult = exteriorPanelDamageMultiplier(validated.assessment);
+  const batMult = batteryMissingFinalMultiplier(validated.assessment);
 
   return {
-    low: Math.round(low * opMult * mileageMult * catMult),
-    high: Math.round(high * opMult * mileageMult * catMult),
-    pointOffer: Math.round(pointOffer * opMult * mileageMult * catMult),
+    low: Math.round(low * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult),
+    high: Math.round(high * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult),
+    pointOffer: Math.round(pointOffer * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult),
     meta: {
       modelVersion: 'valuation_bands_v2',
       estimator: 'valuation_bands',
@@ -298,6 +295,9 @@ async function tryComputeValuationBandEstimate(validated) {
       operationalPricingReason: opDetail.reason,
       mileagePriceMultiplier: mileageMult,
       catalyticFinalMultiplier: catMult,
+      airbagDeployedFinalMultiplier: bagMult,
+      exteriorPanelDamageMultiplier: extPanelMult,
+      batteryMissingFinalMultiplier: batMult,
       titleStatus: String(validated.titleStatus || 'clean'),
       vehicleClass: 'band_table',
       pricingMatchTier,
