@@ -12,7 +12,7 @@
  *   3) Base point               → priceLow + 0.6 * (priceHigh - priceLow) from the running row.
  *   4) Multipliers (mileage × title) → mileage uses exact odometer curve (×1 below 100k); clamped to [0.35, 1.10] (after base, before operational).
  *   5) Operational (key + start/drive) → shared multiplier (no key ≈ −20%; does not start + key ≈ −2%; starts not drives ≈ −10%).
- *   6) Tires                 → both bad 0.80; not attached 0.85; not inflated 0.95; else 1.0
+ *   6) Tires                 → `graceTirePricing`: all OK ×1; flat ~7.16%; missing ~15.15%; legacy both-bad = product.
  *   7) Condition stack        → key (skipped when no key), exterior, completeness (catalytic: applied last as % on final).
  *      Battery missing         → ×0.995 once (not stacked in condition stack).
  *   8) Body/damage penalties  → per-field when body[field] === 'some' (exterior panels: single ×0.88 step, not stacked per side).
@@ -36,6 +36,11 @@ const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
 const { exteriorPanelDamageMultiplier } = require('./graceExteriorPanelPricing.service');
 const { batteryMissingFinalMultiplier } = require('./graceBatteryPricing.service');
+const {
+  tirePricingDetail,
+  TIRE_FLAT_FINAL_MULTIPLIER,
+  TIRE_MISSING_FINAL_MULTIPLIER,
+} = require('./graceTirePricing.service');
 
 const BANDS = [
   { band: '2005-2008', min: 2005, max: 2008 },
@@ -83,9 +88,10 @@ const ASSESSMENT_TO_PENALTY = {
 
 const PANEL_KEYS = ['front', 'rear', 'left', 'right'];
 
-const TIRE_MULT_BOTH_BAD = 0.8;
-const TIRE_MULT_NOT_ATTACHED = 0.85;
-const TIRE_MULT_NOT_INFLATED = 0.95;
+/** @deprecated Prefer `graceTirePricing.service`; kept for export compatibility. */
+const TIRE_MULT_BOTH_BAD = TIRE_FLAT_FINAL_MULTIPLIER * TIRE_MISSING_FINAL_MULTIPLIER;
+const TIRE_MULT_NOT_ATTACHED = TIRE_MISSING_FINAL_MULTIPLIER;
+const TIRE_MULT_NOT_INFLATED = TIRE_FLAT_FINAL_MULTIPLIER;
 
 function isNo(val) {
   return String(val || '').trim().toLowerCase() === 'no';
@@ -262,22 +268,10 @@ function hasNoBodyDamage(assessment) {
 }
 
 /**
- * @returns {{ factor: number, mode: 'ok' | 'inflated' | 'attached' | 'both' }}
+ * @returns {{ factor: number, mode: 'ok' | 'flat' | 'missing' | 'both_legacy' }}
  */
 function computeTireMultiplier(assessment) {
-  const a = assessment && typeof assessment === 'object' ? assessment : {};
-  const notAttached = isNo(a.tiresAttached);
-  const notInflated = isNo(a.tiresInflated);
-  if (notAttached && notInflated) {
-    return { factor: TIRE_MULT_BOTH_BAD, mode: 'both' };
-  }
-  if (notAttached) {
-    return { factor: TIRE_MULT_NOT_ATTACHED, mode: 'attached' };
-  }
-  if (notInflated) {
-    return { factor: TIRE_MULT_NOT_INFLATED, mode: 'inflated' };
-  }
-  return { factor: 1, mode: 'ok' };
+  return tirePricingDetail(assessment);
 }
 
 function clamp(value, min, max) {

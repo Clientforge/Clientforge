@@ -12,6 +12,7 @@ import {
   EXTERIOR_COMPLETE,
   CATALYTIC,
   INTERIOR_QUALITY,
+  TIRE_CONDITION,
 } from './pricingEngine';
 import { postGraceEstimate, postGraceSellIntent } from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
@@ -42,14 +43,13 @@ const FLOW = {
   battery: 7,
   key: 8,
   startDrive: 9,
-  tiresInflated: 10,
-  tiresAttached: 11,
-  exterior: 12,
-  exteriorComplete: 13,
-  glass: 14,
-  catalytic: 15,
-  interior: 16,
-  body: 17,
+  tiresCondition: 10,
+  exterior: 11,
+  exteriorComplete: 12,
+  glass: 13,
+  catalytic: 14,
+  interior: 15,
+  body: 16,
 };
 
 function FlowBlock({ children, step, flowMax, className = '' }) {
@@ -164,6 +164,43 @@ function TwoOptionRow({ label, value, onChange, groupId, leftValue, rightValue, 
   );
 }
 
+function TireConditionRow({ value, onChange, groupId }) {
+  return (
+    <div className="g2g-damage-row g2g-tire-condition-row">
+      <span className="g2g-damage-label" id={`${groupId}-label`}>
+        What is the condition of the tires?
+      </span>
+      <div
+        className="g2g-segment g2g-segment--wide g2g-segment--triple g2g-segment--stack"
+        role="group"
+        aria-labelledby={`${groupId}-label`}
+      >
+        <button
+          type="button"
+          className={value === TIRE_CONDITION.all_ok ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(TIRE_CONDITION.all_ok)}
+        >
+          Yes, all tires are inflated and attached
+        </button>
+        <button
+          type="button"
+          className={value === TIRE_CONDITION.flat ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(TIRE_CONDITION.flat)}
+        >
+          No, one or more tires is flat
+        </button>
+        <button
+          type="button"
+          className={value === TIRE_CONDITION.missing ? 'g2g-segment--active' : ''}
+          onClick={() => onChange(TIRE_CONDITION.missing)}
+        >
+          No, one or more tires is missing
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DamageRow({ label, value, onChange, groupId }) {
   return (
     <div className="g2g-damage-row">
@@ -214,6 +251,19 @@ function isModelComplete(makeSelect, makeOther, modelSelect, modelOther) {
   return true;
 }
 
+function legacyTireFieldsFromCondition(tireCondition) {
+  if (tireCondition === TIRE_CONDITION.all_ok) {
+    return { tiresInflated: 'yes', tiresAttached: 'yes' };
+  }
+  if (tireCondition === TIRE_CONDITION.flat) {
+    return { tiresInflated: 'no', tiresAttached: 'yes' };
+  }
+  if (tireCondition === TIRE_CONDITION.missing) {
+    return { tiresInflated: 'yes', tiresAttached: 'no' };
+  }
+  return { tiresInflated: null, tiresAttached: null };
+}
+
 function computeUnlockedStep({
   entryMode,
   year,
@@ -224,11 +274,10 @@ function computeUnlockedStep({
   vinStepAcknowledged,
   zip,
   mileageOdometer,
+  tireCondition,
   battery,
   key,
   startDrive,
-  tiresInflated,
-  tiresAttached,
   exterior,
   exteriorComplete,
   glass,
@@ -255,10 +304,8 @@ function computeUnlockedStep({
     if (key == null) return m;
     m = FLOW.startDrive;
     if (startDrive == null) return m;
-    m = FLOW.tiresInflated;
-    if (tiresInflated == null) return m;
-    m = FLOW.tiresAttached;
-    if (tiresAttached == null) return m;
+    m = FLOW.tiresCondition;
+    if (tireCondition == null) return m;
     m = FLOW.exterior;
     if (exterior == null) return m;
     m = FLOW.exteriorComplete;
@@ -289,10 +336,8 @@ function computeUnlockedStep({
   if (key == null) return m;
   m = FLOW.startDrive;
   if (startDrive == null) return m;
-  m = FLOW.tiresInflated;
-  if (tiresInflated == null) return m;
-  m = FLOW.tiresAttached;
-  if (tiresAttached == null) return m;
+  m = FLOW.tiresCondition;
+  if (tireCondition == null) return m;
   m = FLOW.exterior;
   if (exterior == null) return m;
   m = FLOW.exteriorComplete;
@@ -313,8 +358,7 @@ function buildSellConditionSummary({
   battery,
   key,
   startDrive,
-  tiresInflated,
-  tiresAttached,
+  tireCondition,
   exterior,
   exteriorComplete,
   catalytic,
@@ -332,7 +376,7 @@ function buildSellConditionSummary({
     `drive:${startDrive}`,
     `bat:${battery}`,
     `key:${key}`,
-    `tires:${tiresInflated}/${tiresAttached}`,
+    `tires:${tireCondition}`,
     `ext:${exterior}/${exteriorComplete}`,
     `cat:${catalytic}`,
     `int:${interiorQuality}`,
@@ -376,8 +420,7 @@ export default function G2GOffer() {
   const [startDrive, setStartDrive] = useState(null);
   const [battery, setBattery] = useState(null);
   const [key, setKey] = useState(null);
-  const [tiresInflated, setTiresInflated] = useState(null);
-  const [tiresAttached, setTiresAttached] = useState(null);
+  const [tireCondition, setTireCondition] = useState(null);
   const [exterior, setExterior] = useState(null);
   const [exteriorComplete, setExteriorComplete] = useState(null);
   const [catalytic, setCatalytic] = useState(null);
@@ -412,11 +455,10 @@ export default function G2GOffer() {
         vinStepAcknowledged,
         zip,
         mileageOdometer,
+        tireCondition,
         battery,
         key,
         startDrive,
-        tiresInflated,
-        tiresAttached,
         exterior,
         exteriorComplete,
         glass: bodyDamage.glass,
@@ -436,8 +478,7 @@ export default function G2GOffer() {
       battery,
       key,
       startDrive,
-      tiresInflated,
-      tiresAttached,
+      tireCondition,
       exterior,
       exteriorComplete,
       bodyDamage.glass,
@@ -494,12 +535,11 @@ export default function G2GOffer() {
     setEngineNote('');
     setZip('');
     setTitleStatus('clean');
-    setMileageBracket('');
+    setMileageOdometer('');
     setBattery(null);
     setKey(null);
     setStartDrive(null);
-    setTiresInflated(null);
-    setTiresAttached(null);
+    setTireCondition(null);
     setExterior(null);
     setExteriorComplete(null);
     setCatalytic(null);
@@ -548,12 +588,11 @@ export default function G2GOffer() {
     setEngineNote('');
     setZip('');
     setTitleStatus('clean');
-    setMileageBracket('');
+    setMileageOdometer('');
     setBattery(null);
     setKey(null);
     setStartDrive(null);
-    setTiresInflated(null);
-    setTiresAttached(null);
+    setTireCondition(null);
     setExterior(null);
     setExteriorComplete(null);
     setCatalytic(null);
@@ -647,8 +686,7 @@ export default function G2GOffer() {
       battery == null
       || key == null
       || startDrive == null
-      || tiresInflated == null
-      || tiresAttached == null
+      || tireCondition == null
       || exterior == null
       || exteriorComplete == null
       || catalytic == null
@@ -660,6 +698,7 @@ export default function G2GOffer() {
     }
     setSubmitting(true);
     const drives = startDrive === START_DRIVE.does_not_start ? 'no' : 'yes';
+    const tireLegacy = legacyTireFieldsFromCondition(tireCondition);
     try {
       const range = await postGraceEstimate({
         sessionId: getOrCreateG2gSessionId(),
@@ -676,8 +715,9 @@ export default function G2GOffer() {
           drives,
           battery,
           key,
-          tiresInflated,
-          tiresAttached,
+          tireCondition,
+          tiresInflated: tireLegacy.tiresInflated,
+          tiresAttached: tireLegacy.tiresAttached,
           exterior,
           exteriorComplete,
           catalytic,
@@ -751,8 +791,7 @@ export default function G2GOffer() {
       battery,
       key,
       startDrive,
-      tiresInflated,
-      tiresAttached,
+      tireCondition,
       exterior,
       exteriorComplete,
       catalytic,
@@ -1156,24 +1195,13 @@ export default function G2GOffer() {
             </FlowBlock>
           ) : null}
 
-          {flowMax >= FLOW.tiresInflated ? (
-            <FlowBlock step={FLOW.tiresInflated} flowMax={flowMax}>
-              <YesNoRow
-                label="Are all tires inflated with air?"
-                value={tiresInflated}
-                onChange={setTiresInflated}
-                groupId="g2g-tires-air"
-              />
-            </FlowBlock>
-          ) : null}
-
-          {flowMax >= FLOW.tiresAttached ? (
-            <FlowBlock step={FLOW.tiresAttached} flowMax={flowMax}>
-              <YesNoRow
-                label="Are all tires attached to the car?"
-                value={tiresAttached}
-                onChange={setTiresAttached}
-                groupId="g2g-tires-attached"
+          {flowMax >= FLOW.tiresCondition ? (
+            <FlowBlock step={FLOW.tiresCondition} flowMax={flowMax}>
+              <div className="g2g-flow-block-title">Tires</div>
+              <TireConditionRow
+                value={tireCondition}
+                onChange={setTireCondition}
+                groupId="g2g-tires"
               />
             </FlowBlock>
           ) : null}

@@ -373,6 +373,23 @@ a.g2g-logo:focus-visible {
   text-align: center;
 }
 
+/** Full-width stacked options (e.g. tire condition tri-choice). */
+.g2g-segment--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.g2g-segment--stack button {
+  flex: 0 0 auto;
+  min-width: 100%;
+  border-left: none;
+  border-top: 1px solid var(--g2g-segment-border);
+}
+
+.g2g-segment--stack button:first-of-type {
+  border-top: none;
+}
+
 .g2g-segment button {
   margin: 0;
   padding: 0.5rem 1.1rem;

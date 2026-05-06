@@ -37,6 +37,13 @@ export function formatMileageDisplay(miles) {
   return `${Number(miles).toLocaleString()} mi`;
 }
 
+/** Single tire question — sent as `assessment.tireCondition` (see graceTirePricing.service). */
+export const TIRE_CONDITION = {
+  all_ok: 'all_ok',
+  flat: 'flat',
+  missing: 'missing',
+};
+
 export const BODY_PANEL_KEYS = [
   'front',
   'rear',

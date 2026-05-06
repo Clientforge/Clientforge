@@ -9,13 +9,14 @@
  */
 
 const db = require('../db/connection');
-const { isNo, operationalPriceMultiplier, operationalPricingDetail } = require('./graceOperationalPricing.service');
+const { operationalPriceMultiplier, operationalPricingDetail } = require('./graceOperationalPricing.service');
 const { resolvePricingBandModelAlias } = require('./modelPricingAlias.service');
 const { mileagePriceMultiplier } = require('./graceMileageMultiplier.service');
 const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
 const { exteriorPanelDamageMultiplier } = require('./graceExteriorPanelPricing.service');
 const { batteryMissingFinalMultiplier } = require('./graceBatteryPricing.service');
+const { tireConditionFinalMultiplier, tirePricingDetail } = require('./graceTirePricing.service');
 
 function norm(s) {
   return String(s || '')
@@ -101,8 +102,8 @@ function tierEase(s) {
  * 0 = matches “worst tier” more, 1 = matches “best tier” more.
  * Mileage is applied as `× mileagePriceMultiplier(exact odometer)` after interpolation (×1 below 100k mi).
  * Key / start–drive use `× operationalPriceMultiplier` (same as Camry) so they are not double-counted here.
- * Catalytic, deployed airbag, exterior panel damage, and battery missing (×0.995) are **not**
- * scored in pillars; multipliers run after operational + mileage.
+ * Catalytic, deployed airbag, exterior panel damage, battery missing, and **tire condition** are **not**
+ * scored in pillars; multipliers run after interpolation (tire curve matches observed flat / missing %).
  * @param {object} assessment
  * @param {string} [titleStatus]
  */
@@ -111,9 +112,6 @@ function scoreConditionTier(assessment, titleStatus) {
   const body = a.body && typeof a.body === 'object' ? a.body : {};
 
   const tTitle = titleScore(titleStatus);
-  const tTireA = isNo(a.tiresAttached) ? 0.2 : 1;
-  const tTireI = isNo(a.tiresInflated) ? 0.4 : 1;
-  const tTire = tTireA * tTireI < 0.5 ? 0.35 : mean([tTireA, tTireI]);
   const tExt =
     a.exterior === 'rust_or_damage' ? 0.22 : 1;
   const tComp = a.exteriorComplete === 'incomplete' ? 0.28 : 1;
@@ -126,7 +124,6 @@ function scoreConditionTier(assessment, titleStatus) {
 
   const pillarWeights = [
     tTitle,
-    tTire,
     tExt,
     tComp,
     tEngine,
@@ -289,11 +286,13 @@ async function tryComputeValuationBandEstimate(validated) {
   const bagMult = airbagDeployedFinalMultiplier(validated.assessment);
   const extPanelMult = exteriorPanelDamageMultiplier(validated.assessment);
   const batMult = batteryMissingFinalMultiplier(validated.assessment);
+  const tireMult = tireConditionFinalMultiplier(validated.assessment);
+  const tireDetail = tirePricingDetail(validated.assessment);
 
   return {
-    low: Math.round(low * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult),
-    high: Math.round(high * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult),
-    pointOffer: Math.round(pointOffer * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult),
+    low: Math.round(low * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult * tireMult),
+    high: Math.round(high * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult * tireMult),
+    pointOffer: Math.round(pointOffer * opMult * mileageMult * catMult * bagMult * extPanelMult * batMult * tireMult),
     meta: {
       modelVersion: 'valuation_bands_v2',
       estimator: 'valuation_bands',
@@ -312,6 +311,8 @@ async function tryComputeValuationBandEstimate(validated) {
       airbagDeployedFinalMultiplier: bagMult,
       exteriorPanelDamageMultiplier: extPanelMult,
       batteryMissingFinalMultiplier: batMult,
+      tireConditionMultiplier: tireMult,
+      tireConditionMode: tireDetail.mode,
       titleStatus: String(validated.titleStatus || 'clean'),
       vehicleClass: 'band_table',
       pricingMatchTier,

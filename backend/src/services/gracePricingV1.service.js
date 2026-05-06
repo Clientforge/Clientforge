@@ -19,6 +19,7 @@ const { catalyticFinalMultiplier } = require('./graceCatalyticPricing.service');
 const { airbagDeployedFinalMultiplier } = require('./graceAirbagPricing.service');
 const { exteriorPanelDamageMultiplier } = require('./graceExteriorPanelPricing.service');
 const { batteryMissingFinalMultiplier } = require('./graceBatteryPricing.service');
+const { tireConditionFinalMultiplier } = require('./graceTirePricing.service');
 
 const FACTOR_BY_ID = {
   runs: 1.0,
@@ -127,14 +128,12 @@ function deriveTitleFactor(titleStatus) {
 
 function deriveConditionFactor(assessment) {
   const a = assessment && typeof assessment === 'object' ? assessment : {};
-  const tiresInflated = a.tiresInflated === 'no' ? 'no' : 'yes';
-  const tiresAttached = a.tiresAttached === 'no' ? 'no' : 'yes';
   const body = a.body && typeof a.body === 'object' ? a.body : {};
 
   let f = 1;
   f *= computeV1DrivabilityFactor(assessment);
-  if (tiresInflated === 'no') f *= 0.88;
-  if (tiresAttached === 'no') f *= 0.82;
+  const tireMult = tireConditionFinalMultiplier(assessment);
+  if (tireMult !== 1) f *= tireMult;
   f *= computeConditionStackMultiplier(assessment, {
     omitKey: isNo(assessment?.key),
     omitCatalytic: true,
@@ -229,6 +228,10 @@ function computeOfferRangeInternal(input) {
     input.assessment && typeof input.assessment === 'object'
       ? batteryMissingFinalMultiplier(input.assessment)
       : 1;
+  const tireMultMeta =
+    input.assessment && typeof input.assessment === 'object'
+      ? tireConditionFinalMultiplier(input.assessment)
+      : 1;
 
   return {
     low,
@@ -246,6 +249,7 @@ function computeOfferRangeInternal(input) {
       airbagDeployedFinalMultiplier: bagMult,
       exteriorPanelDamageMultiplier: extPanelMultMeta,
       batteryMissingFinalMultiplier: batMultMeta,
+      tireConditionMultiplier: tireMultMeta,
       v1OperationalBridge:
         input.assessment && operationalBridge !== 1 ? Number(operationalBridge.toFixed(4)) : null,
       marketCompsProxy: Number(marketPx.toFixed(4)),
