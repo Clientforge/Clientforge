@@ -155,6 +155,14 @@
       box-shadow: var(--shadow);
     }
     .card p { color: var(--muted); font-size: 0.95rem; }
+    .penthos-loc { text-align: left; }
+    .penthos-loc > p:first-child { text-align: center; margin-bottom: 1rem; }
+    .penthos-loc > p:first-child strong { color: var(--ink); }
+    .penthos-hours { width: 100%; font-size: 0.95rem; border-collapse: collapse; margin-top: 0.2rem; }
+    .penthos-hours td { padding: 0.3rem 0; vertical-align: top; }
+    .penthos-hours td:first-child { color: var(--muted); }
+    .penthos-hours td:last-child { text-align: right; font-weight: 600; color: var(--ink); }
+    .penthos-loc-cta { margin-top: 1.1rem; text-align: center; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
     footer {
       text-align: center;
       padding: 28px 22px 40px;
@@ -170,7 +178,7 @@
     <p class="badge">Pentho's Kitchen</p>
     <h1>We’d love to hear about your experience</h1>
     <p class="sub">Tell us how we did—whether you ordered online, picked up, or dined with us. Tap a star; it only takes a moment.</p>
-    <p class="info"><strong>Menu &amp; hours</strong> on our site</p>
+    <p class="info"><strong>Cordova, TN</strong> · Dine-in &amp; pickup</p>
 
     <p class="star-hint" id="star-label">Rate your order or visit</p>
     <div class="star-row" role="group" aria-labelledby="star-label">
@@ -188,12 +196,30 @@
 
   <main class="wrap">
     <section>
-      <h2>Visit us online</h2>
-      <div class="card" style="text-align:center; max-width:480px; margin:0 auto;">
-        <p><strong>Pentho's Kitchen</strong><br><a href="https://www.penthoskitchen.com/" target="_blank" rel="noopener noreferrer">www.penthoskitchen.com</a></p>
-        <p style="margin-top:16px">
-          <a class="btn btn-ghost" href="https://www.penthoskitchen.com/" target="_blank" rel="noopener noreferrer">Open website</a>
-        </p>
+      <h2>Location &amp; hours</h2>
+      <div class="card penthos-loc" style="max-width: 520px; margin: 0 auto;">
+        <p><strong>Pentho's Kitchen</strong></p>
+        <p style="margin-top: 0.75rem;"><strong>Address</strong><br>
+          7946 Fischer Steel Rd<br>
+          Cordova, TN 38018</p>
+        <p style="margin-top: 0.75rem;"><strong>Phone</strong><br>
+          <a href="tel:+18502288995">(850) 228-8995</a></p>
+        <p style="margin-top: 0.75rem; margin-bottom: 0.25rem;"><strong>Hours</strong></p>
+        <table class="penthos-hours">
+          <tbody>
+            <tr><td>Monday</td><td>Closed</td></tr>
+            <tr><td>Tuesday</td><td>5–8 PM</td></tr>
+            <tr><td>Wednesday</td><td>Closed</td></tr>
+            <tr><td>Thursday</td><td>5–8 PM</td></tr>
+            <tr><td>Friday</td><td>5–8 PM</td></tr>
+            <tr><td>Saturday</td><td>5–8 PM</td></tr>
+            <tr><td>Sunday</td><td>Closed</td></tr>
+          </tbody>
+        </table>
+        <div class="penthos-loc-cta">
+          <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&amp;query=7946%20Fischer%20Steel%20Rd%2C%20Cordova%2C%20TN%2038018" target="_blank" rel="noopener noreferrer">Get directions</a>
+          <a class="btn btn-ghost" href="https://www.penthoskitchen.com/" target="_blank" rel="noopener noreferrer">Website</a>
+        </div>
       </div>
     </section>
   </main>
