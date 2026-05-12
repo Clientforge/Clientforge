@@ -50,6 +50,9 @@ app.get('/health', (req, res) => {
 // Public, unauthenticated helpers (CORS-friendly for static demo sites)
 app.use('/api/v1/public', require('./routes/public.routes'));
 
+// Grace to Grace owner portal (JWT distinct from tenant dashboard — see middleware/g2gOwnerAuth.js)
+app.use('/api/v1/g2g-owner', require('./routes/g2gOwner.routes'));
+
 // --------------- PUBLIC ROUTES ---------------
 
 app.use('/api/v1/auth',    require('./routes/auth.routes'));
@@ -92,6 +95,15 @@ app.get('/review/feedback', (req, res) => {
 });
 app.get('/review/google', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'restaurant-review-google.html'));
+});
+app.get('/penthos-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'penthos-kitchen-review.html'));
+});
+app.get('/penthos-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'penthos-kitchen-review-feedback.html'));
+});
+app.get('/penthos-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'penthos-kitchen-review-thanks.html'));
 });
 
 /** SMS-friendly tracked redirects — before SPA fallback */
@@ -138,6 +150,9 @@ app.use(express.static(FRONTEND_DIR));
 // React SPA fallback for /login, /register, /dashboard, etc. (not /grace-to-grace)
 app.get(/^\/(?!api).*/, (req, res, next) => {
   if (req.path === '/grace-to-grace' || req.path.startsWith('/grace-to-grace/')) {
+    return next();
+  }
+  if (req.path === '/penthos-review' || req.path.startsWith('/penthos-review/')) {
     return next();
   }
   const indexPath = path.join(FRONTEND_DIR, 'index.html');

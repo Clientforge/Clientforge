@@ -78,6 +78,9 @@ export default function SiteLayout() {
             <NavLink to="/contact" className={navClass}>
               Contact
             </NavLink>
+            <NavLink to="/owner" className={navClass}>
+              Owner
+            </NavLink>
             <NavLink to="/offer" className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
               Get offer
             </NavLink>
@@ -107,6 +110,9 @@ export default function SiteLayout() {
             </Link>
             <NavLink to="/contact" className={navClass} onClick={closeMenu}>
               Contact now
+            </NavLink>
+            <NavLink to="/owner" className={navClass} onClick={closeMenu}>
+              Owner
             </NavLink>
           </div>
         </div>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pentho's Kitchen — Tell us how we did. Rate your order or visit.">
+  <title>Tell us how we did — Pentho's Kitchen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f7f5;
+      --paper: #fbfcfb;
+      --ink: #1a1f1c;
+      --muted: #4a554e;
+      --accent: #2f5d4a;
+      --accent-dark: #1e3d30;
+      --gold: #c9a227;
+      --line: #dce3de;
+      --radius: 14px;
+      --shadow: 0 18px 40px rgba(26, 31, 28, 0.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+    header {
+      text-align: center;
+      padding: 40px 22px 32px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--paper) 0%, var(--bg) 100%);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 700;
+      font-size: clamp(1.65rem, 4.5vw, 2.35rem);
+      line-height: 1.2;
+      margin-bottom: 8px;
+      color: var(--ink);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto 8px;
+    }
+    .star-hint {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 20px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .star-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(6px, 2vw, 16px);
+      margin: 12px 0 28px;
+      padding: 8px 0 20px;
+    }
+    .star-row a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: clamp(3.25rem, 14vw, 6.5rem);
+      line-height: 1;
+      transition: transform 0.15s ease, color 0.15s ease;
+      cursor: pointer;
+      text-shadow: 0 2px 12px rgba(201, 162, 39, 0.35);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .star-row a:hover,
+    .star-row a:focus {
+      transform: scale(1.12);
+      color: #a68520;
+      outline: none;
+    }
+    .star-row a:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
+    .info {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 4px;
+    }
+    .info strong { color: var(--ink); }
+    .cta-block {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid var(--line);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+    }
+    .btn-primary:hover {
+      background: var(--accent-dark);
+    }
+    section { padding: 40px 0; }
+    section h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.45rem;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+    footer {
+      text-align: center;
+      padding: 28px 22px 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <p class="badge">Pentho's Kitchen</p>
+    <h1>We’d love to hear about your experience</h1>
+    <p class="sub">Tell us how we did—whether you ordered online, picked up, or dined with us. Tap a star; it only takes a moment.</p>
+    <p class="info"><strong>Menu &amp; hours</strong> on our site</p>
+
+    <p class="star-hint" id="star-label">Rate your order or visit</p>
+    <div class="star-row" role="group" aria-labelledby="star-label">
+      <a href="/penthos-review/feedback?stars=1" aria-label="1 out of 5 stars">★</a>
+      <a href="/penthos-review/feedback?stars=2" aria-label="2 out of 5 stars">★</a>
+      <a href="/penthos-review/feedback?stars=3" aria-label="3 out of 5 stars">★</a>
+      <a href="/penthos-review/thanks?stars=4" aria-label="4 out of 5 stars">★</a>
+      <a href="/penthos-review/thanks?stars=5" aria-label="5 out of 5 stars">★</a>
+    </div>
+
+    <div class="cta-block">
+      <a class="btn btn-primary" href="https://www.penthoskitchen.com/" target="_blank" rel="noopener noreferrer">Visit penthoskitchen.com</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>Visit us online</h2>
+      <div class="card" style="text-align:center; max-width:480px; margin:0 auto;">
+        <p><strong>Pentho's Kitchen</strong><br><a href="https://www.penthoskitchen.com/" target="_blank" rel="noopener noreferrer">www.penthoskitchen.com</a></p>
+        <p style="margin-top:16px">
+          <a class="btn btn-ghost" href="https://www.penthoskitchen.com/" target="_blank" rel="noopener noreferrer">Open website</a>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="y"></span> Pentho's Kitchen
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  </footer>
+
+</body>
+</html>
