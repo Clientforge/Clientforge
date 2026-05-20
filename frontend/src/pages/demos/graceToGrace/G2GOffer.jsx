@@ -14,8 +14,14 @@ import {
   INTERIOR_QUALITY,
   TIRE_CONDITION,
 } from './pricingEngine';
-import { postGraceEstimate, postGraceSellIntent } from './graceEstimateApi';
+import {
+  postGraceEstimate,
+  postGraceSellIntent,
+  postG2gLeadStart,
+  postG2gNotifyEstimate,
+} from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
+import { loadG2gContact, saveG2gContact } from './g2gContactStorage';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
 import {
   OTHER_VALUE,
@@ -393,9 +399,19 @@ export default function G2GOffer() {
   const [searchParams] = useSearchParams();
   const vinDeepLinkApplied = useRef(false);
 
+  const [contact, setContact] = useState(() => loadG2gContact());
+  const [leadFirstName, setLeadFirstName] = useState(() => loadG2gContact()?.firstName || '');
+  const [leadPhone, setLeadPhone] = useState(() => loadG2gContact()?.phone || '');
+  const [leadEmail, setLeadEmail] = useState(() => loadG2gContact()?.email || '');
+  const [contactBusy, setContactBusy] = useState(false);
+  const [contactErr, setContactErr] = useState('');
+  const contactReady = Boolean(contact);
+
   useEffect(() => {
-    document.title = 'See what your car is worth — Grace to Grace';
-  }, []);
+    document.title = contactReady
+      ? 'See what your car is worth — Grace to Grace'
+      : 'Get your estimate — Grace to Grace';
+  }, [contactReady]);
 
   const [vin, setVin] = useState('');
   const [decoding, setDecoding] = useState(false);
@@ -442,6 +458,46 @@ export default function G2GOffer() {
   const [sellBusy, setSellBusy] = useState(false);
   const [sellErr, setSellErr] = useState('');
   const [sellOk, setSellOk] = useState(false);
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactErr('');
+    if (!leadFirstName.trim() || leadFirstName.trim().length < 2) {
+      setContactErr('Enter your first name.');
+      return;
+    }
+    if (!leadPhone.trim()) {
+      setContactErr('Enter your phone number.');
+      return;
+    }
+    if (!leadEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail.trim())) {
+      setContactErr('Enter a valid email address.');
+      return;
+    }
+    setContactBusy(true);
+    try {
+      const { leadId } = await postG2gLeadStart({
+        firstName: leadFirstName.trim(),
+        phone: leadPhone.trim(),
+        email: leadEmail.trim(),
+        sessionId: getOrCreateG2gSessionId(),
+      });
+      const saved = {
+        firstName: leadFirstName.trim(),
+        phone: leadPhone.trim(),
+        email: leadEmail.trim().toLowerCase(),
+        leadId: leadId || undefined,
+      };
+      saveG2gContact(saved);
+      setContact(saved);
+      setSellName(saved.firstName);
+      setSellPhone(saved.phone);
+    } catch (err) {
+      setContactErr(err.message || 'Something went wrong.');
+    } finally {
+      setContactBusy(false);
+    }
+  };
 
   const unlocked = useMemo(
     () =>
@@ -726,6 +782,42 @@ export default function G2GOffer() {
         },
       });
       setResult(range);
+      if (contact) {
+        const offerDisplay = displayOfferUsd(range);
+        const conditionLabel = buildSellConditionSummary({
+          titleStatus,
+          mileageOdometer,
+          battery,
+          key,
+          startDrive,
+          tireCondition,
+          exterior,
+          exteriorComplete,
+          catalytic,
+          interiorQuality,
+          bodyDamage,
+        });
+        const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
+        const miParsed = parseMileageInput(mileageOdometer);
+        postG2gNotifyEstimate({
+          firstName: contact.firstName,
+          phone: contact.phone,
+          email: contact.email,
+          leadId: contact.leadId,
+          sessionId: getOrCreateG2gSessionId(),
+          year: year.trim(),
+          make: makeFinal,
+          model: modelFinal,
+          zip: zipClean,
+          vin: normalizeVin(vin) || undefined,
+          mileage: miParsed != null ? formatMileageDisplay(miParsed) : undefined,
+          conditionLabel,
+          estimateLow: range.low != null ? range.low : undefined,
+          estimateHigh: range.high != null ? range.high : undefined,
+          estimateDisplay:
+            offerDisplay != null ? `$${offerDisplay.toLocaleString()}` : undefined,
+        }).catch(() => {});
+      }
     } catch (err) {
       setFormError(err.message || 'Could not reach pricing service.');
     } finally {
@@ -804,6 +896,8 @@ export default function G2GOffer() {
       await postGraceSellIntent({
         customerName: sellName.trim(),
         phone: sellPhone.trim(),
+        email: contact?.email,
+        leadId: contact?.leadId,
         address: addressLine,
         smsConsent: true,
         year: year.trim(),
@@ -839,6 +933,59 @@ export default function G2GOffer() {
   const hasPricedOffer = Boolean(result && displayOfferUsd(result) != null);
   const hasCustomOfferFlow = Boolean(result?.meta?.noEstimate);
   const showResultActions = hasPricedOffer || hasCustomOfferFlow;
+
+  if (!contactReady) {
+    return (
+      <>
+        <h1 className="g2g-page-title">Get your estimate</h1>
+        <p className="g2g-page-lead">
+          Enter your contact info so we can send your estimate and follow up if you have questions. Next, you&apos;ll
+          add your vehicle details — same quick flow as before.
+        </p>
+        <form className="g2g-form" onSubmit={handleContactSubmit}>
+          <div className="g2g-field">
+            <label htmlFor="g2g-lead-first-name">First name</label>
+            <input
+              id="g2g-lead-first-name"
+              name="firstName"
+              autoComplete="given-name"
+              value={leadFirstName}
+              onChange={(ev) => setLeadFirstName(ev.target.value)}
+              required
+            />
+          </div>
+          <div className="g2g-field g2g-mt">
+            <label htmlFor="g2g-lead-phone">Phone number</label>
+            <input
+              id="g2g-lead-phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              value={leadPhone}
+              onChange={(ev) => setLeadPhone(ev.target.value)}
+              required
+            />
+          </div>
+          <div className="g2g-field g2g-mt">
+            <label htmlFor="g2g-lead-email">Email address</label>
+            <input
+              id="g2g-lead-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={leadEmail}
+              onChange={(ev) => setLeadEmail(ev.target.value)}
+              required
+            />
+          </div>
+          {contactErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{contactErr}</div> : null}
+          <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={contactBusy}>
+            {contactBusy ? 'Saving…' : 'Continue to estimate'}
+          </button>
+        </form>
+      </>
+    );
+  }
 
   return (
     <>
@@ -1346,6 +1493,10 @@ export default function G2GOffer() {
             type="button"
             className="g2g-btn g2g-btn--primary g2g-mt"
             onClick={() => {
+              if (contact) {
+                if (!sellName.trim()) setSellName(contact.firstName);
+                if (!sellPhone.trim()) setSellPhone(contact.phone);
+              }
               setSellOpen((o) => !o);
               setSellErr('');
               setSellOk(false);
