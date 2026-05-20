@@ -32,7 +32,8 @@ import {
   matchModelToCatalog,
   coerceDecodedYear,
 } from './vehicleCatalog';
-import { displayOfferUsd } from './displayOffer';
+import { displayOfferUsd, hasDisplayableOffer } from './displayOffer';
+import OfferPricingDisplay from './OfferPricingDisplay';
 import {
   US_STATE_OPTIONS,
   composeSellAddress,
@@ -930,7 +931,7 @@ export default function G2GOffer() {
 
   const canSubmitEstimate = unlocked >= FLOW.body;
 
-  const hasPricedOffer = Boolean(result && displayOfferUsd(result) != null);
+  const hasPricedOffer = Boolean(result && hasDisplayableOffer(result));
   const hasCustomOfferFlow = Boolean(result?.meta?.noEstimate);
   const showResultActions = hasPricedOffer || hasCustomOfferFlow;
 
@@ -1486,7 +1487,7 @@ export default function G2GOffer() {
           ) : (
             <>
               <h2>Here&apos;s what your car could be worth</h2>
-              <p className="g2g-offer-range">${displayOfferUsd(result).toLocaleString()}</p>
+              <OfferPricingDisplay result={result} />
             </>
           )}
           <button

@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { computeOfferRange, CONDITION_OPTIONS, displayOfferUsd } from '../lib/pricingEngine.js';
+import {
+  computeOfferRange,
+  CONDITION_OPTIONS,
+  displayOfferUsd,
+  hasDisplayableOffer,
+} from '../lib/pricingEngine.js';
+import OfferPricingDisplay from '../components/OfferPricingDisplay.jsx';
 import { decodeVin, isValidVinFormat, normalizeVin } from '../lib/vinDecode.js';
 import { BRAND } from '../constants.js';
 import { postGraceSellIntent } from '../lib/sellIntentApi.js';
@@ -417,10 +423,10 @@ export default function OfferPage() {
         </button>
       </form>
 
-      {result && displayOfferUsd(result) != null ? (
+      {result && hasDisplayableOffer(result) ? (
         <div className="g2g-result">
           <h2>Here&apos;s what your car could be worth</h2>
-          <p className="g2g-offer-range">${displayOfferUsd(result).toLocaleString()}</p>
+          <OfferPricingDisplay result={result} />
           <button
             type="button"
             className="g2g-btn g2g-btn--primary g2g-mt"
