@@ -6,6 +6,11 @@ const {
   SellIntentError,
 } = require('../services/graceSellIntent.service');
 const {
+  startG2gLead,
+  notifyG2gEstimateLead,
+  G2gLeadError,
+} = require('../services/graceG2gLead.service');
+const {
   recordGraceEstimateSnapshot,
   getG2gEstimateSnapshots,
 } = require('../services/graceEstimateSnapshot.service');
@@ -197,6 +202,40 @@ router.post('/grace-estimate-snapshot', estimateSnapshotLimiter, async (req, res
     }
     console.error('[public/grace-estimate-snapshot]', err);
     return res.status(500).json({ error: 'Could not save snapshot.' });
+  }
+});
+
+/**
+ * Grace to Grace — contact capture before vehicle step (creates/updates CRM lead).
+ */
+router.post('/g2g-lead/start', sellIntentLimiter, async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const result = await startG2gLead(req.body);
+    return res.json(result);
+  } catch (err) {
+    if (err instanceof G2gLeadError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/g2g-lead/start]', err);
+    return res.status(500).json({ error: 'Could not save contact info.' });
+  }
+});
+
+/**
+ * Grace to Grace — estimate generated; internal SMS/email to team.
+ */
+router.post('/g2g-notify-estimate', sellIntentLimiter, async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const result = await notifyG2gEstimateLead(req.body);
+    return res.json(result);
+  } catch (err) {
+    if (err instanceof G2gLeadError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/g2g-notify-estimate]', err);
+    return res.status(500).json({ error: 'Could not send estimate notification.' });
   }
 });
 

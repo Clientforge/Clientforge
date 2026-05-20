@@ -1,0 +1,29 @@
+const STORAGE_KEY = 'g2g_contact';
+
+export function loadG2gContact() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data?.firstName || !data?.phone || !data?.email) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function saveG2gContact(contact) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(contact));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+export function clearG2gContact() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}

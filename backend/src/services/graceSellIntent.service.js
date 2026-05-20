@@ -2,8 +2,8 @@ const db = require('../db/connection');
 const config = require('../config');
 const { normalizePhone } = require('./lead.service');
 const { sendSms } = require('./sms.service');
-
-const PLATFORM_TENANT_DEFAULT = '00000000-0000-0000-0000-000000000001';
+const { sendEmail } = require('./email.service');
+const { tenantIdForG2g, updateLeadAfterEstimate } = require('./graceG2gLead.service');
 
 class SellIntentError extends Error {
   constructor(message, statusCode = 400) {
@@ -12,8 +12,7 @@ class SellIntentError extends Error {
   }
 }
 
-const tenantIdForLogging = () =>
-  process.env.G2G_SELL_INTENT_TENANT_ID?.trim() || PLATFORM_TENANT_DEFAULT;
+const tenantIdForLogging = () => tenantIdForG2g();
 
 function trimStr(s, max) {
   const t = String(s ?? '').trim();
@@ -76,6 +75,9 @@ function validatePayload(body) {
   }
 
   const manualReviewRequired = body.manualReviewRequired === true;
+  const email = trimStr(body.email, 254).toLowerCase() || null;
+  const leadId = trimStr(body.leadId, 64) || null;
+  const pickupNotes = trimStr(body.pickupNotes, 500) || null;
 
   return {
     customerName,
@@ -91,6 +93,9 @@ function validatePayload(body) {
     estimateLow,
     estimateHigh,
     manualReviewRequired,
+    email,
+    leadId,
+    pickupNotes,
   };
 }
 
@@ -103,17 +108,21 @@ function buildNotifySmsBody(v) {
       ? `$${v.estimateLow.toLocaleString()}–$${v.estimateHigh.toLocaleString()}`
       : '—';
   const reviewPart = v.manualReviewRequired ? `\nReview: MANUAL (confirm custom quote)` : '';
+  const emailPart = v.email ? `\nEmail: ${v.email}` : '';
+  const notesPart = v.pickupNotes ? `\nNotes: ${v.pickupNotes}` : '';
   return (
-    `[G2G] Ready to sell\n` +
+    `[G2G] READY TO SELL\n` +
     `Name: ${v.customerName}\n` +
-    `Phone: ${v.customerPhone}\n` +
-    `Address: ${v.address}\n` +
+    `Phone: ${v.customerPhone}` +
+    emailPart +
+    `\nAddress: ${v.address}\n` +
     `Vehicle: ${v.year} ${v.make} ${v.model}\n` +
     `VIN: ${vinPart}\n` +
     `Condition: ${condPart}\n` +
     `ZIP: ${v.zip}\n` +
     `Mileage: ${miPart}\n` +
     `Est. range: ${estPart}` +
+    notesPart +
     reviewPart
   ).slice(0, 1500);
 }
@@ -150,9 +159,25 @@ const processSellIntent = async (body) => {
   const from = await resolveFromNumber(tenantId);
   const smsBody = buildNotifySmsBody(v);
 
+  const resolvedLeadId = await updateLeadAfterEstimate(tenantId, v.leadId, v.customerPhone, {
+    funnelStage: 'READY_TO_SELL',
+    readyToSellAt: new Date().toISOString(),
+    pickup: { address: v.address, notes: v.pickupNotes || null },
+    vehicle: {
+      year: v.year,
+      make: v.make,
+      model: v.model,
+      zip: v.zip,
+      vin: v.vin,
+      mileage: v.mileage,
+      conditionLabel: v.conditionLabel,
+    },
+    estimate: { low: v.estimateLow, high: v.estimateHigh },
+  });
+
   await sendSms({
     tenantId,
-    leadId: null,
+    leadId: resolvedLeadId,
     contactId: null,
     to,
     from,
@@ -160,7 +185,20 @@ const processSellIntent = async (body) => {
     messageType: 'g2g_sell_intent',
   });
 
-  return { ok: true };
+  const sellEmailTo =
+    process.env.G2G_SELL_NOTIFY_EMAIL?.trim() ||
+    process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim();
+  if (sellEmailTo) {
+    await sendEmail({
+      tenantId,
+      to: sellEmailTo,
+      fromName: 'Grace to Grace',
+      subject: '[G2G] READY TO SELL',
+      body: smsBody,
+    });
+  }
+
+  return { ok: true, leadId: resolvedLeadId };
 };
 
 module.exports = {
