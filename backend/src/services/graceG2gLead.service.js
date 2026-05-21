@@ -6,6 +6,7 @@ const { sendEmail } = require('./email.service');
 
 const PLATFORM_TENANT_DEFAULT = '00000000-0000-0000-0000-000000000001';
 const G2G_SOURCE = 'grace_to_grace';
+const DEFAULT_ESTIMATE_SMS_COOLDOWN_HOURS = 6;
 
 class G2gLeadError extends Error {
   constructor(message, statusCode = 400) {
@@ -279,6 +280,39 @@ function validateEstimateNotifyBody(body) {
   };
 }
 
+function estimateTeamSmsCooldownMs() {
+  const hours = Number(process.env.G2G_ESTIMATE_SMS_COOLDOWN_HOURS);
+  if (Number.isFinite(hours) && hours > 0) {
+    return Math.round(hours * 60 * 60 * 1000);
+  }
+  return DEFAULT_ESTIMATE_SMS_COOLDOWN_HOURS * 60 * 60 * 1000;
+}
+
+async function fetchLeadRow(tenantId, leadId, phone) {
+  if (leadId) {
+    const byId = await db.query(
+      'SELECT id, metadata FROM leads WHERE id = $1 AND tenant_id = $2',
+      [leadId, tenantId],
+    );
+    if (byId.rows.length > 0) return byId.rows[0];
+  }
+  const byPhone = await db.query(
+    'SELECT id, metadata FROM leads WHERE tenant_id = $1 AND phone = $2',
+    [tenantId, phone],
+  );
+  return byPhone.rows[0] || null;
+}
+
+/** Max one team estimate SMS per customer phone within the cooldown window. */
+function shouldSendEstimateTeamSms(metadata) {
+  if (!metadata || typeof metadata !== 'object') return true;
+  const last = metadata.lastEstimateTeamSmsAt || metadata.estimateNotifiedAt;
+  if (!last) return true;
+  const lastMs = new Date(last).getTime();
+  if (!Number.isFinite(lastMs)) return true;
+  return Date.now() - lastMs >= estimateTeamSmsCooldownMs();
+}
+
 async function updateLeadAfterEstimate(tenantId, leadId, phone, patch) {
   if (leadId) {
     const r = await db.query(
@@ -322,7 +356,11 @@ const notifyG2gEstimateLead = async (body) => {
 
   const v = validateEstimateNotifyBody(body);
   const tenantId = tenantIdForG2g();
-  const resolvedLeadId = await updateLeadAfterEstimate(tenantId, v.leadId, v.phone, {
+  const existingLead = await fetchLeadRow(tenantId, v.leadId, v.phone);
+  const sendTeamSms = shouldSendEstimateTeamSms(existingLead?.metadata);
+
+  const nowIso = new Date().toISOString();
+  const metadataPatch = {
     funnelStage: 'ESTIMATE_COMPLETED',
     sessionId: v.sessionId,
     zip: v.zip,
@@ -330,29 +368,46 @@ const notifyG2gEstimateLead = async (body) => {
     state: v.state,
     vehicle: v.vehicle,
     estimate: v.estimate,
-    estimateNotifiedAt: new Date().toISOString(),
-  });
-
-  const smsBody = buildEstimateSmsBody(v);
-  await sendInternalSms({
-    tenantId,
-    leadId: resolvedLeadId,
-    to,
-    body: smsBody,
-    messageType: 'g2g_estimate_lead',
-  });
-
-  const emailTo = process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim();
-  if (emailTo) {
-    await sendInternalEmail({
-      tenantId,
-      to: emailTo,
-      subject: '[G2G ESTIMATE] New estimate inquiry',
-      body: buildEstimateEmailBody(v),
-    });
+    lastEstimateAt: nowIso,
+  };
+  if (sendTeamSms) {
+    metadataPatch.lastEstimateTeamSmsAt = nowIso;
+    metadataPatch.estimateNotifiedAt = nowIso;
   }
 
-  return { ok: true, leadId: resolvedLeadId };
+  const resolvedLeadId = await updateLeadAfterEstimate(
+    tenantId,
+    v.leadId,
+    v.phone,
+    metadataPatch,
+  );
+
+  if (sendTeamSms) {
+    const smsBody = buildEstimateSmsBody(v);
+    await sendInternalSms({
+      tenantId,
+      leadId: resolvedLeadId,
+      to,
+      body: smsBody,
+      messageType: 'g2g_estimate_lead',
+    });
+
+    const emailTo = process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim();
+    if (emailTo) {
+      await sendInternalEmail({
+        tenantId,
+        to: emailTo,
+        subject: '[G2G ESTIMATE] New estimate inquiry',
+        body: buildEstimateEmailBody(v),
+      });
+    }
+  } else {
+    console.log(
+      `[g2g-estimate] team SMS skipped (cooldown) lead=${resolvedLeadId || 'none'} phone=${v.phone}`,
+    );
+  }
+
+  return { ok: true, leadId: resolvedLeadId, teamSmsSent: sendTeamSms };
 };
 
 module.exports = {
