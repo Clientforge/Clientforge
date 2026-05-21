@@ -13,6 +13,17 @@ const trackedLinkService = require('./services/trackedLink.service');
 
 const app = express();
 
+/** Prevent stale SPA shells after frontend deploys (hashed assets still cache long-term). */
+function staticWithFreshIndex(rootDir) {
+  return express.static(rootDir, {
+    setHeaders(res, filePath) {
+      if (path.basename(filePath) === 'index.html') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  });
+}
+
 // --------------- GLOBAL MIDDLEWARE ---------------
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -130,7 +141,7 @@ app.use(express.static(LANDING_DIR));
 
 // Grace to Grace demo SPA — https://<host>/grace-to-grace/
 const G2G_DIR = path.join(__dirname, '../../grace-to-grace-web/dist');
-app.use('/grace-to-grace', express.static(G2G_DIR));
+app.use('/grace-to-grace', staticWithFreshIndex(G2G_DIR));
 app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
   const rel = req.path.replace(/^\/grace-to-grace\/?/, '');
   const lastSeg = rel.split('/').filter(Boolean).pop() || '';
@@ -145,12 +156,13 @@ app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
         'grace-to-grace-web/dist is missing. On the server run: cd backend && npm run build (or npm run build:grace-to-grace). Ensure Render/rootDir is backend and the repo includes grace-to-grace-web.',
     });
   }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.sendFile(g2gIndex);
 });
 
 // React app assets (main ClientForge dashboard SPA)
 const FRONTEND_DIR = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(FRONTEND_DIR));
+app.use(staticWithFreshIndex(FRONTEND_DIR));
 
 // React SPA fallback for /login, /register, /dashboard, etc. (not /grace-to-grace)
 app.get(/^\/(?!api).*/, (req, res, next) => {
@@ -165,6 +177,7 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
   }
   const indexPath = path.join(FRONTEND_DIR, 'index.html');
   if (fs.existsSync(indexPath)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.sendFile(indexPath);
   }
   next();
