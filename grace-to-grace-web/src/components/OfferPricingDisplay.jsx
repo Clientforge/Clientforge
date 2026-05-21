@@ -8,7 +8,7 @@ export default function OfferPricingDisplay({ result }) {
     <div className="g2g-offer-pricing">
       <div className="g2g-offer-pricing__block">
         <p className="g2g-offer-pricing__label">Estimated range</p>
-        <p className="g2g-offer-range g2g-offer-range--band">{range}</p>
+        <p className="g2g-offer-range">{range}</p>
       </div>
     </div>
   );

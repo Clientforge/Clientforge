@@ -41,33 +41,58 @@ function spreadAroundPoint(point) {
   return { lo: Math.max(0, point - spread), hi: point + spread };
 }
 
+function ensureSpreadRange(range, anchor) {
+  if (!range || !Number.isFinite(range.lo) || !Number.isFinite(range.hi)) return null;
+  if (range.lo < range.hi) return range;
+  const center = Number.isFinite(anchor) ? anchor : range.lo;
+  if (!Number.isFinite(center)) return null;
+  return spreadAroundPoint(center);
+}
+
+/** Best single-dollar anchor for widening a collapsed range. */
+export function anchorPriceUsd(result) {
+  if (!result) return null;
+  if (result.pointOffer != null && Number.isFinite(Number(result.pointOffer))) {
+    return Math.round(Number(result.pointOffer));
+  }
+  if (result.low != null && result.high != null) {
+    const lo = Math.round(Number(result.low));
+    const hi = Math.round(Number(result.high));
+    if (Number.isFinite(lo) && Number.isFinite(hi)) {
+      if (lo === hi) return lo;
+      return Math.round((lo + hi) / 2);
+    }
+  }
+  return null;
+}
+
 /**
  * Dollar range to show customers under "Estimated range".
- * Uses API low/high when they differ; else band envelope from meta; else spread around offer.
+ * Always returns lo < hi when any price anchor exists.
  */
 export function getDisplayRangeLoHi(result) {
   if (!result) return null;
 
   const apiLo = result.low != null ? Math.round(Number(result.low)) : null;
   const apiHi = result.high != null ? Math.round(Number(result.high)) : null;
-  if (
-    Number.isFinite(apiLo)
-    && Number.isFinite(apiHi)
-    && apiLo < apiHi
-  ) {
+  const anchor = anchorPriceUsd(result);
+
+  if (Number.isFinite(apiLo) && Number.isFinite(apiHi) && apiLo < apiHi) {
     return { lo: apiLo, hi: apiHi };
   }
 
   const envelope = bandEnvelopeLoHi(result);
-  if (envelope) return envelope;
+  if (envelope) {
+    const widened = ensureSpreadRange(envelope, anchor);
+    if (widened) return widened;
+  }
 
-  const point = formatPointOfferUsd(result);
-  if (point != null && Number.isFinite(apiLo) && apiLo === apiHi) {
-    return spreadAroundPoint(point);
+  if (anchor != null) {
+    return spreadAroundPoint(anchor);
   }
 
   if (Number.isFinite(apiLo) && Number.isFinite(apiHi)) {
-    return { lo: apiLo, hi: apiHi };
+    return ensureSpreadRange({ lo: apiLo, hi: apiHi }, null);
   }
 
   return null;
@@ -91,10 +116,10 @@ export function displayOfferUsd(result) {
   return formatPointOfferUsd(result);
 }
 
+/** Customer-facing range string; never a single collapsed dollar amount. */
 export function formatOfferRange(result) {
   const range = getDisplayRangeLoHi(result);
-  if (!range) return null;
-  if (range.lo === range.hi) return `$${range.lo.toLocaleString()}`;
+  if (!range || range.lo >= range.hi) return null;
   return `$${range.lo.toLocaleString()} – $${range.hi.toLocaleString()}`;
 }
 
@@ -104,5 +129,5 @@ export function formatPointOffer(result) {
 }
 
 export function hasDisplayableOffer(result) {
-  return Boolean(formatOfferRange(result) || formatPointOffer(result));
+  return Boolean(formatOfferRange(result));
 }

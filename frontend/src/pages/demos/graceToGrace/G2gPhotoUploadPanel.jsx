@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { postG2gPhotoSubmission } from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
-import { formatOfferRange, formatPointOffer } from './displayOffer';
+import { formatOfferRange } from './displayOffer';
 
 const MAX_PHOTOS = 12;
 
@@ -106,10 +106,7 @@ export default function G2gPhotoUploadPanel({
         <form className="g2g-photo-panel g2g-form g2g-mt" onSubmit={handleSubmit}>
           <p className="g2g-field-hint" style={{ margin: '0 0 0.75rem' }}>
             Add photos of the exterior, interior, damage, and odometer if you can. This helps us verify your
-            estimate
-            {formatOfferRange(result) ? ` (${formatOfferRange(result)}` : ''}
-            {formatPointOffer(result) ? `${formatOfferRange(result) ? ', ' : ' ('}offer ${formatPointOffer(result)}` : ''}
-            {(formatOfferRange(result) || formatPointOffer(result)) ? ')' : ''}.
+            estimate{formatOfferRange(result) ? ` (${formatOfferRange(result)})` : ''}.
           </p>
           <input
             ref={inputRef}
