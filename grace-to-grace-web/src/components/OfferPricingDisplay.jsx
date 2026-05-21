@@ -1,4 +1,4 @@
-import { formatOfferRange, formatPointOffer } from '../lib/pricingEngine.js';
+import { formatOfferRange, formatPointOffer } from '../lib/displayOffer.js';
 
 export default function OfferPricingDisplay({ result }) {
   const range = formatOfferRange(result);
