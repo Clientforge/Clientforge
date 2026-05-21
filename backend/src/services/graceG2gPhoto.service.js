@@ -27,6 +27,46 @@ function uploadRootDir() {
   return path.join(__dirname, '../../uploads/g2g');
 }
 
+/** Ensure upload root exists and is writable (call at server startup). */
+function ensureG2gUploadDir() {
+  const root = uploadRootDir();
+  try {
+    fs.mkdirSync(root, { recursive: true });
+    fs.accessSync(root, fs.constants.W_OK);
+    return root;
+  } catch (err) {
+    const msg = err.code === 'EACCES'
+      ? `Upload directory is not writable: ${root}`
+      : `Could not prepare upload directory: ${root} (${err.message})`;
+    console.error('[g2g-photo]', msg);
+    throw new Error(msg);
+  }
+}
+
+function writeUploadedFile(storagePath, buffer) {
+  try {
+    fs.writeFileSync(storagePath, buffer);
+  } catch (err) {
+    if (err.code === 'EACCES') {
+      throw new G2gPhotoError(
+        'Photo storage is not writable on the server. Please contact support.',
+        503,
+      );
+    }
+    throw new G2gPhotoError('Could not save photo file.', 500);
+  }
+}
+
+function mapDbError(err) {
+  if (err.code === '42P01') {
+    return new G2gPhotoError(
+      'Photo submissions are not set up yet (database migration missing).',
+      503,
+    );
+  }
+  return err;
+}
+
 function publicAppBaseUrl() {
   const base = process.env.PUBLIC_APP_BASE_URL?.trim();
   if (base) return base.replace(/\/$/, '');
@@ -118,10 +158,20 @@ function resolveNotifyPhone() {
  * @param {object} params.estimate
  * @param {Express.Multer.File[]} params.files
  */
+function normalizeLeadId(leadId) {
+  const id = String(leadId || '').trim();
+  if (!id) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return null;
+  }
+  return id;
+}
+
 async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, estimate, files }) {
   if (!files || files.length === 0) {
     throw new G2gPhotoError('Upload at least one photo.');
   }
+  const safeLeadId = normalizeLeadId(leadId);
   if (files.length > MAX_FILES) {
     throw new G2gPhotoError(`You can upload up to ${MAX_FILES} photos.`);
   }
@@ -131,7 +181,17 @@ async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, esti
   const submissionId = crypto.randomUUID();
 
   const subDir = path.join(uploadRootDir(), submissionId);
-  fs.mkdirSync(subDir, { recursive: true });
+  try {
+    fs.mkdirSync(subDir, { recursive: true });
+  } catch (err) {
+    if (err.code === 'EACCES') {
+      throw new G2gPhotoError(
+        'Photo storage is not writable on the server. Please contact support.',
+        503,
+      );
+    }
+    throw new G2gPhotoError('Could not create upload folder.', 500);
+  }
 
   const savedFiles = [];
   for (let i = 0; i < files.length; i += 1) {
@@ -147,7 +207,7 @@ async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, esti
     const fileId = crypto.randomUUID();
     const filename = `${fileId}${ext}`;
     const storagePath = path.join(subDir, filename);
-    fs.writeFileSync(storagePath, f.buffer);
+    writeUploadedFile(storagePath, f.buffer);
     savedFiles.push({
       id: fileId,
       storagePath,
@@ -157,85 +217,99 @@ async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, esti
     });
   }
 
-  await db.query(
-    `INSERT INTO g2g_photo_submissions
-       (id, tenant_id, lead_id, review_token, session_id, contact, vehicle, estimate)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)`,
-    [
-      submissionId,
-      tenantId,
-      leadId || null,
-      reviewToken,
-      sessionId ? String(sessionId).slice(0, 80) : null,
-      JSON.stringify(contact),
-      JSON.stringify(vehicle),
-      JSON.stringify(estimate),
-    ],
-  );
-
-  for (const row of savedFiles) {
+  try {
     await db.query(
-      `INSERT INTO g2g_photo_files (id, submission_id, storage_path, mime_type, original_filename, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+      `INSERT INTO g2g_photo_submissions
+         (id, tenant_id, lead_id, review_token, session_id, contact, vehicle, estimate)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)`,
       [
-        row.id,
         submissionId,
-        row.storagePath,
-        row.mime,
-        row.originalName,
-        row.sortOrder,
+        tenantId,
+        safeLeadId,
+        reviewToken,
+        sessionId ? String(sessionId).slice(0, 80) : null,
+        JSON.stringify(contact),
+        JSON.stringify(vehicle),
+        JSON.stringify(estimate),
       ],
     );
+
+    for (const row of savedFiles) {
+      await db.query(
+        `INSERT INTO g2g_photo_files (id, submission_id, storage_path, mime_type, original_filename, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          row.id,
+          submissionId,
+          row.storagePath,
+          row.mime,
+          row.originalName,
+          row.sortOrder,
+        ],
+      );
+    }
+  } catch (err) {
+    if (err instanceof G2gPhotoError) throw err;
+    throw mapDbError(err);
   }
 
   const phone = contact?.phone;
-  const resolvedLeadId = await updateLeadAfterEstimate(tenantId, leadId, phone, {
-    funnelStage: 'PHOTOS_SUBMITTED',
-    photoSubmissionId: submissionId,
-    reviewToken,
-    photosSubmittedAt: new Date().toISOString(),
-  });
-
-  const reviewUrl = `${publicAppBaseUrl()}/g2g-review/${reviewToken}`;
-  const notifyPhone = resolveNotifyPhone();
-  if (notifyPhone && notifyPhone.replace(/\D/g, '').length >= 10) {
-    const from = await resolveFromNumber(tenantId);
-    const smsBody = buildNotifySms({
-      contact,
-      vehicle,
-      estimate,
-      reviewUrl,
-      photoCount: savedFiles.length,
+  let resolvedLeadId = null;
+  try {
+    resolvedLeadId = await updateLeadAfterEstimate(tenantId, safeLeadId, phone, {
+      funnelStage: 'PHOTOS_SUBMITTED',
+      photoSubmissionId: submissionId,
+      reviewToken,
+      photosSubmittedAt: new Date().toISOString(),
     });
-    await sendSms({
-      tenantId,
-      leadId: resolvedLeadId,
-      contactId: null,
-      to: notifyPhone,
-      from,
-      body: smsBody,
-      messageType: 'g2g_photo_submission',
-    });
+  } catch (err) {
+    console.error('[g2g-photo] lead metadata update failed:', err.message);
   }
 
-  const emailTo =
-    process.env.G2G_PHOTO_NOTIFY_EMAIL?.trim() ||
-    process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim() ||
-    process.env.G2G_SELL_NOTIFY_EMAIL?.trim();
-  if (emailTo) {
-    await sendEmail({
-      tenantId,
-      to: emailTo,
-      fromName: 'Grace to Grace',
-      subject: '[G2G PHOTOS] Vehicle photo review',
-      body: buildNotifySms({
+  const reviewUrl = `${publicAppBaseUrl()}/g2g-review/${reviewToken}`;
+  try {
+    const notifyPhone = resolveNotifyPhone();
+    if (notifyPhone && notifyPhone.replace(/\D/g, '').length >= 10) {
+      const from = await resolveFromNumber(tenantId);
+      const smsBody = buildNotifySms({
         contact,
         vehicle,
         estimate,
         reviewUrl,
         photoCount: savedFiles.length,
-      }),
-    });
+      });
+      await sendSms({
+        tenantId,
+        leadId: resolvedLeadId,
+        contactId: null,
+        to: notifyPhone,
+        from,
+        body: smsBody,
+        messageType: 'g2g_photo_submission',
+      });
+    }
+
+    const emailTo =
+      process.env.G2G_PHOTO_NOTIFY_EMAIL?.trim() ||
+      process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim() ||
+      process.env.G2G_SELL_NOTIFY_EMAIL?.trim();
+    if (emailTo) {
+      await sendEmail({
+        tenantId,
+        to: emailTo,
+        fromName: 'Grace to Grace',
+        subject: '[G2G PHOTOS] Vehicle photo review',
+        body: buildNotifySms({
+          contact,
+          vehicle,
+          estimate,
+          reviewUrl,
+          photoCount: savedFiles.length,
+        }),
+      });
+    }
+  } catch (err) {
+    console.error('[g2g-photo] team notification failed (photos saved):', err.message);
   }
 
   return {
@@ -316,6 +390,7 @@ module.exports = {
   createPhotoSubmission,
   getSubmissionByToken,
   getFileForToken,
+  ensureG2gUploadDir,
   G2gPhotoError,
   MAX_FILES,
   MAX_FILE_BYTES,

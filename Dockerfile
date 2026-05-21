@@ -36,8 +36,12 @@ COPY --from=g2g-build /app/grace-to-grace-web/dist ./grace-to-grace-web/dist
 # Marketing / legal HTML
 COPY landing/ ./landing/
 
+# G2G vehicle photo uploads (appuser must be able to write here)
+RUN mkdir -p /app/backend/uploads/g2g
+
 # Non-root user for security
-RUN addgroup -g 1001 -S appuser && adduser -S appuser -u 1001
+RUN addgroup -g 1001 -S appuser && adduser -S appuser -u 1001 \
+  && chown -R appuser:appuser /app/backend/uploads
 USER appuser
 
 EXPOSE 3000

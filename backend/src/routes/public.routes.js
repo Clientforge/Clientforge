@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const multer = require('multer');
+const config = require('../config');
 const { computeGraceEstimate } = require('../services/gracePricingV1.service');
 const {
   processSellIntent,
@@ -281,7 +282,21 @@ router.post('/grace-sell-intent', sellIntentLimiter, async (req, res) => {
 router.post(
   '/g2g-photo-submission',
   sellIntentLimiter,
-  g2gPhotoUpload.array('photos', MAX_FILES),
+  (req, res, next) => {
+    g2gPhotoUpload.array('photos', MAX_FILES)(req, res, (err) => {
+      if (err) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        const msg =
+          err.code === 'LIMIT_FILE_SIZE'
+            ? 'Each photo must be under 8 MB.'
+            : err.code === 'LIMIT_FILE_COUNT'
+              ? `You can upload up to ${MAX_FILES} photos.`
+              : 'Upload failed. Try fewer or smaller photos.';
+        return res.status(400).json({ error: msg });
+      }
+      return next();
+    });
+  },
   async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     try {
@@ -305,7 +320,11 @@ router.post(
         return res.status(400).json({ error: 'Invalid submission data.' });
       }
       console.error('[public/g2g-photo-submission]', err);
-      return res.status(500).json({ error: 'Could not save photos.' });
+      const detail = config.env !== 'production' ? err.message : undefined;
+      return res.status(500).json({
+        error: 'Could not save photos.',
+        ...(detail ? { detail } : {}),
+      });
     }
   },
 );

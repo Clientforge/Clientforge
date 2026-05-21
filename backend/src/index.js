@@ -6,6 +6,7 @@ const db = require('./db/connection');
 const followupWorker = require('./workers/followup.worker');
 const campaignWorker = require('./workers/campaign.worker');
 const appointmentWorker = require('./workers/appointment.worker');
+const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
 const startServer = async () => {
   try {
@@ -14,6 +15,13 @@ const startServer = async () => {
   } catch (err) {
     console.warn('[DB] PostgreSQL not available — running without database');
     console.warn(`[DB] ${err.message}`);
+  }
+
+  try {
+    const uploadDir = ensureG2gUploadDir();
+    console.log(`[G2G] Photo upload directory ready: ${uploadDir}`);
+  } catch (err) {
+    console.error(`[G2G] Photo upload directory not ready: ${err.message}`);
   }
 
   app.listen(config.port, () => {
