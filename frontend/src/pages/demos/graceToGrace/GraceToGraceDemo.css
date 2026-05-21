@@ -679,6 +679,48 @@ a.g2g-logo:focus-visible {
   line-height: 1.15;
 }
 
+.g2g-photo-upload {
+  width: 100%;
+}
+
+.g2g-photo-panel {
+  padding: 1rem;
+  border: 1px solid var(--g2g-border, #e5ddd2);
+  border-radius: 8px;
+  background: var(--g2g-surface, #faf8f5);
+}
+
+.g2g-photo-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.g2g-photo-preview {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--g2g-border, #e5ddd2);
+}
+
+.g2g-photo-preview img {
+  width: 100%;
+  height: 88px;
+  object-fit: cover;
+  display: block;
+}
+
+.g2g-photo-preview__remove {
+  width: 100%;
+  border: 0;
+  background: rgba(42, 34, 24, 0.75);
+  color: #fff;
+  font-size: 0.72rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
 .g2g-disclaimer {
   font-size: 0.8rem;
   color: var(--g2g-muted);

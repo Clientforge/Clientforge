@@ -106,6 +106,11 @@ app.get('/penthos-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'penthos-kitchen-review-thanks.html'));
 });
 
+/** Grace to Grace — internal team vehicle photo review (secret link per submission). */
+app.get('/g2g-review/:token', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'g2g-vehicle-review.html'));
+});
+
 /** SMS-friendly tracked redirects — before SPA fallback */
 app.get('/r/:token', trackedLinkService.handleRedirect);
 
@@ -153,6 +158,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/penthos-review' || req.path.startsWith('/penthos-review/')) {
+    return next();
+  }
+  if (req.path === '/g2g-review' || req.path.startsWith('/g2g-review/')) {
     return next();
   }
   const indexPath = path.join(FRONTEND_DIR, 'index.html');

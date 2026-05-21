@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grace to Grace — Vehicle photo review</title>
+  <style>
+    :root {
+      --bg: #f6f3ee;
+      --card: #fff;
+      --text: #2a2218;
+      --muted: #6b5f52;
+      --accent: #c8860a;
+      --border: #e5ddd2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.25rem; }
+    .sub { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.95rem; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+    }
+    .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.65rem; }
+    dl { margin: 0; }
+    dt { font-weight: 600; font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; }
+    dt:first-child { margin-top: 0; }
+    dd { margin: 0.15rem 0 0; font-size: 0.95rem; }
+    .offer-big { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+    .photos { margin-top: 1.5rem; }
+    .photos h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .photo-grid a {
+      display: block;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #eee;
+    }
+    .photo-grid img { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .err { color: #b42318; padding: 1rem; background: #fef3f2; border-radius: 8px; }
+    .loading { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Vehicle photo review</h1>
+    <p class="sub" id="subtitle">Loading submission…</p>
+    <div id="content" class="loading">Please wait.</div>
+  </div>
+  <script>
+    (function () {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const token = parts[parts.length - 1];
+      const apiBase = window.location.origin + '/api/v1/public/g2g-review/' + encodeURIComponent(token);
+      const content = document.getElementById('content');
+      const subtitle = document.getElementById('subtitle');
+
+      function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+      }
+
+      function row(label, value) {
+        return '<dt>' + esc(label) + '</dt><dd>' + esc(value || '—') + '</dd>';
+      }
+
+      fetch(apiBase)
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (_ref) {
+          var ok = _ref.ok;
+          var data = _ref.j;
+          if (!ok) throw new Error(data.error || 'Could not load review.');
+          subtitle.textContent = 'Submitted ' + new Date(data.createdAt).toLocaleString();
+          var c = data.contact || {};
+          var v = data.vehicle || {};
+          var e = data.estimate || {};
+          var estParts = [];
+          if (e.low != null && e.high != null) {
+            estParts.push('$' + Number(e.low).toLocaleString() + ' – $' + Number(e.high).toLocaleString());
+          }
+          if (e.display) estParts.push('Shown: ' + e.display);
+          else if (e.pointOffer != null) estParts.push('Offer: $' + Number(e.pointOffer).toLocaleString());
+          var ymm = [v.year, v.make, v.model].filter(Boolean).join(' ');
+
+          var html = '<div class="grid">' +
+            '<div class="card"><h2>Customer</h2><dl>' +
+            row('Name', c.firstName) +
+            row('Phone', c.phone) +
+            row('Email', c.email) +
+            '</dl></div>' +
+            '<div class="card"><h2>Vehicle</h2><dl>' +
+            row('Year / Make / Model', ymm) +
+            row('VIN', v.vin) +
+            row('Mileage', v.mileage) +
+            row('ZIP', v.zip) +
+            row('Condition', v.conditionLabel) +
+            '</dl></div>' +
+            '<div class="card"><h2>Estimate shown</h2>' +
+            '<p class="offer-big">' + esc(estParts.join(' · ') || '—') + '</p></div>' +
+            '</div>';
+
+          if (data.files && data.files.length) {
+            html += '<section class="photos"><h2>Photos (' + data.files.length + ')</h2><div class="photo-grid">';
+            data.files.forEach(function (f) {
+              html += '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">' +
+                '<img src="' + esc(f.url) + '" alt="' + esc(f.originalFilename || 'Vehicle photo') + '" loading="lazy" />' +
+                '</a>';
+            });
+            html += '</div></section>';
+          } else {
+            html += '<p class="sub">No photos attached.</p>';
+          }
+          content.innerHTML = html;
+          content.className = '';
+        })
+        .catch(function (err) {
+          subtitle.textContent = '';
+          content.className = 'err';
+          content.textContent = err.message || 'Something went wrong.';
+        });
+    })();
+  </script>
+</body>
+</html>

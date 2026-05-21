@@ -32,8 +32,15 @@ import {
   matchModelToCatalog,
   coerceDecodedYear,
 } from './vehicleCatalog';
-import { displayOfferUsd, hasDisplayableOffer } from './displayOffer';
+import {
+  displayOfferUsd,
+  formatOfferRange,
+  formatPointOffer,
+  formatPointOfferUsd,
+  hasDisplayableOffer,
+} from './displayOffer';
 import OfferPricingDisplay from './OfferPricingDisplay';
+import G2gPhotoUploadPanel from './G2gPhotoUploadPanel';
 import {
   US_STATE_OPTIONS,
   composeSellAddress,
@@ -935,6 +942,47 @@ export default function G2GOffer() {
   const hasCustomOfferFlow = Boolean(result?.meta?.noEstimate);
   const showResultActions = hasPricedOffer || hasCustomOfferFlow;
 
+  const buildVehicleSnapshot = () => {
+    const makeFinal =
+      makeSelect === OTHER_VALUE ? makeOther.trim() : makeSelect.trim();
+    const modelFinal =
+      makeSelect === OTHER_VALUE
+        ? modelOther.trim()
+        : modelSelect === OTHER_VALUE
+          ? modelOther.trim()
+          : modelSelect.trim();
+    const miParsed = parseMileageInput(mileageOdometer);
+    return {
+      year: year.trim(),
+      make: makeFinal,
+      model: modelFinal,
+      zip: zip.trim().replace(/\D/g, '').slice(0, 5),
+      vin: normalizeVin(vin) || undefined,
+      mileage: miParsed != null ? formatMileageDisplay(miParsed) : undefined,
+      conditionLabel: buildSellConditionSummary({
+        titleStatus,
+        mileageOdometer,
+        battery,
+        key,
+        startDrive,
+        tireCondition,
+        exterior,
+        exteriorComplete,
+        catalytic,
+        interiorQuality,
+        bodyDamage,
+      }),
+    };
+  };
+
+  const buildEstimateSnapshot = () => ({
+    low: result?.low ?? null,
+    high: result?.high ?? null,
+    pointOffer: result?.pointOffer ?? formatPointOfferUsd(result) ?? null,
+    display: formatOfferRange(result) || undefined,
+    pointDisplay: formatPointOffer(result) || undefined,
+  });
+
   if (!contactReady) {
     return (
       <>
@@ -1490,6 +1538,14 @@ export default function G2GOffer() {
               <OfferPricingDisplay result={result} />
             </>
           )}
+          {contact && result ? (
+            <G2gPhotoUploadPanel
+              contact={contact}
+              result={result}
+              vehicle={buildVehicleSnapshot()}
+              estimatePayload={buildEstimateSnapshot()}
+            />
+          ) : null}
           <button
             type="button"
             className="g2g-btn g2g-btn--primary g2g-mt"

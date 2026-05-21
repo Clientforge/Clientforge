@@ -1,5 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
+const path = require('path');
+const multer = require('multer');
 const { computeGraceEstimate } = require('../services/gracePricingV1.service');
 const {
   processSellIntent,
@@ -14,8 +16,20 @@ const {
   recordGraceEstimateSnapshot,
   getG2gEstimateSnapshots,
 } = require('../services/graceEstimateSnapshot.service');
+const {
+  createPhotoSubmission,
+  getSubmissionByToken,
+  getFileForToken,
+  G2gPhotoError,
+  MAX_FILES,
+} = require('../services/graceG2gPhoto.service');
 
 const router = express.Router();
+
+const g2gPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: MAX_FILES },
+});
 
 function reportKeyMatches(provided, expected) {
   if (provided == null || expected == null) return false;
@@ -261,6 +275,71 @@ router.post('/grace-sell-intent', sellIntentLimiter, async (req, res) => {
  * Set G2G_SNAPSHOTS_REPORT_KEY (long random string). If unset, route returns 404.
  * Example: GET .../public/g2g-estimate-snapshots-report?key=YOUR_SECRET&page=1&limit=50
  */
+/**
+ * Grace to Grace — customer uploads vehicle photos after estimate.
+ */
+router.post(
+  '/g2g-photo-submission',
+  sellIntentLimiter,
+  g2gPhotoUpload.array('photos', MAX_FILES),
+  async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    try {
+      const contact = JSON.parse(req.body.contact || '{}');
+      const vehicle = JSON.parse(req.body.vehicle || '{}');
+      const estimate = JSON.parse(req.body.estimate || '{}');
+      const result = await createPhotoSubmission({
+        leadId: req.body.leadId || null,
+        sessionId: req.body.sessionId || null,
+        contact,
+        vehicle,
+        estimate,
+        files: req.files || [],
+      });
+      return res.json(result);
+    } catch (err) {
+      if (err instanceof G2gPhotoError) {
+        return res.status(err.statusCode).json({ error: err.message });
+      }
+      if (err instanceof SyntaxError) {
+        return res.status(400).json({ error: 'Invalid submission data.' });
+      }
+      console.error('[public/g2g-photo-submission]', err);
+      return res.status(500).json({ error: 'Could not save photos.' });
+    }
+  },
+);
+
+/** Team review — submission JSON by secret token. */
+router.get('/g2g-review/:token', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const data = await getSubmissionByToken(req.params.token);
+    return res.json(data);
+  } catch (err) {
+    if (err instanceof G2gPhotoError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/g2g-review]', err);
+    return res.status(500).json({ error: 'Could not load review.' });
+  }
+});
+
+/** Team review — serve one uploaded image. */
+router.get('/g2g-review/:token/file/:fileId', async (req, res) => {
+  try {
+    const file = await getFileForToken(req.params.token, req.params.fileId);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.sendFile(path.resolve(file.path));
+  } catch (err) {
+    if (err instanceof G2gPhotoError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/g2g-review/file]', err);
+    return res.status(500).json({ error: 'Could not load file.' });
+  }
+});
+
 router.get('/g2g-estimate-snapshots-report', snapshotReportLimiter, async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const expected = process.env.G2G_SNAPSHOTS_REPORT_KEY;
