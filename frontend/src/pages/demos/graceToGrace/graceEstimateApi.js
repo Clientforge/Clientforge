@@ -18,11 +18,11 @@ export async function postGraceEstimate(payload) {
 }
 
 /** Contact capture before vehicle step — creates/updates CRM lead. */
-export async function postG2gLeadStart({ firstName, phone, email, sessionId }) {
+export async function postG2gLeadStart({ firstName, phone, email, zip, city, state, sessionId }) {
   const res = await fetch(`${apiBase()}/public/g2g-lead/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ firstName, phone, email, sessionId }),
+    body: JSON.stringify({ firstName, phone, email, zip, city, state, sessionId }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

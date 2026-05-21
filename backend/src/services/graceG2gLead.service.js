@@ -101,7 +101,19 @@ function validateContactBody(body) {
   }
   const sessionId =
     body.sessionId != null ? trimStr(body.sessionId, 80) || null : null;
-  return { firstName, phone, email, sessionId };
+  const zip = trimStr(body.zip, 10).replace(/\D/g, '').slice(0, 5);
+  if (zip.length !== 5) {
+    throw new G2gLeadError('Enter a valid 5-digit ZIP code.');
+  }
+  const city = trimStr(body.city, 80);
+  const state = trimStr(body.state, 2).toUpperCase();
+  if (!city) {
+    throw new G2gLeadError('City is required. Enter your ZIP code to look it up.');
+  }
+  if (!/^[A-Z]{2}$/.test(state)) {
+    throw new G2gLeadError('State is required. Enter your ZIP code to look it up.');
+  }
+  return { firstName, phone, email, sessionId, zip, city, state };
 }
 
 /**
@@ -113,6 +125,9 @@ const startG2gLead = async (body) => {
   const metadata = {
     funnelStage: 'ESTIMATE_STARTED',
     sessionId: v.sessionId,
+    zip: v.zip,
+    city: v.city,
+    state: v.state,
   };
 
   const existing = await db.query(

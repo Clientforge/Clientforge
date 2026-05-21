@@ -5,7 +5,7 @@ export function loadG2gContact() {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (!data?.firstName || !data?.phone || !data?.email) return null;
+    if (!data?.firstName || !data?.phone || !data?.email || !data?.zip) return null;
     return data;
   } catch {
     return null;

@@ -708,8 +708,13 @@ a.g2g-logo:focus-visible {
   line-height: 1.15;
 }
 
+.g2g-field-hint--error {
+  color: #9b2c2c;
+}
+
 .g2g-photo-upload {
   width: 100%;
+  margin-top: 0.25rem;
 }
 
 .g2g-photo-panel {

@@ -83,7 +83,7 @@ export default function G2gPhotoUploadPanel({
   if (ok) {
     return (
       <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
-        Thanks — we received your photos. We&apos;ll review them and text you your exact offer.
+        Thanks — we received your photos. We&apos;ll review them and text you your verified offer.
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function G2gPhotoUploadPanel({
     <div className="g2g-photo-upload">
       <button
         type="button"
-        className="g2g-btn g2g-btn--ghost"
+        className="g2g-btn g2g-btn--primary"
         onClick={() => {
           setOpen((o) => !o);
           setErr('');

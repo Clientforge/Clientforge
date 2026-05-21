@@ -22,6 +22,7 @@ import {
 } from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
 import { loadG2gContact, saveG2gContact } from './g2gContactStorage';
+import { lookupUsZipCityState } from './zipLookup';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
 import {
   OTHER_VALUE,
@@ -411,6 +412,11 @@ export default function G2GOffer() {
   const [leadFirstName, setLeadFirstName] = useState(() => loadG2gContact()?.firstName || '');
   const [leadPhone, setLeadPhone] = useState(() => loadG2gContact()?.phone || '');
   const [leadEmail, setLeadEmail] = useState(() => loadG2gContact()?.email || '');
+  const [leadZip, setLeadZip] = useState(() => loadG2gContact()?.zip || '');
+  const [leadCity, setLeadCity] = useState(() => loadG2gContact()?.city || '');
+  const [leadState, setLeadState] = useState(() => loadG2gContact()?.state || '');
+  const [zipLookupBusy, setZipLookupBusy] = useState(false);
+  const [zipLookupErr, setZipLookupErr] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
   const [contactErr, setContactErr] = useState('');
   const contactReady = Boolean(contact);
@@ -420,6 +426,47 @@ export default function G2GOffer() {
       ? 'See what your car is worth — Grace to Grace'
       : 'Get your estimate — Grace to Grace';
   }, [contactReady]);
+
+  useEffect(() => {
+    const digits = leadZip.replace(/\D/g, '').slice(0, 5);
+    if (digits.length !== 5) {
+      setLeadCity('');
+      setLeadState('');
+      setZipLookupErr('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    setZipLookupBusy(true);
+    setZipLookupErr('');
+
+    lookupUsZipCityState(digits)
+      .then((loc) => {
+        if (cancelled) return;
+        if (!loc) {
+          setLeadCity('');
+          setLeadState('');
+          setZipLookupErr('Could not find city and state for that ZIP. Check the code and try again.');
+          return;
+        }
+        setLeadZip(loc.zip);
+        setLeadCity(loc.city);
+        setLeadState(loc.state);
+        setZipLookupErr('');
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setZipLookupErr('Could not look up ZIP right now. Try again in a moment.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setZipLookupBusy(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [leadZip]);
 
   const [vin, setVin] = useState('');
   const [decoding, setDecoding] = useState(false);
@@ -435,7 +482,7 @@ export default function G2GOffer() {
   const [engineNote, setEngineNote] = useState('');
 
   const [mileageOdometer, setMileageOdometer] = useState('');
-  const [zip, setZip] = useState('');
+  const [zip, setZip] = useState(() => loadG2gContact()?.zip || '');
   const [titleStatus, setTitleStatus] = useState('clean');
 
   const [vinStepAcknowledged, setVinStepAcknowledged] = useState(false);
@@ -482,24 +529,43 @@ export default function G2GOffer() {
       setContactErr('Enter a valid email address.');
       return;
     }
+    const zipClean = leadZip.replace(/\D/g, '').slice(0, 5);
+    if (zipClean.length !== 5) {
+      setContactErr('Enter a valid 5-digit ZIP code.');
+      return;
+    }
+    if (!leadCity.trim() || !leadState.trim()) {
+      setContactErr(zipLookupErr || 'Enter your ZIP code and wait for city and state to fill in.');
+      return;
+    }
     setContactBusy(true);
     try {
       const { leadId } = await postG2gLeadStart({
         firstName: leadFirstName.trim(),
         phone: leadPhone.trim(),
         email: leadEmail.trim(),
+        zip: zipClean,
+        city: leadCity.trim(),
+        state: leadState.trim(),
         sessionId: getOrCreateG2gSessionId(),
       });
       const saved = {
         firstName: leadFirstName.trim(),
         phone: leadPhone.trim(),
         email: leadEmail.trim().toLowerCase(),
+        zip: zipClean,
+        city: leadCity.trim(),
+        state: leadState.trim(),
         leadId: leadId || undefined,
       };
       saveG2gContact(saved);
       setContact(saved);
+      setZip(zipClean);
       setSellName(saved.firstName);
       setSellPhone(saved.phone);
+      setSellPickupZip(zipClean);
+      setSellCity(saved.city);
+      setSellState(saved.state);
     } catch (err) {
       setContactErr(err.message || 'Something went wrong.');
     } finally {
@@ -1027,6 +1093,56 @@ export default function G2GOffer() {
               required
             />
           </div>
+          <div className="g2g-field g2g-mt">
+            <label htmlFor="g2g-lead-zip">ZIP code</label>
+            <input
+              id="g2g-lead-zip"
+              name="zip"
+              inputMode="numeric"
+              autoComplete="postal-code"
+              placeholder="30260"
+              maxLength={10}
+              value={leadZip}
+              onChange={(ev) => setLeadZip(ev.target.value)}
+              required
+            />
+            {zipLookupBusy ? (
+              <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
+                Looking up city and state…
+              </p>
+            ) : null}
+            {zipLookupErr ? (
+              <p className="g2g-field-hint g2g-field-hint--error" style={{ margin: '0.35rem 0 0' }}>
+                {zipLookupErr}
+              </p>
+            ) : null}
+          </div>
+          <div className="g2g-field g2g-mt">
+            <div className="g2g-row">
+              <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
+                <label htmlFor="g2g-lead-city">City</label>
+                <input
+                  id="g2g-lead-city"
+                  name="city"
+                  autoComplete="address-level2"
+                  value={leadCity}
+                  readOnly
+                  placeholder={zipLookupBusy ? 'Looking up…' : 'Enter ZIP first'}
+                />
+              </div>
+              <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
+                <label htmlFor="g2g-lead-state">State</label>
+                <input
+                  id="g2g-lead-state"
+                  name="state"
+                  autoComplete="address-level1"
+                  value={leadState}
+                  readOnly
+                  placeholder="—"
+                />
+              </div>
+            </div>
+          </div>
           {contactErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{contactErr}</div> : null}
           <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={contactBusy}>
             {contactBusy ? 'Saving…' : 'Continue to estimate'}
@@ -1541,10 +1657,10 @@ export default function G2GOffer() {
                   This range is an estimate based on what you shared—not your final offer.
                 </p>
                 <h3 className="g2g-exact-offer-step__title">
-                  Upload your vehicle photos to receive your exact offer
+                  Upload your vehicle photos to receive a verified offer
                 </h3>
                 <p className="g2g-exact-offer-step__hint">
-                  Photos help us verify the condition and finalize your offer.
+                  Photos help us confirm the vehicle condition and finalize your offer.
                 </p>
               </div>
             </>
@@ -1556,38 +1672,35 @@ export default function G2GOffer() {
               estimatePayload={buildEstimateSnapshot()}
             />
           ) : null}
-          <button
-            type="button"
-            className="g2g-btn g2g-btn--primary g2g-mt"
-            onClick={() => {
-              if (contact) {
-                if (!sellName.trim()) setSellName(contact.firstName);
-                if (!sellPhone.trim()) setSellPhone(contact.phone);
-              }
-              setSellOpen((o) => !o);
-              setSellErr('');
-              setSellOk(false);
-            }}
-          >
-            {hasCustomOfferFlow
-              ? sellOpen
-                ? 'Hide form'
-                : "Enter your details — we'll text you"
-              : sellOpen
-                ? 'Hide form'
-                : 'Get my exact offer'}
-          </button>
-          {sellOk ? (
-            <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
-              Thanks — we got your details and our team has been notified. We&apos;ll reach out shortly.
-            </div>
+          {hasCustomOfferFlow ? (
+            <>
+              <button
+                type="button"
+                className="g2g-btn g2g-btn--primary g2g-mt"
+                onClick={() => {
+                  if (contact) {
+                    if (!sellName.trim()) setSellName(contact.firstName);
+                    if (!sellPhone.trim()) setSellPhone(contact.phone);
+                  }
+                  setSellOpen((o) => !o);
+                  setSellErr('');
+                  setSellOk(false);
+                }}
+              >
+                {sellOpen ? 'Hide form' : "Enter your details — we'll text you"}
+              </button>
+              {sellOk ? (
+                <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
+                  Thanks — we got your details and our team has been notified. We&apos;ll reach out shortly.
+                </div>
+              ) : null}
+            </>
           ) : null}
-          {sellOpen ? (
+          {hasCustomOfferFlow && sellOpen ? (
             <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
               <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
-                {hasCustomOfferFlow
-                  ? "Share your contact info and pickup address. We'll text our buyer team so someone can follow up with your custom offer."
-                  : 'Share your pickup details so our team can review your vehicle and text you your exact offer. Upload photos above first if you have not already.'}
+                Share your contact info and pickup address. We&apos;ll text our buyer team so someone can follow up with
+                your custom offer.
               </p>
               <div className="g2g-field">
                 <label htmlFor="g2g-sell-name">Your name</label>
@@ -1693,7 +1806,7 @@ export default function G2GOffer() {
           ) : null}
           {!hasCustomOfferFlow ? (
             <p className="g2g-disclaimer">
-              Your exact offer may change after we review your photos and confirm title and pickup details.
+              Your verified offer may change after we review your photos and confirm title and pickup details.
             </p>
           ) : null}
         </div>
