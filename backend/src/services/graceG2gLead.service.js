@@ -167,10 +167,17 @@ function buildEstimateSmsBody(v) {
   const vinPart = v.vin || '—';
   const miPart = v.mileage || '—';
   const condPart = v.conditionLabel || '—';
-  const estPart =
-    v.estimateLow != null && v.estimateHigh != null
-      ? `$${v.estimateLow.toLocaleString()}–$${v.estimateHigh.toLocaleString()}`
-      : v.estimateDisplay || '—';
+  let estPart = v.estimateDisplay || '—';
+  if (
+    estPart === '—'
+    && v.estimateLow != null
+    && v.estimateHigh != null
+    && v.estimateLow !== v.estimateHigh
+  ) {
+    estPart = `$${v.estimateLow.toLocaleString()}–$${v.estimateHigh.toLocaleString()}`;
+  } else if (estPart === '—' && v.estimateLow != null && Number.isFinite(v.estimateLow)) {
+    estPart = `$${v.estimateLow.toLocaleString()}`;
+  }
   return (
     `[G2G ESTIMATE] New estimate inquiry\n` +
     `Name: ${v.customerName}\n` +
@@ -189,16 +196,53 @@ function buildEstimateEmailBody(v) {
   return buildEstimateSmsBody(v);
 }
 
+/** Contact fields for estimate notify — zip required; city/state optional. */
+function validateEstimateNotifyContact(body) {
+  if (!body || typeof body !== 'object') {
+    throw new G2gLeadError('Invalid request body.');
+  }
+  const firstName = trimStr(body.firstName, 80);
+  if (firstName.length < 2) {
+    throw new G2gLeadError('Enter your first name (at least 2 characters).');
+  }
+  const phoneRaw = trimStr(body.phone, 32);
+  if (!phoneRaw) {
+    throw new G2gLeadError('Phone number is required.');
+  }
+  let phone;
+  try {
+    phone = normalizePhone(phoneRaw);
+  } catch {
+    throw new G2gLeadError('Enter a valid phone number.');
+  }
+  if (phone.replace(/\D/g, '').length < 10) {
+    throw new G2gLeadError('Enter a valid phone number.');
+  }
+  const email = trimStr(body.email, 254).toLowerCase();
+  if (!email || !isValidEmail(email)) {
+    throw new G2gLeadError('Enter a valid email address.');
+  }
+  const sessionId =
+    body.sessionId != null ? trimStr(body.sessionId, 80) || null : null;
+  const zip = trimStr(body.zip, 10).replace(/\D/g, '').slice(0, 5);
+  if (zip.length !== 5) {
+    throw new G2gLeadError('ZIP code is required.');
+  }
+  const city = trimStr(body.city, 80) || null;
+  const state = trimStr(body.state, 2).toUpperCase() || null;
+  return { firstName, phone, email, sessionId, zip, city, state };
+}
+
 function validateEstimateNotifyBody(body) {
-  const contact = validateContactBody(body);
+  const contact = validateEstimateNotifyContact(body);
   const year = trimStr(body.year, 4);
   const make = trimStr(body.make, 80);
   const model = trimStr(body.model, 80);
-  const zip = trimStr(body.zip, 10).replace(/\D/g, '').slice(0, 5);
+  const vehicleZip = trimStr(body.zip, 10).replace(/\D/g, '').slice(0, 5);
   if (!year || !make || !model) {
     throw new G2gLeadError('Vehicle year, make, and model are required.');
   }
-  if (zip.length < 5) {
+  if (vehicleZip.length < 5) {
     throw new G2gLeadError('ZIP code is required.');
   }
   const vin = trimStr(body.vin, 17).toUpperCase().replace(/\s/g, '') || null;
@@ -222,7 +266,7 @@ function validateEstimateNotifyBody(body) {
     year,
     make,
     model,
-    zip,
+    zip: vehicleZip,
     vin,
     mileage,
     conditionLabel,
@@ -230,7 +274,7 @@ function validateEstimateNotifyBody(body) {
     estimateHigh,
     estimateDisplay,
     leadId: leadId || null,
-    vehicle: { year, make, model, zip, vin, mileage, conditionLabel },
+    vehicle: { year, make, model, zip: vehicleZip, vin, mileage, conditionLabel },
     estimate: { low: estimateLow, high: estimateHigh, display: estimateDisplay },
   };
 }
@@ -281,6 +325,9 @@ const notifyG2gEstimateLead = async (body) => {
   const resolvedLeadId = await updateLeadAfterEstimate(tenantId, v.leadId, v.phone, {
     funnelStage: 'ESTIMATE_COMPLETED',
     sessionId: v.sessionId,
+    zip: v.zip,
+    city: v.city,
+    state: v.state,
     vehicle: v.vehicle,
     estimate: v.estimate,
     estimateNotifiedAt: new Date().toISOString(),

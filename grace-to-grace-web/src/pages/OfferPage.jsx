@@ -3,9 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import {
   computeOfferRange,
   CONDITION_OPTIONS,
-  displayOfferUsd,
   hasDisplayableOffer,
 } from '../lib/pricingEngine.js';
+import { formatOfferRange, getDisplayRangeLoHi } from '../lib/displayOffer.js';
 import OfferPricingDisplay from '../components/OfferPricingDisplay.jsx';
 import { decodeVin, isValidVinFormat, normalizeVin } from '../lib/vinDecode.js';
 import { BRAND } from '../constants.js';
@@ -242,24 +242,29 @@ export default function OfferPage() {
       result: range,
     }).catch(() => {});
     if (contact) {
-      const offerUsd = displayOfferUsd(range);
+      const displayRange = formatOfferRange(range);
+      const rangeLoHi = getDisplayRangeLoHi(range);
       postG2gNotifyEstimate({
         firstName: contact.firstName,
         phone: contact.phone,
         email: contact.email,
+        zip: zipClean,
+        city: contact.city,
+        state: contact.state,
         leadId: contact.leadId,
         sessionId: getOrCreateG2gSessionId(),
         year: year.trim(),
         make: make.trim(),
         model: model.trim(),
-        zip: zipClean,
         vin: normalizeVin(vin) || undefined,
         mileage: mileage.trim() || undefined,
         conditionLabel,
-        estimateLow: range.low,
-        estimateHigh: range.high,
-        estimateDisplay: offerUsd != null ? `$${offerUsd.toLocaleString()}` : undefined,
-      }).catch(() => {});
+        estimateLow: rangeLoHi?.lo ?? range.low,
+        estimateHigh: rangeLoHi?.hi ?? range.high,
+        estimateDisplay: displayRange || undefined,
+      }).catch((err) => {
+        console.warn('[G2G] Estimate team notify failed:', err?.message || err);
+      });
     }
   };
 

@@ -40,7 +40,9 @@ export async function postG2gNotifyEstimate(payload) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    console.warn('[g2g-notify-estimate]', data.error || res.status);
+    const msg = data.error || `Estimate notify failed (${res.status})`;
+    console.warn('[g2g-notify-estimate]', msg);
+    throw new Error(msg);
   }
   return data;
 }

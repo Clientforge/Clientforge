@@ -38,6 +38,7 @@ import {
   formatOfferRange,
   formatPointOffer,
   formatPointOfferUsd,
+  getDisplayRangeLoHi,
   hasDisplayableOffer,
 } from './displayOffer';
 import OfferPricingDisplay from './OfferPricingDisplay';
@@ -857,7 +858,8 @@ export default function G2GOffer() {
       });
       setResult(range);
       if (contact) {
-        const offerDisplay = displayOfferUsd(range);
+        const displayRange = formatOfferRange(range);
+        const rangeLoHi = getDisplayRangeLoHi(range);
         const conditionLabel = buildSellConditionSummary({
           titleStatus,
           mileageOdometer,
@@ -877,20 +879,23 @@ export default function G2GOffer() {
           firstName: contact.firstName,
           phone: contact.phone,
           email: contact.email,
+          zip: zipClean,
+          city: contact.city,
+          state: contact.state,
           leadId: contact.leadId,
           sessionId: getOrCreateG2gSessionId(),
           year: year.trim(),
           make: makeFinal,
           model: modelFinal,
-          zip: zipClean,
           vin: normalizeVin(vin) || undefined,
           mileage: miParsed != null ? formatMileageDisplay(miParsed) : undefined,
           conditionLabel,
-          estimateLow: range.low != null ? range.low : undefined,
-          estimateHigh: range.high != null ? range.high : undefined,
-          estimateDisplay:
-            offerDisplay != null ? `$${offerDisplay.toLocaleString()}` : undefined,
-        }).catch(() => {});
+          estimateLow: rangeLoHi?.lo ?? (range.low != null ? range.low : undefined),
+          estimateHigh: rangeLoHi?.hi ?? (range.high != null ? range.high : undefined),
+          estimateDisplay: displayRange || undefined,
+        }).catch((err) => {
+          console.warn('[G2G] Estimate team notify failed:', err?.message || err);
+        });
       }
     } catch (err) {
       setFormError(err.message || 'Could not reach pricing service.');
