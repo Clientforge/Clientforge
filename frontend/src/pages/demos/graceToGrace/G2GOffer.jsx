@@ -1536,12 +1536,22 @@ export default function G2GOffer() {
             <>
               <h2>Here&apos;s what your car could be worth</h2>
               <OfferPricingDisplay result={result} />
+              <div className="g2g-exact-offer-step">
+                <p className="g2g-estimate-note">
+                  This range is an estimate based on what you shared—not your final offer.
+                </p>
+                <h3 className="g2g-exact-offer-step__title">
+                  Upload your vehicle photos to receive your exact offer
+                </h3>
+                <p className="g2g-exact-offer-step__hint">
+                  Photos help us verify the condition and finalize your offer.
+                </p>
+              </div>
             </>
           )}
-          {contact && result ? (
+          {contact && result && !hasCustomOfferFlow ? (
             <G2gPhotoUploadPanel
               contact={contact}
-              result={result}
               vehicle={buildVehicleSnapshot()}
               estimatePayload={buildEstimateSnapshot()}
             />
@@ -1563,7 +1573,9 @@ export default function G2GOffer() {
               ? sellOpen
                 ? 'Hide form'
                 : "Enter your details — we'll text you"
-              : `${sellOpen ? 'Hide' : 'Sell'} now — we'll text you`}
+              : sellOpen
+                ? 'Hide form'
+                : 'Get my exact offer'}
           </button>
           {sellOk ? (
             <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
@@ -1575,7 +1587,7 @@ export default function G2GOffer() {
               <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
                 {hasCustomOfferFlow
                   ? "Share your contact info and pickup address. We'll text our buyer team so someone can follow up with your custom offer."
-                  : 'Confirm how we can reach you. Submitting sends a text alert to our buyer team with your vehicle and offer details.'}
+                  : 'Share your pickup details so our team can review your vehicle and text you your exact offer. Upload photos above first if you have not already.'}
               </p>
               <div className="g2g-field">
                 <label htmlFor="g2g-sell-name">Your name</label>
@@ -1681,8 +1693,7 @@ export default function G2GOffer() {
           ) : null}
           {!hasCustomOfferFlow ? (
             <p className="g2g-disclaimer">
-              This amount is an estimate based on what you shared. Your final offer may change after we confirm the
-              vehicle, title, and pickup details.
+              Your exact offer may change after we review your photos and confirm title and pickup details.
             </p>
           ) : null}
         </div>

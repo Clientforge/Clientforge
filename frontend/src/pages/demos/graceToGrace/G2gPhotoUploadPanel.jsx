@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { postG2gPhotoSubmission } from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
-import { formatOfferRange } from './displayOffer';
 
 const MAX_PHOTOS = 12;
 
 export default function G2gPhotoUploadPanel({
   contact,
-  result,
   vehicle,
   estimatePayload,
   onSuccess,
@@ -85,13 +83,13 @@ export default function G2gPhotoUploadPanel({
   if (ok) {
     return (
       <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
-        Thanks — we received your photos. Our team will review them shortly.
+        Thanks — we received your photos. We&apos;ll review them and text you your exact offer.
       </div>
     );
   }
 
   return (
-    <div className="g2g-photo-upload g2g-mt">
+    <div className="g2g-photo-upload">
       <button
         type="button"
         className="g2g-btn g2g-btn--ghost"
@@ -105,8 +103,7 @@ export default function G2gPhotoUploadPanel({
       {open ? (
         <form className="g2g-photo-panel g2g-form g2g-mt" onSubmit={handleSubmit}>
           <p className="g2g-field-hint" style={{ margin: '0 0 0.75rem' }}>
-            Add photos of the exterior, interior, damage, and odometer if you can. This helps us verify your
-            estimate{formatOfferRange(result) ? ` (${formatOfferRange(result)})` : ''}.
+            Add photos of the exterior, interior, damage, and odometer if you can.
           </p>
           <input
             ref={inputRef}
