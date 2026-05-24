@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const leadService = require('../services/lead.service');
 const smsService = require('../services/sms.service');
+const { handleBookingEmailWebhook } = require('./bookingEmail.webhook');
+
+/**
+ * POST /api/v1/webhook/booking-email
+ * Forwarded booking confirmations (info@clientforge-ai.com).
+ */
+router.post('/booking-email', express.json({ limit: '5mb' }), handleBookingEmailWebhook);
 
 /**
  * POST /api/v1/webhook/leads

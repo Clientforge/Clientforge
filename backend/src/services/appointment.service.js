@@ -4,7 +4,7 @@ const { normalizePhone } = require('./lead.service');
 /**
  * Upsert contact from booking event. Match by tenant_id + phone (or email if no phone).
  */
-const upsertContact = async (tenantId, contactData) => {
+const upsertContact = async (tenantId, contactData, source = 'calendly') => {
   const phone = contactData.phone ? normalizePhone(contactData.phone) : null;
   const email = (contactData.email || '').trim().toLowerCase() || null;
 
@@ -28,10 +28,10 @@ const upsertContact = async (tenantId, contactData) => {
           first_name = COALESCE(NULLIF($2, ''), first_name),
           last_name = COALESCE(NULLIF($3, ''), last_name),
           email = COALESCE(NULLIF($4, ''), email),
-          source = CASE WHEN source = 'import' THEN 'calendly' ELSE source END,
+          source = CASE WHEN source = 'import' THEN $5 ELSE source END,
           updated_at = NOW()
          WHERE id = $1`,
-        [id, contactData.firstName || '', contactData.lastName || '', contactData.email || ''],
+        [id, contactData.firstName || '', contactData.lastName || '', contactData.email || '', source],
       );
       return id;
     }
@@ -50,10 +50,10 @@ const upsertContact = async (tenantId, contactData) => {
           first_name = COALESCE(NULLIF($2, ''), first_name),
           last_name = COALESCE(NULLIF($3, ''), last_name),
           phone = COALESCE(NULLIF($4, ''), phone),
-          source = CASE WHEN source = 'import' THEN 'calendly' ELSE source END,
+          source = CASE WHEN source = 'import' THEN $5 ELSE source END,
           updated_at = NOW()
          WHERE id = $1`,
-        [id, contactData.firstName || '', contactData.lastName || '', phone || ''],
+        [id, contactData.firstName || '', contactData.lastName || '', phone || '', source],
       );
       return id;
     }
@@ -63,7 +63,7 @@ const upsertContact = async (tenantId, contactData) => {
   const insertPhone = phone || (email ? `e-${email}` : `unknown-${Date.now()}`);
   const result = await db.query(
     `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, source)
-     VALUES ($1, $2, $3, $4, $5, 'calendly')
+     VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (tenant_id, phone) DO UPDATE SET
        first_name = COALESCE(NULLIF(EXCLUDED.first_name, ''), contacts.first_name),
        last_name = COALESCE(NULLIF(EXCLUDED.last_name, ''), contacts.last_name),
@@ -76,6 +76,7 @@ const upsertContact = async (tenantId, contactData) => {
       contactData.lastName || null,
       insertPhone,
       contactData.email || null,
+      source,
     ],
   );
   return result.rows[0].id;
@@ -125,8 +126,8 @@ const upsertAppointment = async (tenantId, contactId, appointmentData, status = 
 /**
  * Process canonical event from adapter: upsert contact + appointment, return for workflow dispatch.
  */
-const processBookingEvent = async (tenantId, { eventType, contact, appointment }) => {
-  const contactId = await upsertContact(tenantId, contact);
+const processBookingEvent = async (tenantId, { eventType, contact, appointment, contactSource }) => {
+  const contactId = await upsertContact(tenantId, contact, contactSource || appointment?.provider || 'calendly');
 
   let status = 'scheduled';
   if (eventType === 'booking.cancelled') status = 'cancelled';

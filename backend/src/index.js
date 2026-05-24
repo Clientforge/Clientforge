@@ -5,7 +5,7 @@ const config = require('./config');
 const db = require('./db/connection');
 const followupWorker = require('./workers/followup.worker');
 const campaignWorker = require('./workers/campaign.worker');
-const appointmentWorker = require('./workers/appointment.worker');
+const bookingEmailWorker = require('./workers/bookingEmail.worker');
 const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
 const startServer = async () => {
@@ -33,6 +33,7 @@ const startServer = async () => {
     followupWorker.startWorker();
     campaignWorker.startWorker();
     appointmentWorker.startWorker();
+    bookingEmailWorker.startWorker();
   });
 };
 
