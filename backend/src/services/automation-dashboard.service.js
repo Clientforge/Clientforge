@@ -92,13 +92,15 @@ const listAppointmentRecords = async (tenantId, { page = 1, limit = 20, status, 
 
   const result = await db.query(
     `SELECT a.id, a.external_id, a.provider, a.status, a.scheduled_at, a.timezone,
-            a.service_name, a.duration_minutes, a.created_at,
+            a.service_name, a.duration_minutes, a.created_at, a.matched_service_id,
+            ts.name AS matched_service_name, ts.return_interval_days AS matched_return_interval_days,
             c.id AS contact_id, c.first_name, c.last_name, c.phone, c.email,
             (SELECT COUNT(*)::int FROM appointment_workflow_jobs j WHERE j.appointment_id = a.id) AS job_count,
             (SELECT COUNT(*)::int FROM appointment_workflow_jobs j WHERE j.appointment_id = a.id AND j.status = 'sent') AS sent_count,
             (SELECT COUNT(*)::int FROM appointment_workflow_jobs j WHERE j.appointment_id = a.id AND j.status = 'pending') AS pending_count
      FROM appointments a
      JOIN contacts c ON c.id = a.contact_id
+     LEFT JOIN tenant_services ts ON ts.id = a.matched_service_id
      WHERE ${where}
      ORDER BY a.scheduled_at DESC
      LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -118,9 +120,11 @@ const listAppointmentRecords = async (tenantId, { page = 1, limit = 20, status, 
 
 const getAppointmentRecord = async (tenantId, appointmentId) => {
   const apptResult = await db.query(
-    `SELECT a.*, c.first_name, c.last_name, c.phone, c.email
+    `SELECT a.*, c.first_name, c.last_name, c.phone, c.email,
+            ts.name AS matched_service_name, ts.return_interval_days AS matched_return_interval_days
      FROM appointments a
      JOIN contacts c ON c.id = a.contact_id
+     LEFT JOIN tenant_services ts ON ts.id = a.matched_service_id
      WHERE a.id = $1 AND a.tenant_id = $2`,
     [appointmentId, tenantId],
   );
@@ -273,6 +277,9 @@ const mapAppointmentRow = (row) => ({
   scheduledAt: row.scheduled_at,
   timezone: row.timezone,
   serviceName: row.service_name,
+  matchedServiceId: row.matched_service_id,
+  matchedServiceName: row.matched_service_name || null,
+  matchedReturnIntervalDays: row.matched_return_interval_days ?? null,
   durationMinutes: row.duration_minutes,
   createdAt: row.created_at,
   contactId: row.contact_id,

@@ -166,6 +166,15 @@ function AppointmentTimeline({ detail }) {
       <div className="timeline-meta">
         <div><span className="muted">When</span> {formatDateTime(appointment.scheduledAt)}</div>
         <div><span className="muted">Service</span> {appointment.serviceName || '—'}</div>
+        {appointment.matchedServiceName && (
+          <div>
+            <span className="muted">Matched</span>{' '}
+            {appointment.matchedServiceName}
+            {appointment.matchedReturnIntervalDays
+              ? ` · rebook in ${appointment.matchedReturnIntervalDays} days`
+              : ''}
+          </div>
+        )}
         <div><span className="muted">Source</span> {appointment.provider}</div>
         <div><span className="muted">Contact</span> {contact.phone || contact.email || '—'}</div>
       </div>

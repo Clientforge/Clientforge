@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const automationService = require('../services/appointment-automation.service');
 const dashboardService = require('../services/automation-dashboard.service');
+const tenantService = require('../services/tenant-service.service');
 const aiService = require('../services/ai.service');
 
 router.get('/appointment-records', async (req, res, next) => {
@@ -95,6 +96,20 @@ router.put('/appointments', async (req, res, next) => {
   try {
     const updated = await automationService.updateAutomations(req.tenantId, req.body);
     res.json(updated);
+  } catch (err) { next(err); }
+});
+
+router.get('/services', async (req, res, next) => {
+  try {
+    const result = await tenantService.listServices(req.tenantId);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.put('/services', async (req, res, next) => {
+  try {
+    const result = await tenantService.replaceServices(req.tenantId, req.body.services);
+    res.json(result);
   } catch (err) { next(err); }
 });
 

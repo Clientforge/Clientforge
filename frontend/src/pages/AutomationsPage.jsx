@@ -2,9 +2,11 @@ import { useState } from 'react';
 import WorkflowsPanel from './automations/WorkflowsPanel';
 import AppointmentsPanel from './automations/AppointmentsPanel';
 import EmailIngestPanel from './automations/EmailIngestPanel';
+import ServicesPanel from './automations/ServicesPanel';
 
 const VIEWS = [
   { key: 'workflows', label: 'Workflows' },
+  { key: 'services', label: 'Services' },
   { key: 'appointments', label: 'Appointments' },
   { key: 'email', label: 'Email Ingest' },
 ];
@@ -53,6 +55,7 @@ export default function AutomationsPage() {
       </div>
 
       {view === 'workflows' && <WorkflowsPanel />}
+      {view === 'services' && <ServicesPanel />}
       {view === 'appointments' && <AppointmentsPanel />}
       {view === 'email' && <EmailIngestPanel />}
     </div>
