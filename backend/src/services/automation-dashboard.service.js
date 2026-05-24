@@ -54,6 +54,9 @@ const JOB_TYPE_LABELS = {
   post_visit: 'Post-visit follow-up',
   review_request: 'Review request',
   rebooking: 'Rebooking',
+  rebooking_initial: 'Rebooking (initial)',
+  rebooking_followup_1: 'Rebooking (follow-up 1)',
+  rebooking_followup_2: 'Rebooking (follow-up 2)',
   cancellation: 'Cancellation',
   reschedule: 'Reschedule',
 };

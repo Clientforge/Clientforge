@@ -2,6 +2,7 @@ const db = require('../db/connection');
 const smsService = require('../services/sms.service');
 const emailService = require('../services/email.service');
 const compliance = require('../services/compliance.service');
+const rebookingCampaign = require('../services/rebooking-campaign.service');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
 
@@ -47,6 +48,21 @@ const processDueAppointmentJobs = async () => {
           [job.id],
         );
         continue;
+      }
+
+      if (rebookingCampaign.isRebookingJobType(job.job_type)) {
+        const booked = await rebookingCampaign.hasFutureBooking(
+          job.tenant_id,
+          job.contact_id,
+          { excludeAppointmentId: job.appointment_id },
+        );
+        if (booked) {
+          await rebookingCampaign.cancelRebookingJobsForContact(job.tenant_id, job.contact_id);
+          console.log(
+            `[APPT-WORKER] Skipped rebooking job ${job.id} — contact has a future appointment`,
+          );
+          continue;
+        }
       }
 
       if (job.channel === 'sms') {

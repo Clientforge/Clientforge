@@ -5,6 +5,7 @@ const emailService = require('./email.service');
 const compliance = require('./compliance.service');
 const automationService = require('./appointment-automation.service');
 const tenantService = require('./tenant-service.service');
+const rebookingCampaign = require('./rebooking-campaign.service');
 
 /**
  * Dispatch workflows based on booking event type.
@@ -50,6 +51,7 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
   }
 
   if (eventType === 'booking.created') {
+    await rebookingCampaign.cancelRebookingJobsForContact(tenantId, contactId);
     await scheduleAutomationSteps(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
     await scheduleRebooking(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
   }
@@ -122,56 +124,97 @@ const scheduleRebooking = async (
     await tenantService.setAppointmentMatchedService(appointmentId, matched.id);
   }
 
-  const rebookStep = (config.rebooking?.steps || []).find((s) => s.enabled !== false && s.message);
-  const channel = rebookStep?.channel || 'sms';
+  const steps = config.rebooking?.steps || [];
+  const initialStep = steps[0];
+  const followup1Step = steps[1];
+  const followup2Step = steps[2];
+  const followupIntervalDays = config.rebooking?.followup_interval_days || 14;
 
   let offsetDays = null;
-  let message = null;
-  let emailSubject = null;
   let source = 'generic';
 
   if (matched?.rebookingEnabled && Number.isFinite(matched.returnIntervalDays) && matched.returnIntervalDays > 0) {
     offsetDays = matched.returnIntervalDays;
-    message = matched.rebookMessage || rebookStep?.message || null;
-    emailSubject = matched.rebookEmailSubject || rebookStep?.email_subject || null;
     source = 'service';
-  } else if (config.rebooking?.enabled && rebookStep) {
-    offsetDays = Math.max(1, Math.round(rebookStep.offset_minutes / (60 * 24)));
-    message = rebookStep.message;
-    emailSubject = rebookStep.email_subject;
+  } else if (config.rebooking?.enabled && initialStep) {
+    offsetDays = Math.max(1, Math.round(initialStep.offset_minutes / (60 * 24)));
     source = 'generic';
   }
 
-  if (!offsetDays || !message) return;
-
-  const runAt = new Date(appointmentTime.getTime() + offsetDays * 24 * 60 * 60 * 1000);
-  if (runAt <= new Date()) return;
+  if (!offsetDays) return;
 
   const serviceVars = {
     ...vars,
     serviceName: matched?.name || appointment.service_name || vars.serviceName,
   };
 
-  const body = automationService.renderTemplate(message, serviceVars);
-  const subject = automationService.renderTemplate(
-    emailSubject || 'Time to rebook — {businessName}',
-    serviceVars,
+  const campaignSteps = [
+    {
+      jobType: 'rebooking_initial',
+      step: initialStep,
+      message: matched?.rebookMessage || initialStep?.message || null,
+      emailSubject: matched?.rebookEmailSubject || initialStep?.email_subject || null,
+      runAt: new Date(appointmentTime.getTime() + offsetDays * 24 * 60 * 60 * 1000),
+    },
+    {
+      jobType: 'rebooking_followup_1',
+      step: followup1Step,
+      message: followup1Step?.message || null,
+      emailSubject: followup1Step?.email_subject || null,
+      runAt: null,
+    },
+    {
+      jobType: 'rebooking_followup_2',
+      step: followup2Step,
+      message: followup2Step?.message || null,
+      emailSubject: followup2Step?.email_subject || null,
+      runAt: null,
+    },
+  ];
+
+  campaignSteps[1].runAt = new Date(
+    campaignSteps[0].runAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000,
+  );
+  campaignSteps[2].runAt = new Date(
+    campaignSteps[1].runAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000,
   );
 
-  const channels = automationService.channelsForStep(channel);
-  for (const ch of channels) {
-    await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, 'rebooking', {
-      scheduledAt: runAt.toISOString(),
-      channel: ch,
-      messageBody: body,
-      emailSubject: ch === 'email' ? subject : null,
-    });
+  let scheduledCount = 0;
+  const now = new Date();
+
+  for (const item of campaignSteps) {
+    if (!item.message || !item.runAt || item.runAt <= now) continue;
+
+    const isInitial = item.jobType === 'rebooking_initial';
+    if (!isInitial && (!item.step || item.step.enabled === false)) continue;
+    if (isInitial && item.step?.enabled === false && source !== 'service') continue;
+
+    const body = automationService.renderTemplate(item.message, serviceVars);
+    const subject = automationService.renderTemplate(
+      item.emailSubject || 'Time to rebook — {businessName}',
+      serviceVars,
+    );
+    const channel = item.step.channel || initialStep?.channel || 'sms';
+    const channels = automationService.channelsForStep(channel);
+
+    for (const ch of channels) {
+      await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, item.jobType, {
+        scheduledAt: item.runAt.toISOString(),
+        channel: ch,
+        messageBody: body,
+        emailSubject: ch === 'email' ? subject : null,
+      });
+      scheduledCount++;
+    }
   }
 
-  console.log(
-    `[APPT-WORKFLOW] Scheduled ${source} rebooking in ${offsetDays}d for appointment ${appointmentId}`
-    + (matched ? ` (${matched.name})` : ''),
-  );
+  if (scheduledCount > 0) {
+    console.log(
+      `[APPT-WORKFLOW] Scheduled ${source} rebooking campaign (${scheduledCount} job(s))`
+      + ` starting ${offsetDays}d after visit for appointment ${appointmentId}`
+      + (matched ? ` (${matched.name})` : ''),
+    );
+  }
 };
 
 const sendEventMessage = async (tenantId, contactId, contact, tenant, eventConfig, vars, messageType) => {

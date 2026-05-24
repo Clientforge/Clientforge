@@ -203,14 +203,31 @@ async function ensureRebookingAutomation(tenantId) {
   const current = await automationService.getAutomations(tenantId);
   const rebooking = {
     enabled: true,
+    followupIntervalDays: 14,
     steps: [
       {
-        id: 'rebook-default',
+        id: 'rebook-initial',
         enabled: true,
         channel: 'sms',
         offset_minutes: 43200,
         message: DEFAULT_REBOOK_MESSAGE,
         email_subject: 'Time for your {serviceName} — {businessName}',
+      },
+      {
+        id: 'rebook-followup-1',
+        enabled: true,
+        channel: 'sms',
+        offset_minutes: 0,
+        message: 'Hi {firstName}! Just checking in — ready to schedule your next {serviceName} at {businessName}? {bookingLink}',
+        email_subject: 'Reminder: Book your {serviceName} — {businessName}',
+      },
+      {
+        id: 'rebook-followup-2',
+        enabled: true,
+        channel: 'sms',
+        offset_minutes: 0,
+        message: 'Hi {firstName}, we\'d still love to see you for your {serviceName}. Book at {businessName}: {bookingLink}',
+        email_subject: 'Last reminder: {serviceName} at {businessName}',
       },
     ],
   };
@@ -260,7 +277,7 @@ async function main() {
   await ensureBookingAlias(tenant.id);
 
   console.log(`[seed] Loaded ${result.services.length} services for ${tenant.name}`);
-  console.log('[seed] Enabled default rebooking SMS template');
+  console.log('[seed] Enabled 3-step rebooking campaign (initial + 2 follow-ups every 14 days)');
   console.log('[seed] Ensured booking email alias "Cherished Aesthetics"');
   process.exit(0);
 }

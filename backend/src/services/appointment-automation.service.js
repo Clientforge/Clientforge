@@ -83,12 +83,28 @@ const DEFAULT_STEPS = {
   ],
   rebooking: [
     {
-      id: 'rebook-30d',
-      enabled: false,
+      id: 'rebook-initial',
+      enabled: true,
       channel: 'sms',
       offset_minutes: 43200,
-      message: 'Hi {firstName}! It\'s been a while since your last visit to {businessName}. Ready to book again? {bookingLink}',
-      email_subject: 'We\'d Love to See You Again — {businessName}',
+      message: 'Hi {firstName}! It\'s time for your {serviceName} at {businessName}. Book your next visit: {bookingLink}',
+      email_subject: 'Time for your {serviceName} — {businessName}',
+    },
+    {
+      id: 'rebook-followup-1',
+      enabled: true,
+      channel: 'sms',
+      offset_minutes: 0,
+      message: 'Hi {firstName}! Just checking in — ready to schedule your next {serviceName} at {businessName}? {bookingLink}',
+      email_subject: 'Reminder: Book your {serviceName} — {businessName}',
+    },
+    {
+      id: 'rebook-followup-2',
+      enabled: true,
+      channel: 'sms',
+      offset_minutes: 0,
+      message: 'Hi {firstName}, we\'d still love to see you for your {serviceName}. Book at {businessName}: {bookingLink}',
+      email_subject: 'Last reminder: {serviceName} at {businessName}',
     },
   ],
 };
@@ -98,7 +114,7 @@ const buildDefaultConfig = () => ({
   reminders: { enabled: true, steps: DEFAULT_STEPS.reminders.map((s) => ({ ...s })) },
   post_appointment: { enabled: true, steps: DEFAULT_STEPS.post_appointment.map((s) => ({ ...s })) },
   review_requests: { enabled: false, steps: DEFAULT_STEPS.review_requests.map((s) => ({ ...s })) },
-  rebooking: { enabled: false, steps: DEFAULT_STEPS.rebooking.map((s) => ({ ...s })) },
+  rebooking: { enabled: false, followup_interval_days: 14, steps: DEFAULT_STEPS.rebooking.map((s) => ({ ...s })) },
   event_messages: {
     cancellation: { ...DEFAULT_EVENT_MESSAGES.cancellation },
     reschedule: { ...DEFAULT_EVENT_MESSAGES.reschedule },
@@ -126,10 +142,19 @@ const normalizeCategory = (raw, key) => {
     ? raw.steps.map((step, idx) => normalizeStep(step, defaults.steps[idx] || defaults.steps[0]))
     : defaults.steps.map((s) => ({ ...s }));
 
-  return {
+  const section = {
     enabled: raw?.enabled !== false,
     steps,
   };
+
+  if (key === 'rebooking') {
+    const followupDays = Number(raw?.followup_interval_days ?? raw?.followupIntervalDays);
+    section.followup_interval_days = Number.isFinite(followupDays) && followupDays > 0
+      ? Math.round(followupDays)
+      : defaults.followup_interval_days ?? 14;
+  }
+
+  return section;
 };
 
 const normalizeEventMessage = (raw, key) => {
@@ -154,6 +179,7 @@ const normalizeConfig = (raw) => {
     cancellation: normalizeEventMessage(raw.event_messages?.cancellation, 'cancellation'),
     reschedule: normalizeEventMessage(raw.event_messages?.reschedule, 'reschedule'),
   };
+
   return config;
 };
 
@@ -162,7 +188,10 @@ const toApiConfig = (config) => ({
   reminders: config.reminders,
   postAppointment: config.post_appointment,
   reviewRequests: config.review_requests,
-  rebooking: config.rebooking,
+  rebooking: {
+    ...config.rebooking,
+    followupIntervalDays: config.rebooking.followup_interval_days,
+  },
   eventMessages: {
     cancellation: config.event_messages.cancellation,
     reschedule: config.event_messages.reschedule,
@@ -177,7 +206,12 @@ const fromApiConfig = (api) => {
   if (api.reminders) raw.reminders = api.reminders;
   if (api.postAppointment) raw.post_appointment = api.postAppointment;
   if (api.reviewRequests) raw.review_requests = api.reviewRequests;
-  if (api.rebooking) raw.rebooking = api.rebooking;
+  if (api.rebooking) {
+    raw.rebooking = {
+      ...api.rebooking,
+      followup_interval_days: api.rebooking.followupIntervalDays ?? api.rebooking.followup_interval_days,
+    };
+  }
   if (api.eventMessages) {
     raw.event_messages = {
       cancellation: api.eventMessages.cancellation,

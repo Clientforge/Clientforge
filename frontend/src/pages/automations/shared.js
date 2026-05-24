@@ -47,7 +47,7 @@ export const emptyConfig = () => ({
   reminders: { enabled: true, steps: [] },
   postAppointment: { enabled: true, steps: [] },
   reviewRequests: { enabled: false, steps: [] },
-  rebooking: { enabled: false, steps: [] },
+  rebooking: { enabled: false, followupIntervalDays: 14, steps: [] },
   eventMessages: {
     cancellation: { enabled: true, channel: 'sms', message: '', email_subject: '' },
     reschedule: { enabled: true, channel: 'sms', message: '', email_subject: '' },

@@ -211,6 +211,22 @@ export default function WorkflowsPanel() {
 
         {section.enabled !== false && (
           <>
+            {tab === 'rebooking' && (
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="followup-interval">Follow-up interval (days between messages)</label>
+                <input
+                  id="followup-interval"
+                  type="number"
+                  min={1}
+                  value={section.followupIntervalDays ?? 14}
+                  onChange={(e) => updateSection(tab, { followupIntervalDays: Number(e.target.value) || 14 })}
+                  style={{ maxWidth: '120px' }}
+                />
+                <p className="settings-desc" style={{ marginTop: '0.35rem' }}>
+                  Step 1 sends after the service return interval. Steps 2 and 3 send this many days apart.
+                </p>
+              </div>
+            )}
             <div className="schedule-list">
               {(section.steps || []).map((step, idx) => (
                 <StepEditor
@@ -218,6 +234,16 @@ export default function WorkflowsPanel() {
                   step={step}
                   idx={idx}
                   showImmediate={tab === 'confirmations'}
+                  delayLabel={
+                    tab === 'rebooking'
+                      ? (idx === 0
+                        ? 'After service return interval (from Services catalog)'
+                        : idx === 1
+                          ? `${section.followupIntervalDays ?? 14} days after initial reminder`
+                          : `${section.followupIntervalDays ?? 14} days after follow-up 1`)
+                      : null
+                  }
+                  hideOffset={tab === 'rebooking'}
                   onUpdate={(field, value) => updateStep(tab, idx, field, value)}
                   onUpdateOffset={(parts) => updateStepOffset(tab, idx, parts)}
                   onRemove={() => removeStep(tab, idx)}
@@ -283,14 +309,14 @@ export default function WorkflowsPanel() {
   );
 }
 
-function StepEditor({ step, idx, showImmediate, onUpdate, onUpdateOffset, onRemove, canRemove }) {
+function StepEditor({ step, idx, showImmediate, delayLabel, hideOffset, onUpdate, onUpdateOffset, onRemove, canRemove }) {
   const offset = parseOffset(step.offset_minutes ?? 0);
 
   return (
     <div className="schedule-step">
       <div className="step-header">
         <span className="step-number">Step {idx + 1}</span>
-        <span className="step-delay">{formatOffsetLabel(step.offset_minutes ?? 0)}</span>
+        <span className="step-delay">{delayLabel || formatOffsetLabel(step.offset_minutes ?? 0)}</span>
         <label className="toggle-label step-toggle">
           <input type="checkbox" checked={step.enabled !== false} onChange={(e) => onUpdate('enabled', e.target.checked)} />
           <span className="toggle-slider" />
@@ -300,6 +326,7 @@ function StepEditor({ step, idx, showImmediate, onUpdate, onUpdateOffset, onRemo
         )}
       </div>
 
+      {!hideOffset && (
       <div className="field-row">
         <div className="field">
           <label>Timing</label>
@@ -332,6 +359,18 @@ function StepEditor({ step, idx, showImmediate, onUpdate, onUpdateOffset, onRemo
           </select>
         </div>
       </div>
+      )}
+
+      {hideOffset && (
+        <div className="field-row">
+          <div className="field" style={{ maxWidth: 140 }}>
+            <label>Channel</label>
+            <select value={step.channel || 'sms'} onChange={(e) => onUpdate('channel', e.target.value)}>
+              {CHANNELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
 
       {(step.channel === 'email' || step.channel === 'both') && (
         <div className="field">
