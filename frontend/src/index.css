@@ -416,6 +416,7 @@ a:hover { text-decoration: underline; }
 .record-item-stats { font-size: 12px; color: var(--text-2); margin-top: 6px; display: flex; gap: 10px; align-items: center; }
 .pending-dot { color: var(--primary); font-weight: 600; }
 .record-error { font-size: 11px; color: var(--red); margin-top: 4px; }
+.record-unlinked { color: var(--text-3); font-style: italic; }
 .automation-filter { margin-bottom: 12px; }
 .automation-filter input { flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; }
 .timeline-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }

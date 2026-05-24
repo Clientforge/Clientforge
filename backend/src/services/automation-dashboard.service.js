@@ -1,5 +1,52 @@
 const db = require('../db/connection');
 const { inboxEmail } = require('./bookingEmailIngest.service');
+const { normalizeBusinessName } = require('./bookingEmailParse.service');
+
+async function getTenantEmailMatchPatterns(tenantId) {
+  const [tenantResult, aliasResult] = await Promise.all([
+    db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]),
+    db.query(
+      `SELECT alias FROM tenant_booking_email_aliases
+       WHERE tenant_id = $1 AND active = true`,
+      [tenantId],
+    ),
+  ]);
+
+  const patterns = new Set();
+  const addPattern = (raw) => {
+    const norm = normalizeBusinessName(raw);
+    if (norm && norm.length >= 3) patterns.add(`%${norm}%`);
+    const lower = String(raw || '').trim().toLowerCase();
+    if (lower.length >= 3) patterns.add(`%${lower}%`);
+  };
+
+  addPattern(tenantResult.rows[0]?.name);
+  for (const row of aliasResult.rows) addPattern(row.alias);
+
+  return [...patterns];
+}
+
+function buildBookingEmailVisibilityClause(tenantId, patterns, startIdx) {
+  if (patterns.length === 0) {
+    return { clause: `tenant_id = $${startIdx}`, params: [tenantId], nextIdx: startIdx + 1 };
+  }
+
+  const patternClauses = patterns.map((_, i) => {
+    const pIdx = startIdx + 1 + i;
+    return `(
+      COALESCE(body_text, '') ILIKE $${pIdx}
+      OR COALESCE(subject, '') ILIKE $${pIdx}
+      OR COALESCE(parsed->>'businessName', '') ILIKE $${pIdx}
+      OR COALESCE(parsed->>'bodyTextPreview', '') ILIKE $${pIdx}
+    )`;
+  });
+
+  return {
+    clause: `(tenant_id = $${startIdx} OR (tenant_id IS NULL AND (${patternClauses.join(' OR ')})))`,
+    params: [tenantId, ...patterns],
+    nextIdx: startIdx + 1 + patterns.length,
+  };
+}
 
 const JOB_TYPE_LABELS = {
   confirmation: 'Confirmation',
@@ -106,9 +153,12 @@ const getAppointmentRecord = async (tenantId, appointmentId) => {
 
 const listBookingEmails = async (tenantId, { page = 1, limit = 20, parseStatus } = {}) => {
   const offset = (page - 1) * limit;
-  const conditions = ['tenant_id = $1'];
-  const params = [tenantId];
-  let idx = 2;
+  const patterns = await getTenantEmailMatchPatterns(tenantId);
+  const visibility = buildBookingEmailVisibilityClause(tenantId, patterns, 1);
+
+  const conditions = [visibility.clause];
+  const params = [...visibility.params];
+  let idx = visibility.nextIdx;
 
   if (parseStatus) {
     conditions.push(`parse_status = $${idx++}`);
@@ -125,7 +175,7 @@ const listBookingEmails = async (tenantId, { page = 1, limit = 20, parseStatus }
 
   const result = await db.query(
     `SELECT id, message_id, from_address, subject, parse_status, received_at,
-            appointment_id, error_message, parsed, created_at
+            appointment_id, error_message, parsed, created_at, tenant_id
      FROM booking_email_messages
      WHERE ${where}
      ORDER BY COALESCE(received_at, created_at) DESC
@@ -145,12 +195,15 @@ const listBookingEmails = async (tenantId, { page = 1, limit = 20, parseStatus }
 };
 
 const getBookingEmail = async (tenantId, emailId) => {
+  const patterns = await getTenantEmailMatchPatterns(tenantId);
+  const visibility = buildBookingEmailVisibilityClause(tenantId, patterns, 2);
+
   const result = await db.query(
     `SELECT id, message_id, inbox_email, from_address, subject, body_text, body_html,
-            parse_status, received_at, appointment_id, error_message, parsed, created_at
+            parse_status, received_at, appointment_id, error_message, parsed, created_at, tenant_id
      FROM booking_email_messages
-     WHERE id = $1 AND tenant_id = $2`,
-    [emailId, tenantId],
+     WHERE id = $1 AND ${visibility.clause}`,
+    [emailId, ...visibility.params],
   );
 
   if (result.rows.length === 0) {
@@ -254,10 +307,12 @@ const mapEmailRow = (row) => ({
   receivedAt: row.received_at,
   appointmentId: row.appointment_id,
   errorMessage: row.error_message,
-  customerName: row.parsed?.contact?.firstName
-    ? [row.parsed.contact.firstName, row.parsed.contact.lastName].filter(Boolean).join(' ')
-    : row.parsed?.contactName || null,
-  scheduledAt: row.parsed?.appointment?.scheduledAt || row.parsed?.scheduledAt || null,
+  tenantLinked: Boolean(row.tenant_id),
+  customerName: row.parsed?.firstName
+    ? [row.parsed.firstName, row.parsed.lastName].filter(Boolean).join(' ')
+    : row.parsed?.customerName || null,
+  businessName: row.parsed?.businessName || null,
+  scheduledAt: row.parsed?.scheduledAt || null,
   createdAt: row.created_at,
 });
 

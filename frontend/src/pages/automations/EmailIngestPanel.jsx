@@ -159,8 +159,11 @@ export default function EmailIngestPanel() {
       <div className="automation-split-view">
         <div className="automation-list-pane">
           <h3>Ingest Log</h3>
+          <p className="settings-desc" style={{ marginTop: -8, marginBottom: 12 }}>
+            Includes emails matched to your business name or aliases, including failed and unroutable attempts.
+          </p>
           <div className="filter-bar" style={{ marginBottom: 16 }}>
-            {['', 'parsed', 'failed', 'needs_review'].map((s) => (
+            {['', 'parsed', 'failed', 'needs_review', 'unroutable', 'ambiguous'].map((s) => (
               <button
                 key={s || 'all'}
                 type="button"
@@ -198,6 +201,10 @@ export default function EmailIngestPanel() {
                     <div className="record-item-meta muted">
                       {formatDateTime(e.receivedAt || e.createdAt)}
                       {e.customerName ? ` · ${e.customerName}` : ''}
+                      {e.businessName ? ` · ${e.businessName}` : ''}
+                      {!e.tenantLinked && e.parseStatus !== 'parsed' && (
+                        <span className="record-unlinked"> · not linked to account</span>
+                      )}
                     </div>
                     {e.errorMessage && <div className="record-error">{e.errorMessage}</div>}
                   </button>

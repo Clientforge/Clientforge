@@ -15,7 +15,7 @@
     "migrate:rollback": "knex migrate:rollback",
     "migrate:status": "knex migrate:status",
     "seed:g2g-owner": "node scripts/seedG2gOwner.js",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "node scripts/testBookingEmailParse.js"
   },
   "keywords": [
     "clientforge",

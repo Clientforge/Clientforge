@@ -3,6 +3,18 @@
 const US_PHONE_RE = /(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
+const TZ_ABBREV = {
+  EST: 'America/New_York',
+  EDT: 'America/New_York',
+  CST: 'America/Chicago',
+  CDT: 'America/Chicago',
+  MST: 'America/Denver',
+  MDT: 'America/Denver',
+  PST: 'America/Los_Angeles',
+  PDT: 'America/Los_Angeles',
+  UTC: 'UTC',
+};
+
 function normalizeBusinessName(s) {
   return String(s ?? '')
     .toLowerCase()
@@ -44,34 +56,69 @@ function parseName(raw) {
   };
 }
 
+function resolveTimezone(abbrev, fallbackTz) {
+  if (!abbrev) return fallbackTz;
+  return TZ_ABBREV[abbrev.toUpperCase()] || fallbackTz;
+}
+
+function tryParseCombinedDateTime(datePart, timePart, tzAbbrev, fallbackTz) {
+  const combined = `${datePart} ${timePart || ''}`.trim();
+  const d = new Date(combined);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    scheduledAt: d.toISOString(),
+    timezone: resolveTimezone(tzAbbrev, fallbackTz),
+  };
+}
+
 function parseDateTime(text, fallbackTz = 'America/New_York') {
+  const tzSuffix = '(?:\\s+(EST|EDT|PST|PDT|CST|CDT|MST|MDT|UTC))?';
   const patterns = [
-    /(?:on\s+)?([A-Za-z]+day,?\s+[A-Za-z]+\s+\d{1,2},?\s+\d{4})\s+(?:at\s+)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))/i,
-    /([A-Za-z]+\s+\d{1,2},?\s+\d{4})\s+(?:at\s+)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))/i,
-    /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(?:at\s+)?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i,
-    /(\d{4}-\d{2}-\d{2})\s+(?:at\s+)?(\d{1,2}:\d{2})/i,
+    new RegExp(
+      `(?:booked for|appointment (?:is|on|at)|scheduled for)\\s+`
+      + `([A-Za-z]+day,?\\s+[A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4}),?\\s+at\\s+(\\d{1,2}:\\d{2}\\s*(?:AM|PM|am|pm))${tzSuffix}`,
+      'i',
+    ),
+    new RegExp(
+      `([A-Za-z]+day,?\\s+[A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4}),?\\s+at\\s+(\\d{1,2}:\\d{2}\\s*(?:AM|PM|am|pm))${tzSuffix}`,
+      'i',
+    ),
+    new RegExp(
+      `([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4}),?\\s+at\\s+(\\d{1,2}:\\d{2}\\s*(?:AM|PM|am|pm))${tzSuffix}`,
+      'i',
+    ),
+    /(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+at\s+(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i,
+    /(\d{4}-\d{2}-\d{2}),?\s+at\s+(\d{1,2}:\d{2})/i,
   ];
 
   for (const re of patterns) {
     const m = text.match(re);
     if (!m) continue;
-    const combined = `${m[1]} ${m[2] || ''}`.trim();
-    const d = new Date(combined);
-    if (!Number.isNaN(d.getTime())) {
-      return { scheduledAt: d.toISOString(), timezone: fallbackTz };
-    }
+    const parsed = tryParseCombinedDateTime(m[1], m[2], m[3], fallbackTz);
+    if (parsed) return parsed;
   }
 
   const dateOnly = pickLabelValue(text, ['Appointment date', 'Date', 'When']);
   const timeOnly = pickLabelValue(text, ['Appointment time', 'Time', 'Start time']);
   if (dateOnly && timeOnly) {
-    const d = new Date(`${dateOnly} ${timeOnly}`);
-    if (!Number.isNaN(d.getTime())) {
-      return { scheduledAt: d.toISOString(), timezone: fallbackTz };
-    }
+    const parsed = tryParseCombinedDateTime(dateOnly, timeOnly, null, fallbackTz);
+    if (parsed) return parsed;
   }
 
   return { scheduledAt: null, timezone: fallbackTz };
+}
+
+function parseBusinessNameFromGreeting(text) {
+  const patterns = [
+    /^Hello\s+(.+?),\s*$/im,
+    /^Hi\s+(.+?),\s*$/im,
+    /^Dear\s+(.+?),\s*$/im,
+  ];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m?.[1]?.trim()) return m[1].trim();
+  }
+  return null;
 }
 
 function detectEventType(subject, text) {
@@ -123,7 +170,7 @@ function parseBookingEmail(input) {
       'Location name',
       'Location',
       'With',
-    ]) || null;
+    ]) || parseBusinessNameFromGreeting(bodyText);
 
   const serviceName =
     pickLabelValue(bodyText, [
@@ -142,7 +189,15 @@ function parseBookingEmail(input) {
   }
 
   let customerPhone =
-    pickLabelValue(bodyText, ['Client phone', 'Customer phone', 'Phone', 'Mobile', 'Cell']) || null;
+    pickLabelValue(bodyText, [
+      'Client phone',
+      'Customer phone',
+      'Phone Number',
+      'Phone number',
+      'Phone',
+      'Mobile',
+      'Cell',
+    ]) || null;
   if (!customerPhone) {
     const phones = bodyText.match(US_PHONE_RE) || [];
     customerPhone = phones[0] || null;
@@ -179,4 +234,6 @@ module.exports = {
   parseBookingEmail,
   normalizeBusinessName,
   stripHtml,
+  parseBusinessNameFromGreeting,
+  parseDateTime,
 };
