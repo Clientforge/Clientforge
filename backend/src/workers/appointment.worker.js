@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const smsService = require('../services/sms.service');
+const emailService = require('../services/email.service');
 const compliance = require('../services/compliance.service');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
@@ -10,8 +11,9 @@ const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
  */
 const processDueAppointmentJobs = async () => {
   const result = await db.query(
-    `SELECT j.*, c.phone, c.first_name, c.unsubscribed,
-            t.phone_number AS tenant_phone, t.name AS tenant_name
+    `SELECT j.*, c.phone, c.email, c.first_name, c.unsubscribed,
+            t.phone_number AS tenant_phone, t.name AS tenant_name,
+            t.email_from_name, t.email_from_address
      FROM appointment_workflow_jobs j
      JOIN contacts c ON c.id = j.contact_id
      JOIN tenants t ON t.id = j.tenant_id
@@ -47,22 +49,38 @@ const processDueAppointmentJobs = async () => {
         continue;
       }
 
-      if (!job.phone) {
-        await db.query(
-          `UPDATE appointment_workflow_jobs SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
-          [job.id],
-        );
-        continue;
-      }
-
-      if (job.channel === 'sms' && job.message_body) {
+      if (job.channel === 'sms') {
+        if (!job.phone || !job.message_body) {
+          await db.query(
+            `UPDATE appointment_workflow_jobs SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
+            [job.id],
+          );
+          continue;
+        }
         await smsService.sendSms({
           tenantId: job.tenant_id,
           leadId: null,
+          contactId: job.contact_id,
           to: job.phone,
           from: job.tenant_phone || undefined,
           body: job.message_body,
           messageType: `appointment_${job.job_type}`,
+        });
+      } else if (job.channel === 'email') {
+        if (!job.email || !job.message_body) {
+          await db.query(
+            `UPDATE appointment_workflow_jobs SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
+            [job.id],
+          );
+          continue;
+        }
+        await emailService.sendEmail({
+          tenantId: job.tenant_id,
+          to: job.email,
+          fromName: job.email_from_name || job.tenant_name,
+          fromAddress: job.email_from_address || undefined,
+          subject: job.email_subject || `Message from ${job.tenant_name || 'ClientForge'}`,
+          body: job.message_body,
         });
       }
 

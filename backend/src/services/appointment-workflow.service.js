@@ -1,7 +1,9 @@
 const db = require('../db/connection');
 const appointmentService = require('./appointment.service');
 const smsService = require('./sms.service');
+const emailService = require('./email.service');
 const compliance = require('./compliance.service');
+const automationService = require('./appointment-automation.service');
 
 /**
  * Dispatch workflows based on booking event type.
@@ -9,9 +11,14 @@ const compliance = require('./compliance.service');
  */
 const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType }) => {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
-    db.query('SELECT name, phone_number FROM tenants WHERE id = $1', [tenantId]),
-    db.query('SELECT first_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
-    db.query('SELECT scheduled_at, service_name FROM appointments WHERE id = $1', [appointmentId]),
+    db.query(
+      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+              appointment_automation_config
+       FROM tenants WHERE id = $1`,
+      [tenantId],
+    ),
+    db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
+    db.query('SELECT scheduled_at, service_name, timezone FROM appointments WHERE id = $1', [appointmentId]),
   ]);
 
   const tenant = tenantRow.rows[0];
@@ -23,98 +30,107 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
     return;
   }
 
-  const firstName = contact.first_name || 'there';
-  const businessName = tenant.name || 'us';
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  const templateContext = { tenant, contact, appointment };
+  const vars = automationService.buildTemplateVars(templateContext);
 
   if (eventType === 'booking.cancelled') {
     await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
-    if (contact.phone && !contact.unsubscribed) {
-      const body = `Hi ${firstName}, your appointment with ${businessName} has been cancelled. Need to reschedule? Reply to this message.`;
-      await sendAppointmentSms(tenantId, contactId, contact.phone, tenant.phone_number, body, 'cancellation');
-    }
+    await sendEventMessage(tenantId, contactId, contact, tenant, config.event_messages.cancellation, vars, 'cancellation');
     return;
   }
 
   if (eventType === 'booking.rescheduled') {
     await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
-    if (contact.phone && !contact.unsubscribed) {
-      const body = `Hi ${firstName}, your appointment with ${businessName} has been rescheduled. We'll send a reminder before your new time.`;
-      await sendAppointmentSms(tenantId, contactId, contact.phone, tenant.phone_number, body, 'reschedule');
-    }
-    // Schedule new reminder for the rescheduled time
-    await scheduleReminder(tenantId, appointmentId, contactId, appointment.scheduled_at);
+    await sendEventMessage(tenantId, contactId, contact, tenant, config.event_messages.reschedule, vars, 'reschedule');
+    await scheduleAutomationSteps(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
     return;
   }
 
   if (eventType === 'booking.created') {
-    // Immediate confirmation
-    if (contact.phone && !contact.unsubscribed) {
-      const body = `Hi ${firstName}! Your appointment with ${businessName} is confirmed. We'll send a reminder before your visit.`;
-      await sendAppointmentSms(tenantId, contactId, contact.phone, tenant.phone_number, body, 'confirmation');
-    }
-
-    // Schedule reminder (24 hours before)
-    await scheduleReminder(tenantId, appointmentId, contactId, appointment.scheduled_at);
-
-    // Schedule post-visit follow-up (24 hours after)
-    await schedulePostVisit(tenantId, appointmentId, contactId, appointment.scheduled_at, appointment.service_name);
+    await scheduleAutomationSteps(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
   }
 };
 
-/**
- * Schedule reminder job — 24 hours before appointment.
- */
-const scheduleReminder = async (tenantId, appointmentId, contactId, scheduledAt) => {
-  const at = new Date(scheduledAt);
-  at.setHours(at.getHours() - 24);
-  if (at <= new Date()) return; // Don't schedule if already past
+const scheduleAutomationSteps = async (
+  tenantId,
+  appointmentId,
+  contactId,
+  contact,
+  tenant,
+  appointment,
+  config,
+  vars,
+) => {
+  const appointmentTime = new Date(appointment.scheduled_at);
 
-  const [tenantRow, contactRow] = await Promise.all([
-    db.query('SELECT name, phone_number FROM tenants WHERE id = $1', [tenantId]),
-    db.query('SELECT first_name, phone FROM contacts WHERE id = $1', [contactId]),
-  ]);
-  const tenant = tenantRow.rows[0];
-  const contact = contactRow.rows[0];
-  const firstName = contact?.first_name || 'there';
-  const businessName = tenant?.name || 'us';
+  for (const category of automationService.CATEGORY_KEYS) {
+    const section = config[category];
+    if (!section?.enabled) continue;
 
-  const body = `Hi ${firstName}! Reminder: you have an appointment with ${businessName} tomorrow. Reply if you need to reschedule.`;
+    const jobType = automationService.JOB_TYPE_BY_CATEGORY[category];
 
-  await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, 'reminder', {
-    scheduledAt: at.toISOString(),
-    channel: 'sms',
-    messageBody: body,
-  });
+    for (const step of section.steps || []) {
+      if (!step.enabled || !step.message) continue;
+
+      const runAt = new Date(appointmentTime.getTime() + step.offset_minutes * 60 * 1000);
+      if (step.offset_minutes !== 0 && runAt <= new Date()) continue;
+
+      const body = automationService.renderTemplate(step.message, vars);
+      const emailSubject = automationService.renderTemplate(step.email_subject, vars);
+      const channels = automationService.channelsForStep(step.channel);
+
+      for (const channel of channels) {
+        if (step.offset_minutes === 0) {
+          await deliverMessage(tenantId, contactId, contact, tenant, {
+            channel,
+            body,
+            emailSubject,
+            messageType: jobType,
+          });
+        } else {
+          await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, jobType, {
+            scheduledAt: runAt.toISOString(),
+            channel,
+            messageBody: body,
+            emailSubject: channel === 'email' ? emailSubject : null,
+          });
+        }
+      }
+    }
+  }
 };
 
-/**
- * Schedule post-visit follow-up — 24 hours after appointment.
- */
-const schedulePostVisit = async (tenantId, appointmentId, contactId, scheduledAt, serviceName) => {
-  const at = new Date(scheduledAt);
-  at.setHours(at.getHours() + 24);
+const sendEventMessage = async (tenantId, contactId, contact, tenant, eventConfig, vars, messageType) => {
+  if (!eventConfig?.enabled || !eventConfig.message) return;
 
-  const [tenantRow, contactRow] = await Promise.all([
-    db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]),
-    db.query('SELECT first_name, phone FROM contacts WHERE id = $1', [contactId]),
-  ]);
-  const tenant = tenantRow.rows[0];
-  const contact = contactRow.rows[0];
-  const firstName = contact?.first_name || 'there';
-  const businessName = tenant?.name || 'us';
+  const body = automationService.renderTemplate(eventConfig.message, vars);
+  const emailSubject = automationService.renderTemplate(eventConfig.email_subject, vars);
+  const channels = automationService.channelsForStep(eventConfig.channel);
 
-  const body = `Hi ${firstName}! Hope your visit to ${businessName} went well. We'd love to see you again — book your next appointment anytime.`;
-
-  await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, 'post_visit', {
-    scheduledAt: at.toISOString(),
-    channel: 'sms',
-    messageBody: body,
-  });
+  for (const channel of channels) {
+    await deliverMessage(tenantId, contactId, contact, tenant, {
+      channel,
+      body,
+      emailSubject,
+      messageType,
+    });
+  }
 };
 
-/**
- * Send SMS for appointment workflow. Uses contact_id (lead_id can be null).
- */
+const deliverMessage = async (tenantId, contactId, contact, tenant, { channel, body, emailSubject, messageType }) => {
+  if (channel === 'sms') {
+    if (!contact.phone || contact.unsubscribed) return;
+    await sendAppointmentSms(tenantId, contactId, contact.phone, tenant.phone_number, body, messageType);
+    return;
+  }
+
+  if (channel === 'email') {
+    if (!contact.email || contact.unsubscribed) return;
+    await sendAppointmentEmail(tenantId, contactId, contact.email, tenant, emailSubject, body, messageType);
+  }
+};
+
 const sendAppointmentSms = async (tenantId, contactId, to, from, body, messageType) => {
   try {
     const canSend = await compliance.canSendToContact(contactId);
@@ -132,7 +148,27 @@ const sendAppointmentSms = async (tenantId, contactId, to, from, body, messageTy
       messageType: `appointment_${messageType}`,
     });
   } catch (err) {
-    console.error(`[APPT-WORKFLOW] Failed to send ${messageType} to contact ${contactId}:`, err.message);
+    console.error(`[APPT-WORKFLOW] Failed to send ${messageType} SMS to contact ${contactId}:`, err.message);
+  }
+};
+
+const sendAppointmentEmail = async (tenantId, contactId, to, tenant, subject, body, messageType) => {
+  try {
+    const canSend = await compliance.canSendToContact(contactId);
+    if (!canSend) {
+      console.log(`[APPT-WORKFLOW] Contact ${contactId} unsubscribed — skipping email`);
+      return;
+    }
+    await emailService.sendEmail({
+      tenantId,
+      to,
+      fromName: tenant.email_from_name || tenant.name,
+      fromAddress: tenant.email_from_address || undefined,
+      subject: subject || `Message from ${tenant.name || 'ClientForge'}`,
+      body,
+    });
+  } catch (err) {
+    console.error(`[APPT-WORKFLOW] Failed to send ${messageType} email to contact ${contactId}:`, err.message);
   }
 };
 

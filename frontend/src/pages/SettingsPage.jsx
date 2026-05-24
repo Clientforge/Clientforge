@@ -592,7 +592,7 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
       <hr className="settings-divider" />
 
       <h3>Calendly Integration</h3>
-      <p className="settings-desc">Connect Calendly to automatically create contacts, track appointments, and send reminders, confirmations, and post-visit follow-ups.</p>
+      <p className="settings-desc">Connect Calendly to automatically create contacts, track appointments, and send reminders, confirmations, and post-visit follow-ups. Configure message content and timing in <strong>Automations</strong>.</p>
       <form onSubmit={saveCalendly} className="integration-block">
         <div className="field">
           <label>Calendly Webhook Signing Key</label>

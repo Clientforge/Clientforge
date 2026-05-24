@@ -1,0 +1,101 @@
+const express = require('express');
+const router = express.Router();
+const automationService = require('../services/appointment-automation.service');
+const dashboardService = require('../services/automation-dashboard.service');
+const aiService = require('../services/ai.service');
+
+router.get('/appointment-records', async (req, res, next) => {
+  try {
+    const { page, limit, status, search } = req.query;
+    const result = await dashboardService.listAppointmentRecords(req.tenantId, {
+      page: parseInt(page, 10) || 1,
+      limit: parseInt(limit, 10) || 20,
+      status,
+      search,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get('/appointment-records/:id', async (req, res, next) => {
+  try {
+    const record = await dashboardService.getAppointmentRecord(req.tenantId, req.params.id);
+    res.json(record);
+  } catch (err) { next(err); }
+});
+
+router.get('/booking-emails', async (req, res, next) => {
+  try {
+    const { page, limit, parseStatus } = req.query;
+    const result = await dashboardService.listBookingEmails(req.tenantId, {
+      page: parseInt(page, 10) || 1,
+      limit: parseInt(limit, 10) || 20,
+      parseStatus,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get('/booking-emails/:id', async (req, res, next) => {
+  try {
+    const email = await dashboardService.getBookingEmail(req.tenantId, req.params.id);
+    res.json(email);
+  } catch (err) { next(err); }
+});
+
+router.get('/booking-email-setup', async (req, res, next) => {
+  try {
+    const setup = await dashboardService.getBookingEmailSetup(req.tenantId);
+    res.json(setup);
+  } catch (err) { next(err); }
+});
+
+router.put('/booking-email-setup', async (req, res, next) => {
+  try {
+    const setup = await dashboardService.updateBookingEmailAliases(req.tenantId, req.body.aliases);
+    res.json(setup);
+  } catch (err) { next(err); }
+});
+
+router.post('/generate-messages', async (req, res, next) => {
+  try {
+    const { category } = req.body;
+    if (!category) {
+      return res.status(400).json({ error: 'category is required' });
+    }
+    const result = await aiService.generateAppointmentMessages(req.tenantId, category);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/refine-messages', async (req, res, next) => {
+  try {
+    const { category, currentSteps, instruction } = req.body;
+    if (!category || !instruction) {
+      return res.status(400).json({ error: 'category and instruction are required' });
+    }
+    const result = await aiService.refineAppointmentMessages(
+      req.tenantId,
+      category,
+      currentSteps || [],
+      instruction,
+    );
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get('/appointments', async (req, res, next) => {
+  try {
+    const config = await automationService.getAutomations(req.tenantId);
+    res.json(config);
+  } catch (err) { next(err); }
+});
+
+router.put('/appointments', async (req, res, next) => {
+  try {
+    const updated = await automationService.updateAutomations(req.tenantId, req.body);
+    res.json(updated);
+  } catch (err) { next(err); }
+});
+
+module.exports = router;

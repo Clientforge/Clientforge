@@ -80,6 +80,7 @@ app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settin
 app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));
 app.use('/api/v1/conversations', authenticate, tenantScope, require('./routes/conversations.routes'));
 app.use('/api/v1/campaigns', authenticate, tenantScope, require('./routes/campaigns.routes'));
+app.use('/api/v1/automations', authenticate, tenantScope, require('./routes/automations.routes'));
 app.use('/api/v1/admin',     authenticate, requireSuperAdmin, require('./routes/admin.routes'));
 
 // --------------- STATIC FILES (production) ---------------

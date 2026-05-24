@@ -319,9 +319,173 @@ Respond with ONLY the SMS text, no quotes or labels.`;
   return text;
 };
 
+const APPOINTMENT_CATEGORY_META = {
+  confirmations: {
+    label: 'Booking Confirmations',
+    hint: '1 immediate confirmation when an appointment is created.',
+    defaultOffsets: [0],
+  },
+  reminders: {
+    label: 'Reminder Sequences',
+    hint: '2 reminders: 24 hours before and 2 hours before the appointment.',
+    defaultOffsets: [-1440, -120],
+  },
+  postAppointment: {
+    label: 'Post-Appointment Follow-ups',
+    hint: '1 thank-you / check-in message 24 hours after the appointment.',
+    defaultOffsets: [1440],
+  },
+  reviewRequests: {
+    label: 'Review Requests',
+    hint: '1 review request 48 hours after the appointment.',
+    defaultOffsets: [2880],
+  },
+  rebooking: {
+    label: 'Rebooking Campaigns',
+    hint: '1 rebooking nudge 30 days after the appointment.',
+    defaultOffsets: [43200],
+  },
+};
+
+const parseAiJsonArray = (raw) => {
+  let jsonStr = raw.trim();
+  const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) jsonStr = jsonMatch[1].trim();
+  return JSON.parse(jsonStr);
+};
+
+const normalizeAiAppointmentSteps = (steps, fallbackOffsets) => {
+  if (!Array.isArray(steps) || steps.length === 0) {
+    throw new Error('Invalid response format');
+  }
+
+  return steps.map((s, i) => ({
+    id: s.id || `ai-${Date.now()}-${i}`,
+    enabled: s.enabled !== false,
+    channel: ['sms', 'email', 'both'].includes(s.channel) ? s.channel : 'sms',
+    offset_minutes: Number.isFinite(Number(s.offset_minutes))
+      ? Number(s.offset_minutes)
+      : (fallbackOffsets[i] ?? fallbackOffsets[fallbackOffsets.length - 1] ?? 0),
+    message: String(s.message || '').trim(),
+    email_subject: String(s.email_subject || s.emailSubject || 'Message from {businessName}').trim(),
+  }));
+};
+
+const generateAppointmentMessages = async (tenantId, categoryKey) => {
+  const meta = APPOINTMENT_CATEGORY_META[categoryKey];
+  if (!meta) {
+    throw Object.assign(new Error('Invalid category'), { statusCode: 400, isOperational: true });
+  }
+
+  const result = await db.query(
+    `SELECT name, industry, description, target_audience, tone, booking_link
+     FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
+  }
+  const t = result.rows[0];
+
+  const prompt = `You are an expert SMS/email copywriter for appointment-based businesses. Generate messages for: ${meta.label}.
+
+BUSINESS CONTEXT:
+- Business Name: ${t.name}
+- Industry: ${t.industry || 'General services'}
+- Description: ${t.description || 'An appointment-based business'}
+- Target Audience: ${t.target_audience || 'Customers with scheduled appointments'}
+- Tone: ${t.tone || 'friendly'}
+
+CATEGORY: ${meta.label}
+${meta.hint}
+
+RULES:
+- SMS messages MUST be under 155 characters when channel is sms or both
+- MUST use template variables where natural: {firstName}, {businessName}, {serviceName}, {appointmentDate}, {appointmentTime}, {bookingLink}, {reviewLink}
+- offset_minutes: negative = before appointment, positive = after, 0 = immediately on booking
+- Suggested offsets (minutes): ${meta.defaultOffsets.join(', ')}
+- channel: "sms", "email", or "both"
+- Include email_subject for email/both channels
+
+RESPOND ONLY with valid JSON:
+{"steps":[{"enabled":true,"channel":"sms","offset_minutes":0,"message":"...","email_subject":"..."}]}`;
+
+  const openai = getClient();
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.8,
+    max_tokens: 1200,
+  });
+
+  try {
+    const parsed = parseAiJsonArray(completion.choices[0].message.content);
+    const steps = normalizeAiAppointmentSteps(parsed.steps || parsed, meta.defaultOffsets);
+    return { category: categoryKey, steps };
+  } catch (parseErr) {
+    console.error('[AI] Failed to parse appointment generate response:', parseErr.message);
+    throw Object.assign(new Error('AI returned an invalid response. Please try again.'), {
+      statusCode: 502, isOperational: true,
+    });
+  }
+};
+
+const refineAppointmentMessages = async (tenantId, categoryKey, currentSteps, userInstruction) => {
+  const meta = APPOINTMENT_CATEGORY_META[categoryKey];
+  if (!meta) {
+    throw Object.assign(new Error('Invalid category'), { statusCode: 400, isOperational: true });
+  }
+  if (!userInstruction) {
+    throw Object.assign(new Error('instruction is required'), { statusCode: 400, isOperational: true });
+  }
+
+  const result = await db.query(
+    `SELECT name, industry, description, target_audience, tone
+     FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+  const t = result.rows[0];
+
+  const prompt = `You are an expert SMS/email copywriter. Refine appointment automation messages for: ${meta.label}.
+
+BUSINESS: ${t.name} (${t.industry || 'General'}) — ${t.tone || 'friendly'} tone
+
+CURRENT STEPS:
+${(currentSteps || []).map((s, i) => `Step ${i + 1} (${s.offset_minutes} min, ${s.channel}): "${s.message}"`).join('\n')}
+
+USER REQUEST: "${userInstruction}"
+
+Update the steps based on the user's request. Keep the same number of steps and offset_minutes unless they ask to change timing. Use variables: {firstName}, {businessName}, {serviceName}, {appointmentDate}, {appointmentTime}, {bookingLink}, {reviewLink}. SMS under 155 chars.
+
+RESPOND ONLY with valid JSON:
+{"steps":[{"enabled":true,"channel":"sms","offset_minutes":0,"message":"...","email_subject":"..."}]}`;
+
+  const openai = getClient();
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.7,
+    max_tokens: 1200,
+  });
+
+  try {
+    const parsed = parseAiJsonArray(completion.choices[0].message.content);
+    const fallbackOffsets = (currentSteps || []).map((s) => s.offset_minutes);
+    const steps = normalizeAiAppointmentSteps(parsed.steps || parsed, fallbackOffsets);
+    return { category: categoryKey, steps };
+  } catch (parseErr) {
+    console.error('[AI] Failed to parse appointment refine response:', parseErr.message);
+    throw Object.assign(new Error('AI returned an invalid response. Please try again.'), {
+      statusCode: 502, isOperational: true,
+    });
+  }
+};
+
 module.exports = {
   generateFollowUpSchedule,
   refineFollowUpMessages,
   generateCampaignSequence,
   generateInboundSmsReply,
+  generateAppointmentMessages,
+  refineAppointmentMessages,
 };
