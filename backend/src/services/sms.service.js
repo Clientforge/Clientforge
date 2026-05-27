@@ -2,6 +2,7 @@ const db = require('../db/connection');
 const config = require('../config');
 const compliance = require('./compliance.service');
 const { normalizePhone } = require('./lead.service');
+const tenantPhoneService = require('./tenant-phone.service');
 const trackedLinkService = require('./trackedLink.service');
 
 /**
@@ -74,8 +75,7 @@ const trySmsKeywordOptIn = async ({
     const ok = await compliance.canSendToContact(contactId);
     if (ok) {
       const personalized = welcomeTemplate.replace(/\{businessName\}/gi, t.name || '');
-      const fromNumber = t.phone_number
-        || (config.sms.provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom);
+      const fromNumber = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number).from;
       await sendSms({
         tenantId,
         leadId: null,
@@ -119,8 +119,9 @@ const sendSms = async ({
     });
   }
 
+  const effective = tenantPhoneService.resolveEffectiveSmsFrom(from);
+  const fromNumber = effective.from;
   const provider = config.sms.provider || 'twilio';
-  const fromNumber = from || (provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom);
   let messageId = null;
   let deliveryStatus = 'sent';
 
@@ -206,7 +207,7 @@ const sendInitialContact = async (tenantId, lead) => {
     tenantId,
     leadId: lead.id,
     to: lead.phone,
-    from: tenant.phone_number || (config.sms.provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom),
+    from: tenant.phone_number,
     body,
     messageType: 'initial',
   });
@@ -246,19 +247,11 @@ const handleInbound = async ({ from, to, body, twilioSid }) => {
 
   // Twilio may send E.164 or other shapes; DB stores normalizePhone() output for leads/contacts.
   const fromNorm = normalizePhone(from);
-  const toNorm = to ? normalizePhone(to) : null;
 
-  // Match tenant by Twilio "To" (our number) — raw or normalized.
-  const tenantResult = await db.query(
-    'SELECT id FROM tenants WHERE phone_number = $1 OR ($2::text IS NOT NULL AND phone_number = $2)',
-    [to, toNorm],
-  );
+  // Match tenant by Twilio "To" (our number).
+  let tenantId = await tenantPhoneService.findTenantIdByInboundSmsNumber(to);
 
-  let tenantId;
-
-  if (tenantResult.rows.length > 0) {
-    tenantId = tenantResult.rows[0].id;
-  } else {
+  if (!tenantId) {
     // Fallback: find by phone across leads or contacts
     const leadLookup = await db.query(
       'SELECT tenant_id FROM leads WHERE phone = $1 ORDER BY created_at DESC LIMIT 1',

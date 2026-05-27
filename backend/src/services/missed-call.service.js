@@ -2,6 +2,7 @@ const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
 const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
+const tenantPhoneService = require('./tenant-phone.service');
 
 const DEFAULT_MISSED_CALL_MESSAGE = "Sorry we missed your call! How can we help? Reply to this message.";
 const DEDUP_WINDOW_MINUTES = 30;
@@ -55,28 +56,22 @@ const processMissedCall = async ({ from, to, callSid }) => {
   }
 
   // Find tenant by the Twilio number that received the call
-  // Try exact match first, then normalized (Twilio sends E.164; tenant may have different format)
-  let tenantResult = await db.query(
-    'SELECT id, name, phone_number, followup_config FROM tenants WHERE phone_number = $1 AND active = true',
-    [twilioTo],
-  );
-  if (tenantResult.rows.length === 0) {
-    tenantResult = await db.query(
-      'SELECT id, name, phone_number, followup_config FROM tenants WHERE active = true AND phone_number IS NOT NULL',
-    );
-    const match = tenantResult.rows.find(
-      (t) => normalizePhone(t.phone_number) === twilioTo,
-    );
-    if (match) tenantResult = { rows: [match] };
-  }
-
-  if (tenantResult.rows.length === 0) {
+  const tenantId = await tenantPhoneService.findTenantIdByInboundSmsNumber(twilioTo);
+  if (!tenantId) {
     console.warn(`[MISSED-CALL] No tenant found for number ${twilioTo}`);
     return { action: 'skipped', reason: 'tenant_not_found' };
   }
 
+  const tenantResult = await db.query(
+    'SELECT id, name, phone_number, followup_config FROM tenants WHERE id = $1 AND active = true',
+    [tenantId],
+  );
+  if (tenantResult.rows.length === 0) {
+    console.warn(`[MISSED-CALL] Tenant ${tenantId} not active`);
+    return { action: 'skipped', reason: 'tenant_not_found' };
+  }
+
   const tenant = tenantResult.rows[0];
-  const tenantId = tenant.id;
 
   // Upsert contact
   const contact = await upsertContactByPhone(tenantId, callerPhone);
@@ -132,7 +127,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
       leadId: null,
       contactId: contact.id,
       to: callerPhone,
-      from: tenant.phone_number,
+      from: tenantPhoneService.resolveEffectiveSmsFrom(tenant.phone_number).from,
       body: messageBody,
       messageType: 'missed_call_followup',
     });

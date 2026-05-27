@@ -16,7 +16,8 @@
     "migrate:status": "knex migrate:status",
     "seed:g2g-owner": "node scripts/seedG2gOwner.js",
     "test": "node scripts/testBookingEmailParse.js",
-    "seed:cherished-aesthetics": "node scripts/seedCherishedAestheticsServices.js"
+    "seed:cherished-aesthetics": "node scripts/seedCherishedAestheticsServices.js",
+    "normalize:tenant-phones": "node scripts/normalizeTenantPhones.js"
   },
   "keywords": [
     "clientforge",

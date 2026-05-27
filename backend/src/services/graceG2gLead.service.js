@@ -3,6 +3,7 @@ const config = require('../config');
 const { createLead, normalizePhone } = require('./lead.service');
 const { sendSms } = require('./sms.service');
 const { sendEmail } = require('./email.service');
+const tenantPhoneService = require('./tenant-phone.service');
 
 const PLATFORM_TENANT_DEFAULT = '00000000-0000-0000-0000-000000000001';
 const G2G_SOURCE = 'grace_to_grace';
@@ -36,10 +37,7 @@ function mergeMetadata(existing, patch) {
 
 async function resolveFromNumber(tenantId) {
   const r = await db.query('SELECT phone_number FROM tenants WHERE id = $1', [tenantId]);
-  const row = r.rows[0];
-  if (row?.phone_number) return row.phone_number;
-  const provider = config.sms.provider || 'twilio';
-  return provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom;
+  return tenantPhoneService.resolveEffectiveSmsFrom(r.rows[0]?.phone_number).from;
 }
 
 function resolveNotifyPhone(envKey, fallbackEnvKey) {

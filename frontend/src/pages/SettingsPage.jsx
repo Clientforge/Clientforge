@@ -89,6 +89,13 @@ function BusinessTab({ settings, onSave, saving }) {
     smsKeywordWelcomeMessage: settings.business.smsKeywordWelcomeMessage || '',
   });
 
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      phoneNumber: settings.business.phoneNumber || '',
+    }));
+  }, [settings.business.phoneNumber]);
+
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const handleSubmit = (e) => {
@@ -210,7 +217,21 @@ function BusinessTab({ settings, onSave, saving }) {
       <div className="field">
         <label>SMS Phone Number</label>
         <input value={form.phoneNumber} onChange={set('phoneNumber')} placeholder="+15551234567" />
-        <span className="field-hint">Your Twilio number. Leads will receive SMS from this number.</span>
+        <span className="field-hint">
+          Your dedicated Twilio number in E.164 format (e.g. +12405551234).
+          {settings.business.smsFromSource === 'platform_default' ? (
+            <>
+              {' '}No dedicated number is set — outbound SMS currently sends from{' '}
+              <strong>{settings.business.effectiveSmsFrom || 'the platform default'}</strong>.
+            </>
+          ) : (
+            <>
+              {' '}Outbound SMS will send from{' '}
+              <strong>{settings.business.effectiveSmsFrom || form.phoneNumber}</strong>.
+            </>
+          )}
+          {' '}Assigning a number here automatically removes it from any other account.
+        </span>
       </div>
       <div className="field">
         <label>Booking Link</label>

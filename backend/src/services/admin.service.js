@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const tenantPhoneService = require('./tenant-phone.service');
 const { sendWelcomeEmail } = require('./email.service');
 
 const PLATFORM_TENANT_ID = '00000000-0000-0000-0000-000000000001';
@@ -169,14 +170,7 @@ const formatTenantRow = (row) => ({
 });
 
 const updateTenantPhone = async (tenantId, phoneNumber) => {
-  const result = await db.query(
-    'UPDATE tenants SET phone_number = $1, updated_at = NOW() WHERE id = $2 RETURNING id, phone_number',
-    [phoneNumber || null, tenantId],
-  );
-  if (result.rows.length === 0) {
-    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
-  }
-  return { phoneNumber: result.rows[0].phone_number };
+  return tenantPhoneService.assignPhoneNumberToTenant(tenantId, phoneNumber);
 };
 
 const sendWelcomeEmailToTenant = async (tenantId) => {

@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_SCHEDULE, DEFAULT_OUTREACH_WINDOW } = require('./followup.service');
+const tenantPhoneService = require('./tenant-phone.service');
 
 const getSettings = async (tenantId) => {
   const result = await db.query(
@@ -19,6 +20,7 @@ const getSettings = async (tenantId) => {
 
   const t = result.rows[0];
   const config = t.followup_config || {};
+  const smsFrom = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number);
 
   return {
     business: {
@@ -26,6 +28,8 @@ const getSettings = async (tenantId) => {
       industry: t.industry,
       timezone: t.timezone,
       phoneNumber: t.phone_number,
+      effectiveSmsFrom: smsFrom.from,
+      smsFromSource: smsFrom.source,
       bookingLink: t.booking_link,
       plan: t.plan,
       description: t.description,
@@ -61,6 +65,11 @@ const getSettings = async (tenantId) => {
 
 const updateSettings = async (tenantId, updates) => {
   const { business, followup } = updates;
+
+  if (business?.phoneNumber !== undefined) {
+    await tenantPhoneService.assignPhoneNumberToTenant(tenantId, business.phoneNumber);
+  }
+
   const sets = [];
   const params = [];
   let idx = 1;
@@ -69,7 +78,6 @@ const updateSettings = async (tenantId, updates) => {
     if (business.name !== undefined) { sets.push(`name = $${idx++}`); params.push(business.name); }
     if (business.industry !== undefined) { sets.push(`industry = $${idx++}`); params.push(business.industry); }
     if (business.timezone !== undefined) { sets.push(`timezone = $${idx++}`); params.push(business.timezone); }
-    if (business.phoneNumber !== undefined) { sets.push(`phone_number = $${idx++}`); params.push(business.phoneNumber); }
     if (business.bookingLink !== undefined) { sets.push(`booking_link = $${idx++}`); params.push(business.bookingLink); }
     if (business.description !== undefined) { sets.push(`description = $${idx++}`); params.push(business.description); }
     if (business.targetAudience !== undefined) { sets.push(`target_audience = $${idx++}`); params.push(business.targetAudience); }

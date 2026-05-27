@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
+const tenantPhoneService = require('./tenant-phone.service');
 const { normalizePhone } = require('./lead.service');
 
 /**
@@ -349,7 +350,7 @@ const sendManualReply = async (tenantId, participantType, participantId, body) =
     'SELECT phone_number FROM tenants WHERE id = $1',
     [tenantId],
   );
-  const fromNumber = tenantResult.rows[0]?.phone_number || null;
+  const fromNumber = tenantResult.rows[0]?.phone_number ?? null;
 
   const message = await smsService.sendSms({
     tenantId,
