@@ -79,9 +79,10 @@ export const formatOffsetLabel = (minutes) => {
 
 export const newStepId = () => `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-export const formatDateTime = (d) => {
+export const formatDateTime = (d, timeZone = 'America/New_York') => {
   if (!d) return '—';
   return new Date(d).toLocaleString('en-US', {
+    timeZone,
     month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 };

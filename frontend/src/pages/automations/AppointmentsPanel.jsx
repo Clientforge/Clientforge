@@ -164,7 +164,7 @@ function AppointmentTimeline({ detail }) {
       </div>
 
       <div className="timeline-meta">
-        <div><span className="muted">When</span> {formatDateTime(appointment.scheduledAt)}</div>
+        <div><span className="muted">When</span> {formatDateTime(appointment.scheduledAt, appointment.timezone)}</div>
         <div><span className="muted">Service</span> {appointment.serviceName || '—'}</div>
         {appointment.matchedServiceName && (
           <div>
@@ -202,8 +202,8 @@ function AppointmentTimeline({ detail }) {
                   </span>
                 </div>
                 <div className="timeline-item-meta muted">
-                  {job.channel.toUpperCase()} · {formatDateTime(job.scheduledAt)}
-                  {job.sentAt && ` · Sent ${formatDateTime(job.sentAt)}`}
+                  {job.channel.toUpperCase()} · {formatDateTime(job.scheduledAt, appointment.timezone)}
+                  {job.sentAt && ` · Sent ${formatDateTime(job.sentAt, appointment.timezone)}`}
                 </div>
                 {job.messageBody && (
                   <p className="timeline-message">{job.messageBody}</p>
