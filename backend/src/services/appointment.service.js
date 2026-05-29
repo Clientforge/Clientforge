@@ -1,6 +1,104 @@
 const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
 
+const ACTIVE_APPOINTMENT_STATUSES = ['scheduled', 'confirmed', 'rescheduled'];
+const SAME_TIME_MS = 60 * 1000;
+
+const servicesMatch = (a, b) => {
+  if (!a || !b) return true;
+  const x = String(a).toLowerCase().trim();
+  const y = String(b).toLowerCase().trim();
+  return x.includes(y) || y.includes(x);
+};
+
+/**
+ * Decide whether an incoming booking.rescheduled event is a true reschedule
+ * (existing appointment moved to a new time) vs a first-time confirmation
+ * (email template says "rescheduled" but no prior appointment exists).
+ */
+const resolveEventTypeFromExisting = (incomingEventType, {
+  scheduledAt,
+  serviceName,
+  priorByExternalId,
+  priorByContact,
+}) => {
+  if (incomingEventType === 'booking.cancelled') {
+    return {
+      eventType: 'booking.cancelled',
+      existingAppointmentId: priorByExternalId?.id || null,
+    };
+  }
+
+  if (incomingEventType !== 'booking.rescheduled') {
+    return { eventType: incomingEventType, existingAppointmentId: null };
+  }
+
+  const newTime = new Date(scheduledAt).getTime();
+  if (Number.isNaN(newTime)) {
+    return { eventType: 'booking.created', existingAppointmentId: null };
+  }
+
+  if (priorByExternalId) {
+    const oldTime = new Date(priorByExternalId.scheduled_at).getTime();
+    if (Math.abs(oldTime - newTime) > SAME_TIME_MS) {
+      return { eventType: 'booking.rescheduled', existingAppointmentId: priorByExternalId.id };
+    }
+    return { eventType: 'booking.created', existingAppointmentId: priorByExternalId.id };
+  }
+
+  for (const row of priorByContact || []) {
+    if (!ACTIVE_APPOINTMENT_STATUSES.includes(row.status)) continue;
+    const oldTime = new Date(row.scheduled_at).getTime();
+    if (Math.abs(oldTime - newTime) <= SAME_TIME_MS) continue;
+    if (!servicesMatch(serviceName, row.service_name)) continue;
+    return { eventType: 'booking.rescheduled', existingAppointmentId: row.id };
+  }
+
+  return { eventType: 'booking.created', existingAppointmentId: null };
+};
+
+const findPriorAppointmentByExternalId = async (tenantId, externalId) => {
+  if (!externalId) return null;
+  const result = await db.query(
+    `SELECT id, scheduled_at, service_name, status
+     FROM appointments WHERE tenant_id = $1 AND external_id = $2`,
+    [tenantId, externalId],
+  );
+  return result.rows[0] || null;
+};
+
+const findPriorAppointmentsByContact = async (tenantId, contactId) => {
+  const result = await db.query(
+    `SELECT id, scheduled_at, service_name, status
+     FROM appointments
+     WHERE tenant_id = $1
+       AND contact_id = $2
+       AND status = ANY($3::text[])
+       AND scheduled_at > NOW() - INTERVAL '180 days'
+     ORDER BY scheduled_at DESC
+     LIMIT 10`,
+    [tenantId, contactId, ACTIVE_APPOINTMENT_STATUSES],
+  );
+  return result.rows;
+};
+
+const classifyBookingEvent = async (tenantId, contactId, incomingEventType, appointment) => {
+  const priorByExternalId = await findPriorAppointmentByExternalId(
+    tenantId,
+    appointment?.externalId,
+  );
+  const priorByContact = priorByExternalId
+    ? []
+    : await findPriorAppointmentsByContact(tenantId, contactId);
+
+  return resolveEventTypeFromExisting(incomingEventType, {
+    scheduledAt: appointment?.scheduledAt,
+    serviceName: appointment?.serviceName,
+    priorByExternalId,
+    priorByContact,
+  });
+};
+
 /**
  * Upsert contact from booking event. Match by tenant_id + phone (or email if no phone).
  */
@@ -15,7 +113,6 @@ const upsertContact = async (tenantId, contactData, source = 'calendly') => {
     });
   }
 
-  // Try to find existing by phone first
   if (phone) {
     const existing = await db.query(
       'SELECT id FROM contacts WHERE tenant_id = $1 AND phone = $2',
@@ -37,7 +134,6 @@ const upsertContact = async (tenantId, contactData, source = 'calendly') => {
     }
   }
 
-  // Try by email if no phone match
   if (email) {
     const existing = await db.query(
       'SELECT id FROM contacts WHERE tenant_id = $1 AND LOWER(email) = $2',
@@ -59,7 +155,6 @@ const upsertContact = async (tenantId, contactData, source = 'calendly') => {
     }
   }
 
-  // Create new — need phone for unique constraint; use email-based placeholder if no phone
   const insertPhone = phone || (email ? `e-${email}` : `unknown-${Date.now()}`);
   const result = await db.query(
     `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, source)
@@ -123,27 +218,87 @@ const upsertAppointment = async (tenantId, contactId, appointmentData, status = 
   };
 };
 
+const updateAppointmentById = async (
+  tenantId,
+  appointmentId,
+  contactId,
+  appointmentData,
+  status,
+) => {
+  const { scheduledAt, timezone, serviceName, durationMinutes, rawPayload } = appointmentData;
+
+  await db.query(
+    `UPDATE appointments SET
+       contact_id = $2,
+       status = $3,
+       scheduled_at = $4,
+       timezone = $5,
+       service_name = COALESCE($6, service_name),
+       duration_minutes = COALESCE($7, duration_minutes),
+       raw_payload = COALESCE(raw_payload, '{}'::jsonb) || COALESCE($8::jsonb, '{}'::jsonb),
+       updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $9`,
+    [
+      appointmentId,
+      contactId,
+      status,
+      scheduledAt,
+      timezone || 'America/New_York',
+      serviceName || null,
+      durationMinutes || 30,
+      rawPayload ? JSON.stringify(rawPayload) : null,
+      tenantId,
+    ],
+  );
+
+  return { id: appointmentId, status };
+};
+
 /**
  * Process canonical event from adapter: upsert contact + appointment, return for workflow dispatch.
  */
-const processBookingEvent = async (tenantId, { eventType, contact, appointment, contactSource }) => {
+const processBookingEvent = async (tenantId, { eventType: incomingEventType, contact, appointment, contactSource }) => {
   const contactId = await upsertContact(tenantId, contact, contactSource || appointment?.provider || 'calendly');
+
+  const classification = await classifyBookingEvent(
+    tenantId,
+    contactId,
+    incomingEventType,
+    appointment,
+  );
+  const eventType = classification.eventType;
 
   let status = 'scheduled';
   if (eventType === 'booking.cancelled') status = 'cancelled';
   else if (eventType === 'booking.rescheduled') status = 'rescheduled';
 
-  const { id: appointmentId } = await upsertAppointment(
-    tenantId,
-    contactId,
-    appointment,
-    status,
-  );
+  let appointmentId;
+  if (classification.existingAppointmentId && eventType === 'booking.rescheduled') {
+    const updated = await updateAppointmentById(
+      tenantId,
+      classification.existingAppointmentId,
+      contactId,
+      appointment,
+      status,
+    );
+    appointmentId = updated.id;
+  } else {
+    const upserted = await upsertAppointment(tenantId, contactId, appointment, status);
+    appointmentId = upserted.id;
+  }
+
+  if (eventType !== incomingEventType) {
+    console.log(
+      `[APPT] Reclassified ${incomingEventType} → ${eventType} for contact ${contactId}`
+      + (classification.existingAppointmentId ? ` (appointment ${classification.existingAppointmentId})` : ''),
+    );
+  }
 
   return {
     contactId,
     appointmentId,
     eventType,
+    incomingEventType,
   };
 };
 
@@ -190,4 +345,6 @@ module.exports = {
   processBookingEvent,
   scheduleWorkflowJob,
   cancelWorkflowJobsForAppointment,
+  resolveEventTypeFromExisting,
+  classifyBookingEvent,
 };

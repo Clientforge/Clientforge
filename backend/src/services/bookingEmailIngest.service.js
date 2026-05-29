@@ -258,7 +258,8 @@ async function processInboundBookingEmail(email) {
     tenantId: route.tenantId,
     appointmentId: result.appointmentId,
     contactId: result.contactId,
-    eventType: normalized.eventType,
+    eventType: result.eventType,
+    parsedEventType: normalized.eventType,
   };
 }
 
