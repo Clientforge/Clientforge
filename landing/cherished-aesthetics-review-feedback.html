@@ -16,7 +16,10 @@
       --muted: #6b6460;
       --accent: #9e6b7a;
       --accent-dark: #7d5160;
-      --gold: #c4a882;
+      --gold: #ffd700;
+      --gold-light: #fff4a8;
+      --gold-mid: #ffd700;
+      --gold-dark: #b8860b;
       --line: #ebe3df;
       --radius: 16px;
     }
@@ -47,11 +50,15 @@
     }
     .stars-display {
       text-align: center;
-      color: var(--gold);
       font-size: clamp(2.5rem, 10vw, 4rem);
       letter-spacing: 0.15em;
       margin: 16px 0 20px;
       line-height: 1;
+      background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-mid) 40%, #e6b800 75%, var(--gold-dark) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 2px 6px rgba(184, 134, 11, 0.45));
     }
     .meta {
       text-align: center;

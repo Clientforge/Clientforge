@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Cherished Aesthetics PC — Share your med spa experience. Rate your visit in Grayson or Snellville, GA.">
+  <meta name="description" content="Cherished Aesthetics PC — Share your med spa experience. Rate your visit in Snellville, GA.">
   <title>How was your visit? — Cherished Aesthetics PC</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +17,10 @@
       --accent: #9e6b7a;
       --accent-dark: #7d5160;
       --rose: #c9a9a6;
-      --gold: #c4a882;
+      --gold: #ffd700;
+      --gold-light: #fff4a8;
+      --gold-mid: #ffd700;
+      --gold-dark: #b8860b;
       --line: #ebe3df;
       --radius: 16px;
       --shadow: 0 20px 48px rgba(45, 42, 38, 0.07);
@@ -116,18 +119,24 @@
       align-items: center;
       justify-content: center;
       text-decoration: none;
-      color: var(--gold);
       font-size: clamp(3.25rem, 14vw, 6.5rem);
       line-height: 1;
-      transition: transform 0.15s ease, color 0.15s ease;
       cursor: pointer;
-      text-shadow: 0 2px 16px rgba(196, 168, 130, 0.4);
       -webkit-tap-highlight-color: transparent;
+      background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-mid) 35%, #e6b800 70%, var(--gold-dark) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 2px 6px rgba(184, 134, 11, 0.45));
+      transition: transform 0.15s ease, filter 0.15s ease;
     }
     .star-row a:hover,
     .star-row a:focus {
       transform: scale(1.12);
-      color: #a88b5c;
+      background: linear-gradient(180deg, #fff8c8 0%, #ffec8b 30%, var(--gold-mid) 60%, #daa520 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.55));
       outline: none;
     }
     .star-row a:focus-visible {
@@ -175,13 +184,8 @@
       text-align: center;
     }
     .locations {
-      display: grid;
-      gap: 16px;
-      max-width: 640px;
+      max-width: 420px;
       margin: 0 auto;
-    }
-    @media (min-width: 600px) {
-      .locations { grid-template-columns: 1fr 1fr; }
     }
     .card {
       background: var(--paper);
@@ -229,23 +233,15 @@
     </div>
 
     <div class="cta-block">
-      <a class="btn btn-primary" href="https://www.cherished-aesthetics.com/contact-us" target="_blank" rel="noopener noreferrer">Book an appointment</a>
+      <a class="btn btn-primary" href="https://cherishedaesthetics.glossgenius.com/services" target="_blank" rel="noopener noreferrer">Book an appointment</a>
       <a class="btn btn-ghost" href="https://www.cherished-aesthetics.com/" target="_blank" rel="noopener noreferrer">Visit website</a>
     </div>
   </header>
 
   <main class="wrap">
     <section>
-      <h2>Our locations</h2>
+      <h2>Our location</h2>
       <div class="locations">
-        <div class="card">
-          <h3>Grayson</h3>
-          <p>1845 Grayson Hwy, Suite 200<br>Grayson, GA 30017</p>
-          <p><a href="tel:+17705263061">(770) 526-3061</a></p>
-          <p style="margin-top: 10px;">
-            <a href="https://www.google.com/maps/search/?api=1&amp;query=1845%20Grayson%20Hwy%20Suite%20200%20Grayson%20GA%2030017" target="_blank" rel="noopener noreferrer">Get directions →</a>
-          </p>
-        </div>
         <div class="card">
           <h3>Snellville</h3>
           <p>2429 Main Street East, Suite 6<br>Snellville, GA 30078</p>
