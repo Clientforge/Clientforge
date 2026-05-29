@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cherished Aesthetics PC — Share your med spa experience. Rate your visit in Grayson or Snellville, GA.">
+  <title>How was your visit? — Cherished Aesthetics PC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf6f4;
+      --paper: #fffcfb;
+      --ink: #2d2a26;
+      --muted: #6b6460;
+      --accent: #9e6b7a;
+      --accent-dark: #7d5160;
+      --rose: #c9a9a6;
+      --gold: #c4a882;
+      --line: #ebe3df;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(45, 42, 38, 0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 169, 166, 0.35), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(196, 168, 130, 0.15), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; position: relative; z-index: 1; }
+    header {
+      text-align: center;
+      padding: 48px 22px 36px;
+      border-bottom: 1px solid var(--line);
+    }
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--rose), var(--accent));
+      color: #fff;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(158, 107, 122, 0.25);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 600;
+      font-size: clamp(1.85rem, 5vw, 2.6rem);
+      line-height: 1.15;
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto 8px;
+    }
+    .tagline {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(158, 107, 122, 0.1);
+      color: var(--accent-dark);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .star-hint {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 28px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .star-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(6px, 2vw, 16px);
+      margin: 12px 0 28px;
+      padding: 8px 0 20px;
+    }
+    .star-row a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: clamp(3.25rem, 14vw, 6.5rem);
+      line-height: 1;
+      transition: transform 0.15s ease, color 0.15s ease;
+      cursor: pointer;
+      text-shadow: 0 2px 16px rgba(196, 168, 130, 0.4);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .star-row a:hover,
+    .star-row a:focus {
+      transform: scale(1.12);
+      color: #a88b5c;
+      outline: none;
+    }
+    .star-row a:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
+    .cta-block {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-ghost {
+      background: var(--paper);
+      color: var(--ink);
+      border: 1.5px solid var(--line);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      border: none;
+      box-shadow: 0 8px 24px rgba(125, 81, 96, 0.28);
+    }
+    section { padding: 40px 0; }
+    section h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .locations {
+      display: grid;
+      gap: 16px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    @media (min-width: 600px) {
+      .locations { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .card h3 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: var(--accent-dark);
+    }
+    .card p { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.5rem; }
+    .card a { color: var(--accent-dark); font-weight: 600; text-decoration: none; }
+    .card a:hover { text-decoration: underline; }
+    footer {
+      text-align: center;
+      padding: 28px 22px 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-mark" aria-hidden="true">C</div>
+    <p class="badge">Medical Spa</p>
+    <h1>How was your experience?</h1>
+    <p class="sub">Your feedback helps us refine every treatment—from injectables and facials to wellness services. Tap a star; it only takes a moment.</p>
+    <p class="tagline">Botox · Fillers · Facials · Wellness</p>
+
+    <p class="star-hint" id="star-label">Rate your visit</p>
+    <div class="star-row" role="group" aria-labelledby="star-label">
+      <a href="/cherished-review/feedback?stars=1" aria-label="1 out of 5 stars">★</a>
+      <a href="/cherished-review/feedback?stars=2" aria-label="2 out of 5 stars">★</a>
+      <a href="/cherished-review/feedback?stars=3" aria-label="3 out of 5 stars">★</a>
+      <a href="/cherished-review/thanks?stars=4" aria-label="4 out of 5 stars">★</a>
+      <a href="/cherished-review/thanks?stars=5" aria-label="5 out of 5 stars">★</a>
+    </div>
+
+    <div class="cta-block">
+      <a class="btn btn-primary" href="https://www.cherished-aesthetics.com/contact-us" target="_blank" rel="noopener noreferrer">Book an appointment</a>
+      <a class="btn btn-ghost" href="https://www.cherished-aesthetics.com/" target="_blank" rel="noopener noreferrer">Visit website</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>Our locations</h2>
+      <div class="locations">
+        <div class="card">
+          <h3>Grayson</h3>
+          <p>1845 Grayson Hwy, Suite 200<br>Grayson, GA 30017</p>
+          <p><a href="tel:+17705263061">(770) 526-3061</a></p>
+          <p style="margin-top: 10px;">
+            <a href="https://www.google.com/maps/search/?api=1&amp;query=1845%20Grayson%20Hwy%20Suite%20200%20Grayson%20GA%2030017" target="_blank" rel="noopener noreferrer">Get directions →</a>
+          </p>
+        </div>
+        <div class="card">
+          <h3>Snellville</h3>
+          <p>2429 Main Street East, Suite 6<br>Snellville, GA 30078</p>
+          <p><a href="tel:+15164510911">(516) 451-0911</a></p>
+          <p style="margin-top: 10px;">
+            <a href="https://www.google.com/maps/search/?api=1&amp;query=2429%20Main%20Street%20East%20Snellville%20GA%2030078" target="_blank" rel="noopener noreferrer">Get directions →</a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="y"></span> Cherished Aesthetics PC
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  </footer>
+
+</body>
+</html>

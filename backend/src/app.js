@@ -117,6 +117,15 @@ app.get('/penthos-review/feedback', (req, res) => {
 app.get('/penthos-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'penthos-kitchen-review-thanks.html'));
 });
+app.get('/cherished-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-review.html'));
+});
+app.get('/cherished-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-review-feedback.html'));
+});
+app.get('/cherished-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-review-thanks.html'));
+});
 
 /** Grace to Grace — internal team vehicle photo review (secret link per submission). */
 app.get('/g2g-review/:token', (req, res) => {
@@ -171,6 +180,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/penthos-review' || req.path.startsWith('/penthos-review/')) {
+    return next();
+  }
+  if (req.path === '/cherished-review' || req.path.startsWith('/cherished-review/')) {
     return next();
   }
   if (req.path === '/g2g-review' || req.path.startsWith('/g2g-review/')) {
