@@ -542,6 +542,42 @@ img {
   border-bottom: 1px solid var(--color-border-light);
 }
 
+/* --- STATS STRIP --- */
+.stats-strip {
+  padding: 56px 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.stats-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  text-align: center;
+}
+
+.stats-strip-value {
+  display: block;
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.stats-strip-label {
+  display: block;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
 .logos-label {
   font-size: 13px;
   font-weight: 600;
@@ -619,6 +655,10 @@ img {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
+}
+
+.features-grid.features-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .feature-card {
@@ -843,6 +883,11 @@ img {
   background: var(--color-primary-bg);
 }
 
+.who-card-more {
+  border-style: dashed;
+  color: var(--color-text-tertiary);
+}
+
 /* --- SERVICES --- */
 .services-section {
   padding: 100px 0;
@@ -935,6 +980,13 @@ img {
   font-weight: 500;
 }
 
+.price-setup {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
 .pricing-features {
   list-style: none;
   margin-bottom: 28px;
@@ -969,6 +1021,50 @@ img {
   max-width: 560px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.setup-includes {
+  margin-top: 48px;
+  padding: 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+}
+
+.setup-includes h3 {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.setup-includes-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 20px;
+}
+
+.setup-includes-list li {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  padding-left: 22px;
+  position: relative;
+}
+
+.setup-includes-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.pricing-footnotes {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-tertiary);
 }
 
 /* --- TESTIMONIALS --- */
@@ -1252,8 +1348,18 @@ img {
    ============================================================ */
 @media (max-width: 1024px) {
   .features-grid,
+  .features-grid.features-grid-4,
   .pricing-grid,
   .testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-strip-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .setup-includes-list {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -1391,8 +1497,13 @@ img {
   }
 
   .features-grid,
+  .features-grid.features-grid-4,
   .pricing-grid,
   .testimonials-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-includes-list {
     grid-template-columns: 1fr;
   }
 
