@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Tell Cherished Aesthetics PC how we can improve your experience.">
-  <title>Your feedback — Cherished Aesthetics PC</title>
+  <meta name="description" content="Tell Cherished Aesthetics how we can improve your experience.">
+  <title>Your feedback — Cherished Aesthetics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -150,7 +150,7 @@
         e.preventDefault();
         var msg = document.getElementById('message').value.trim();
         if (!msg) return;
-        var subject = encodeURIComponent('Cherished Aesthetics PC feedback (' + stars + ' stars)');
+        var subject = encodeURIComponent('Cherished Aesthetics feedback (' + stars + ' stars)');
         var body = encodeURIComponent('Rating: ' + stars + ' / 5 stars\n\n' + msg);
         window.location.href = 'mailto:' + FEEDBACK_EMAIL + '?subject=' + subject + '&body=' + body;
         document.getElementById('form-panel').style.display = 'none';
