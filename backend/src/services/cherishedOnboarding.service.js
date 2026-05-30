@@ -101,7 +101,7 @@ async function maybeSendWelcomeSms(tenant, contactId, contact, portraitLink) {
 
   const template =
     process.env.CHERISHED_ONBOARDING_WELCOME_SMS
-    || 'Hi {firstName}! Welcome to {businessName}. Start your Portrait skin analysis: {portraitLink}';
+    || 'Hi {firstName}! Welcome to {businessName}. Access your patient portal here: {portraitLink}';
 
   const body = template
     .replace(/\{firstName\}/gi, contact.firstName || 'there')

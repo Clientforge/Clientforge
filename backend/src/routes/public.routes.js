@@ -387,7 +387,7 @@ router.get('/g2g-estimate-snapshots-report', snapshotReportLimiter, async (req, 
 });
 
 /**
- * Cherished Aesthetics — public onboarding config (Portrait URL, etc.).
+ * Cherished Aesthetics — public onboarding config (Portrait Care patient portal URL, etc.).
  */
 router.get('/cherished-onboarding/config', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
