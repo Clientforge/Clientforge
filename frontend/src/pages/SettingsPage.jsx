@@ -33,6 +33,23 @@ export default function SettingsPage() {
 
   useEffect(() => { loadSettings(); }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get('tab');
+    if (urlTab === 'integration') setTab('integration');
+    const gcal = params.get('gcal');
+    if (gcal === 'connected') {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (gcal === 'error') {
+      const reason = params.get('reason') || 'Connection failed';
+      setError(`Google Calendar: ${decodeURIComponent(reason)}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   const save = async (payload) => {
     setSaving(true); setError(''); setSaved(false);
     try {
@@ -644,6 +661,10 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <hr className="settings-divider" />
 
+      <GoogleCalendarSection settings={settings} onReload={onReload} />
+
+      <hr className="settings-divider" />
+
       <h3>SMS Inbound Webhook (Twilio / Telnyx)</h3>
       <p className="settings-desc">Configure your SMS provider to receive inbound messages. Set this URL in Twilio or Telnyx messaging profile.</p>
       {smsInboundWebhookUrl && (
@@ -689,6 +710,150 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
     "email": "jane@example.com",
     "source": "website_form"
   }'`}</pre>
+    </div>
+  );
+}
+
+function GoogleCalendarSection({ settings, onReload }) {
+  const gcal = settings.integration?.googleCalendar || {};
+  const [busy, setBusy] = useState('');
+  const [calendars, setCalendars] = useState([]);
+  const [calendarId, setCalendarId] = useState(gcal.calendarId || 'primary');
+  const [syncEnabled, setSyncEnabled] = useState(gcal.syncEnabled !== false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    setCalendarId(gcal.calendarId || 'primary');
+    setSyncEnabled(gcal.syncEnabled !== false);
+  }, [gcal.calendarId, gcal.syncEnabled]);
+
+  useEffect(() => {
+    if (!gcal.connected) return;
+    api.get('/integrations/google-calendar/calendars')
+      .then((data) => setCalendars(data.calendars || []))
+      .catch(() => {});
+  }, [gcal.connected]);
+
+  const connect = async () => {
+    setBusy('connect');
+    setMsg('');
+    try {
+      const { url } = await api.post('/integrations/google-calendar/connect');
+      window.location.href = url;
+    } catch (err) {
+      setMsg(err.message);
+      setBusy('');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Google Calendar? Appointment sync from calendar will stop.')) return;
+    setBusy('disconnect');
+    setMsg('');
+    try {
+      await api.post('/integrations/google-calendar/disconnect');
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const syncNow = async () => {
+    setBusy('sync');
+    setMsg('');
+    try {
+      const result = await api.post('/integrations/google-calendar/sync');
+      setMsg(`Sync complete — ${result.processed ?? 0} processed, ${result.skipped ?? 0} skipped`);
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const saveCalendar = async (e) => {
+    e.preventDefault();
+    setBusy('save');
+    setMsg('');
+    try {
+      await api.put('/integrations/google-calendar', { calendarId, syncEnabled });
+      await onReload();
+      setMsg('Calendar settings saved');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  if (!gcal.configured) {
+    return (
+      <div className="integration-block">
+        <h3>Google Calendar</h3>
+        <p className="settings-desc muted">Google Calendar sync is not configured on the server yet. Set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> in the backend environment.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="integration-block">
+      <h3>Google Calendar</h3>
+      <p className="settings-desc">
+        Sync appointments booked directly on Google Calendar into ClientForge. Client events with a guest attendee are matched to contacts and trigger the same automations as email ingest and Calendly (reminders, reviews, rebooking).
+      </p>
+
+      {!gcal.connected ? (
+        <button type="button" className="btn-primary" onClick={connect} disabled={busy === 'connect'}>
+          {busy === 'connect' ? 'Redirecting…' : 'Connect Google Calendar'}
+        </button>
+      ) : (
+        <>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>Connected account</label>
+            <p style={{ margin: 0, fontSize: 14 }}>{gcal.googleEmail || 'Google account'}</p>
+            {gcal.lastSyncedAt && (
+              <span className="field-hint">Last synced: {new Date(gcal.lastSyncedAt).toLocaleString()}</span>
+            )}
+            {gcal.lastSyncError && (
+              <span className="field-hint" style={{ color: 'var(--danger, #c0392b)' }}>Last error: {gcal.lastSyncError}</span>
+            )}
+          </div>
+
+          <form onSubmit={saveCalendar} style={{ marginTop: 16 }}>
+            <div className="field">
+              <label>Calendar to sync</label>
+              <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
+                {(calendars.length ? calendars : [{ id: calendarId, summary: gcal.calendarSummary || calendarId }]).map((c) => (
+                  <option key={c.id} value={c.id}>{c.summary || c.id}{c.primary ? ' (primary)' : ''}</option>
+                ))}
+              </select>
+            </div>
+            <label className="checkbox-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+              <input type="checkbox" checked={syncEnabled} onChange={(e) => setSyncEnabled(e.target.checked)} />
+              Enable automatic sync
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+              <button type="submit" className="btn-primary" disabled={busy === 'save'}>
+                {busy === 'save' ? 'Saving…' : 'Save'}
+              </button>
+              <button type="button" className="btn-sm" onClick={syncNow} disabled={!!busy}>
+                {busy === 'sync' ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
+                Disconnect
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
+      <span className="field-hint" style={{ display: 'block', marginTop: 12 }}>
+        Only events with an external guest attendee (client email) are imported. SMS automations require a phone on file — email-only guests receive email steps when configured.
+      </span>
     </div>
   );
 }

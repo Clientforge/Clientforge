@@ -41,6 +41,12 @@ const config = {
     resendApiKey: process.env.RESEND_API_KEY,
     defaultFrom: process.env.EMAIL_DEFAULT_FROM || 'ClientForge.ai <noreply@clientforge.ai>',
   },
+
+  googleCalendar: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI,
+  },
 };
 
 if (config.env === 'production') {

@@ -2,6 +2,7 @@ const db = require('../db/connection');
 const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_SCHEDULE, DEFAULT_OUTREACH_WINDOW } = require('./followup.service');
 const tenantPhoneService = require('./tenant-phone.service');
+const googleCalendarService = require('./googleCalendar.service');
 
 const getSettings = async (tenantId) => {
   const result = await db.query(
@@ -21,6 +22,13 @@ const getSettings = async (tenantId) => {
   const t = result.rows[0];
   const config = t.followup_config || {};
   const smsFrom = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number);
+
+  let googleCalendar = { connected: false, configured: googleCalendarService.isConfigured() };
+  try {
+    googleCalendar = (await googleCalendarService.getStatus(tenantId)) || googleCalendar;
+  } catch {
+    // ignore
+  }
 
   return {
     business: {
@@ -48,6 +56,7 @@ const getSettings = async (tenantId) => {
       calendlyWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/calendly/${tenantId}`,
       voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
+      googleCalendar,
     },
     email: {
       fromName: t.email_from_name || '',

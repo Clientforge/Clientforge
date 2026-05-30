@@ -69,7 +69,26 @@ app.use('/api/v1/g2g-owner', require('./routes/g2gOwner.routes'));
 app.use('/api/v1/auth',    require('./routes/auth.routes'));
 app.use('/api/v1/webhook', require('./routes/webhook.routes'));
 app.use('/api/v1/webhook/calendly', require('./routes/calendly.webhook'));
+app.use('/api/v1/webhook/google-calendar', require('./routes/googleCalendar.webhook'));
 app.use('/api/v1/voice',   require('./routes/voice.routes'));
+
+const googleCalendarService = require('./services/googleCalendar.service');
+app.get('/api/v1/integrations/google-calendar/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+  if (error) {
+    return res.redirect(googleCalendarService.appSettingsUrl(`tab=integration&gcal=error&reason=${encodeURIComponent(error)}`));
+  }
+  try {
+    if (!code || !state) throw new Error('Missing OAuth code or state');
+    await googleCalendarService.handleOAuthCallback(code, state);
+    return res.redirect(googleCalendarService.appSettingsUrl('tab=integration&gcal=connected'));
+  } catch (err) {
+    console.error('[GCAL] OAuth callback failed:', err.message);
+    return res.redirect(
+      googleCalendarService.appSettingsUrl(`tab=integration&gcal=error&reason=${encodeURIComponent(err.message)}`),
+    );
+  }
+});
 
 // --------------- PROTECTED ROUTES ---------------
 
@@ -77,6 +96,7 @@ app.use('/api/v1/leads',     authenticate, tenantScope, require('./routes/leads.
 app.use('/api/v1/sms',       require('./routes/sms.routes'));
 app.use('/api/v1/dashboard', authenticate, tenantScope, require('./routes/dashboard.routes'));
 app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settings.routes'));
+app.use('/api/v1/integrations/google-calendar', authenticate, tenantScope, require('./routes/googleCalendar.routes'));
 app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));
 app.use('/api/v1/conversations', authenticate, tenantScope, require('./routes/conversations.routes'));
 app.use('/api/v1/campaigns', authenticate, tenantScope, require('./routes/campaigns.routes'));
