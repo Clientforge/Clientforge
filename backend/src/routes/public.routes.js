@@ -24,6 +24,11 @@ const {
   G2gPhotoError,
   MAX_FILES,
 } = require('../services/graceG2gPhoto.service');
+const {
+  submitOnboarding,
+  getPublicConfig,
+  CherishedOnboardingError,
+} = require('../services/cherishedOnboarding.service');
 
 const router = express.Router();
 
@@ -378,6 +383,31 @@ router.get('/g2g-estimate-snapshots-report', snapshotReportLimiter, async (req, 
   } catch (err) {
     console.error('[public/g2g-estimate-snapshots-report]', err);
     return res.status(500).json({ error: 'Could not load data.' });
+  }
+});
+
+/**
+ * Cherished Aesthetics — public onboarding config (Portrait URL, etc.).
+ */
+router.get('/cherished-onboarding/config', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  return res.json(getPublicConfig());
+});
+
+/**
+ * Cherished Aesthetics — contact capture for onboarding (upserts CRM contact).
+ */
+router.post('/cherished-onboarding', sellIntentLimiter, async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const result = await submitOnboarding(req.body);
+    return res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof CherishedOnboardingError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/cherished-onboarding]', err);
+    return res.status(500).json({ error: 'Could not save your information.' });
   }
 });
 

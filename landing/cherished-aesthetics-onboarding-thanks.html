@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Thank you — begin your Portrait skin analysis with Cherished Aesthetics.">
+  <title>Thank you — Cherished Aesthetics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf6f4;
+      --paper: #fffcfb;
+      --ink: #2d2a26;
+      --muted: #6b6460;
+      --accent: #9e6b7a;
+      --accent-dark: #7d5160;
+      --line: #ebe3df;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(45, 42, 38, 0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 48px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 169, 166, 0.35), transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 40px 28px 44px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .brand-name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.65rem, 5vw, 2rem);
+      font-weight: 600;
+      color: var(--accent-dark);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.85rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 32px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 32px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      transition: filter 0.15s ease, transform 0.15s ease;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .btn:disabled, .btn.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .hint {
+      margin-top: 20px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .site-link {
+      display: block;
+      margin-top: 24px;
+      font-size: 0.95rem;
+    }
+    .site-link a { color: var(--accent-dark); font-weight: 600; text-decoration: none; }
+    .site-link a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <p class="brand-name">Cherished Aesthetics</p>
+    <h1>Thank you!</h1>
+    <p class="lead">Your information has been saved. Next, complete your Portrait skin analysis — it only takes a few minutes and helps us personalize your care.</p>
+
+    <a class="btn" id="portrait-btn" href="#" target="_blank" rel="noopener noreferrer">Start Portrait skin analysis</a>
+    <p class="hint" id="portrait-hint" style="display:none">Portrait link is being configured. Please contact us if you need help.</p>
+
+    <p class="site-link"><a href="https://www.cherished-aesthetics.com/" target="_blank" rel="noopener noreferrer">cherished-aesthetics.com</a></p>
+  </div>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('portrait-btn');
+      var hint = document.getElementById('portrait-hint');
+
+      fetch('/api/v1/public/cherished-onboarding/config')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var url = data.portraitUrl;
+          if (url && /^https?:\/\//i.test(url)) {
+            btn.href = url;
+            btn.removeAttribute('aria-disabled');
+          } else {
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            hint.style.display = 'block';
+          }
+        })
+        .catch(function () {
+          hint.style.display = 'block';
+          btn.classList.add('disabled');
+        });
+    })();
+  </script>
+
+</body>
+</html>

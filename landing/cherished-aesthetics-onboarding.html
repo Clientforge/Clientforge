@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Welcome to Cherished Aesthetics — start your onboarding with a quick contact form.">
+  <title>Welcome — Cherished Aesthetics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf6f4;
+      --paper: #fffcfb;
+      --ink: #2d2a26;
+      --muted: #6b6460;
+      --accent: #9e6b7a;
+      --accent-dark: #7d5160;
+      --line: #ebe3df;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(45, 42, 38, 0.07);
+      --error: #b42318;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 48px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 169, 166, 0.35), transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 36px 28px 40px;
+      box-shadow: var(--shadow);
+    }
+    .brand-name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.65rem, 5vw, 2rem);
+      font-weight: 600;
+      color: var(--accent-dark);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .badge {
+      display: block;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .lead {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 28px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      margin-bottom: 18px;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(158, 107, 122, 0.18);
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      transition: filter 0.15s ease;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .error {
+      display: none;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: var(--error);
+      font-size: 0.92rem;
+    }
+    .error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <p class="brand-name">Cherished Aesthetics</p>
+    <span class="badge">New client onboarding</span>
+    <h1>Welcome — let&apos;s get started</h1>
+    <p class="lead">Share your contact details below. On the next screen you&apos;ll begin your Portrait skin analysis.</p>
+
+    <p id="form-error" class="error" role="alert"></p>
+
+    <form id="onboarding-form" novalidate>
+      <label for="firstName">First name</label>
+      <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
+
+      <label for="lastName">Last name</label>
+      <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
+
+      <label for="phone">Phone number</label>
+      <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="(555) 555-5555">
+
+      <label for="email">Email address</label>
+      <input type="email" id="email" name="email" autocomplete="email" required>
+
+      <button type="submit" class="btn" id="submit-btn">Continue</button>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById('onboarding-form');
+      var errorEl = document.getElementById('form-error');
+      var submitBtn = document.getElementById('submit-btn');
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.classList.add('visible');
+      }
+
+      function clearError() {
+        errorEl.textContent = '';
+        errorEl.classList.remove('visible');
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearError();
+
+        var payload = {
+          firstName: document.getElementById('firstName').value.trim(),
+          lastName: document.getElementById('lastName').value.trim(),
+          phone: document.getElementById('phone').value.trim(),
+          email: document.getElementById('email').value.trim(),
+        };
+
+        if (!payload.firstName) { showError('First name is required.'); return; }
+        if (!payload.lastName) { showError('Last name is required.'); return; }
+        if (!payload.phone) { showError('Phone number is required.'); return; }
+        if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+          showError('Enter a valid email address.');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving…';
+
+        fetch('/api/v1/public/cherished-onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+              window.location.href = '/cherished-onboarding/thanks';
+            });
+          })
+          .catch(function (err) {
+            showError(err.message || 'Could not save your information. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Continue';
+          });
+      });
+    })();
+  </script>
+
+</body>
+</html>
