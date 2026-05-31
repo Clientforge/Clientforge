@@ -433,6 +433,10 @@ a:hover { text-decoration: underline; }
 .timeline-item.timeline-failed .timeline-item-marker { background: #dc2626; }
 .timeline-item-body { flex: 1; min-width: 0; }
 .timeline-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.timeline-item-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.timeline-cancel-btn { padding: 4px 10px; font-size: 12px; }
+.timeline-actions-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.timeline-actions-row h4 { margin: 0 0 4px; }
 .timeline-item-meta { font-size: 12px; margin-bottom: 6px; }
 .timeline-message { font-size: 13px; line-height: 1.5; color: var(--text-2); background: var(--bg); padding: 10px 12px; border-radius: var(--radius-sm); margin: 0; }
 .email-ingest-layout { display: flex; flex-direction: column; gap: 24px; }

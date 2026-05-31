@@ -334,9 +334,56 @@ const mapEmailDetail = (row) => ({
   parsed: row.parsed,
 });
 
+async function assertAppointmentBelongsToTenant(tenantId, appointmentId) {
+  const result = await db.query(
+    'SELECT id FROM appointments WHERE id = $1 AND tenant_id = $2',
+    [appointmentId, tenantId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Appointment not found'), { statusCode: 404, isOperational: true });
+  }
+}
+
+const cancelWorkflowJob = async (tenantId, appointmentId, jobId) => {
+  await assertAppointmentBelongsToTenant(tenantId, appointmentId);
+
+  const result = await db.query(
+    `UPDATE appointment_workflow_jobs
+     SET status = 'cancelled', cancelled_at = NOW()
+     WHERE id = $1 AND appointment_id = $2 AND tenant_id = $3 AND status = 'pending'
+     RETURNING id`,
+    [jobId, appointmentId, tenantId],
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Scheduled message not found or already sent'), {
+      statusCode: 404,
+      isOperational: true,
+    });
+  }
+
+  return { cancelled: true, jobId: result.rows[0].id };
+};
+
+const cancelAllPendingWorkflowJobs = async (tenantId, appointmentId) => {
+  await assertAppointmentBelongsToTenant(tenantId, appointmentId);
+
+  const result = await db.query(
+    `UPDATE appointment_workflow_jobs
+     SET status = 'cancelled', cancelled_at = NOW()
+     WHERE appointment_id = $1 AND tenant_id = $2 AND status = 'pending'
+     RETURNING id`,
+    [appointmentId, tenantId],
+  );
+
+  return { cancelledCount: result.rows.length };
+};
+
 module.exports = {
   listAppointmentRecords,
   getAppointmentRecord,
+  cancelWorkflowJob,
+  cancelAllPendingWorkflowJobs,
   listBookingEmails,
   getBookingEmail,
   getBookingEmailSetup,

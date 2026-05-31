@@ -25,6 +25,24 @@ router.get('/appointment-records/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/appointment-records/:id/cancel-workflows', async (req, res, next) => {
+  try {
+    const result = await dashboardService.cancelAllPendingWorkflowJobs(req.tenantId, req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/appointment-records/:appointmentId/workflow-jobs/:jobId/cancel', async (req, res, next) => {
+  try {
+    const result = await dashboardService.cancelWorkflowJob(
+      req.tenantId,
+      req.params.appointmentId,
+      req.params.jobId,
+    );
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.get('/booking-emails', async (req, res, next) => {
   try {
     const { page, limit, parseStatus } = req.query;

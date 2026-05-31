@@ -141,15 +141,57 @@ export default function AppointmentsPanel() {
         ) : !detail ? (
           <div className="empty-state"><p>Could not load appointment</p></div>
         ) : (
-          <AppointmentTimeline detail={detail} />
+          <AppointmentTimeline
+            detail={detail}
+            onRefresh={() => {
+              loadDetail(selectedId);
+              load(pagination.page || 1);
+            }}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function AppointmentTimeline({ detail }) {
+function AppointmentTimeline({ detail, onRefresh }) {
   const { appointment, contact, workflowJobs } = detail;
+  const [busy, setBusy] = useState('');
+  const [actionMsg, setActionMsg] = useState('');
+
+  const pendingCount = workflowJobs.filter((job) => job.status === 'pending').length;
+
+  const cancelJob = async (jobId) => {
+    if (!confirm('Cancel this scheduled message?')) return;
+    setBusy(jobId);
+    setActionMsg('');
+    try {
+      await api.post(`/automations/appointment-records/${appointment.id}/workflow-jobs/${jobId}/cancel`);
+      setActionMsg('Message cancelled.');
+      await onRefresh?.();
+    } catch (err) {
+      setActionMsg(err.message || 'Could not cancel message.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const cancelAll = async () => {
+    if (!confirm(`Stop all ${pendingCount} scheduled message(s) for this appointment?`)) return;
+    setBusy('all');
+    setActionMsg('');
+    try {
+      const result = await api.post(`/automations/appointment-records/${appointment.id}/cancel-workflows`);
+      setActionMsg(result.cancelledCount
+        ? `Stopped ${result.cancelledCount} scheduled message(s).`
+        : 'No scheduled messages to stop.');
+      await onRefresh?.();
+    } catch (err) {
+      setActionMsg(err.message || 'Could not stop messages.');
+    } finally {
+      setBusy('');
+    }
+  };
 
   return (
     <div className="appointment-timeline">
@@ -181,8 +223,23 @@ function AppointmentTimeline({ detail }) {
 
       <hr className="settings-divider" />
 
-      <h4>Automation Timeline</h4>
-      <p className="settings-desc">Messages scheduled or sent for this appointment.</p>
+      <div className="timeline-actions-row">
+        <div>
+          <h4>Automation Timeline</h4>
+          <p className="settings-desc">Messages scheduled or sent for this appointment.</p>
+        </div>
+        {pendingCount > 0 && (
+          <button
+            type="button"
+            className="btn-sm btn-danger-sm"
+            onClick={cancelAll}
+            disabled={!!busy}
+          >
+            {busy === 'all' ? 'Stopping…' : `Stop all scheduled (${pendingCount})`}
+          </button>
+        )}
+      </div>
+      {actionMsg && <p className="field-hint automation-inline-saved">{actionMsg}</p>}
 
       {workflowJobs.length === 0 ? (
         <p className="muted">No workflow messages yet.</p>
@@ -194,12 +251,24 @@ function AppointmentTimeline({ detail }) {
               <div className="timeline-item-body">
                 <div className="timeline-item-top">
                   <strong>{job.jobTypeLabel}</strong>
-                  <span className="status-badge" style={{
-                    background: JOB_STATUS_STYLES[job.status]?.bg,
-                    color: JOB_STATUS_STYLES[job.status]?.color,
-                  }}>
-                    {JOB_STATUS_STYLES[job.status]?.label || job.status}
-                  </span>
+                  <div className="timeline-item-actions">
+                    <span className="status-badge" style={{
+                      background: JOB_STATUS_STYLES[job.status]?.bg,
+                      color: JOB_STATUS_STYLES[job.status]?.color,
+                    }}>
+                      {JOB_STATUS_STYLES[job.status]?.label || job.status}
+                    </span>
+                    {job.status === 'pending' && (
+                      <button
+                        type="button"
+                        className="btn-sm btn-danger-sm timeline-cancel-btn"
+                        onClick={() => cancelJob(job.id)}
+                        disabled={!!busy}
+                      >
+                        {busy === job.id ? '…' : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="timeline-item-meta muted">
                   {job.channel.toUpperCase()} · {formatDateTime(job.scheduledAt, appointment.timezone)}
