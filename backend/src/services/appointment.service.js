@@ -29,32 +29,52 @@ const resolveEventTypeFromExisting = (incomingEventType, {
     };
   }
 
-  if (incomingEventType !== 'booking.rescheduled') {
-    return { eventType: incomingEventType, existingAppointmentId: null };
-  }
-
   const newTime = new Date(scheduledAt).getTime();
-  if (Number.isNaN(newTime)) {
-    return { eventType: 'booking.created', existingAppointmentId: null };
-  }
 
   if (priorByExternalId) {
     const oldTime = new Date(priorByExternalId.scheduled_at).getTime();
-    if (Math.abs(oldTime - newTime) > SAME_TIME_MS) {
+    const isActive = ACTIVE_APPOINTMENT_STATUSES.includes(priorByExternalId.status);
+
+    if (!Number.isNaN(newTime) && !Number.isNaN(oldTime) && isActive) {
+      if (Math.abs(oldTime - newTime) <= SAME_TIME_MS) {
+        return {
+          eventType: 'booking.unchanged',
+          existingAppointmentId: priorByExternalId.id,
+          existingStatus: priorByExternalId.status,
+        };
+      }
       return { eventType: 'booking.rescheduled', existingAppointmentId: priorByExternalId.id };
     }
+
     return { eventType: 'booking.created', existingAppointmentId: priorByExternalId.id };
   }
 
-  for (const row of priorByContact || []) {
-    if (!ACTIVE_APPOINTMENT_STATUSES.includes(row.status)) continue;
-    const oldTime = new Date(row.scheduled_at).getTime();
-    if (Math.abs(oldTime - newTime) <= SAME_TIME_MS) continue;
-    if (!servicesMatch(serviceName, row.service_name)) continue;
-    return { eventType: 'booking.rescheduled', existingAppointmentId: row.id };
+  if (!Number.isNaN(newTime)) {
+    for (const row of priorByContact || []) {
+      if (!ACTIVE_APPOINTMENT_STATUSES.includes(row.status)) continue;
+      if (!servicesMatch(serviceName, row.service_name)) continue;
+
+      const oldTime = new Date(row.scheduled_at).getTime();
+      if (Number.isNaN(oldTime)) continue;
+
+      if (Math.abs(oldTime - newTime) <= SAME_TIME_MS) {
+        return {
+          eventType: 'booking.unchanged',
+          existingAppointmentId: row.id,
+          existingStatus: row.status,
+        };
+      }
+      if (incomingEventType === 'booking.rescheduled') {
+        return { eventType: 'booking.rescheduled', existingAppointmentId: row.id };
+      }
+    }
   }
 
-  return { eventType: 'booking.created', existingAppointmentId: null };
+  if (incomingEventType === 'booking.rescheduled') {
+    return { eventType: 'booking.created', existingAppointmentId: null };
+  }
+
+  return { eventType: incomingEventType, existingAppointmentId: null };
 };
 
 const findPriorAppointmentByExternalId = async (tenantId, externalId) => {
@@ -271,6 +291,7 @@ const processBookingEvent = async (tenantId, { eventType: incomingEventType, con
   let status = 'scheduled';
   if (eventType === 'booking.cancelled') status = 'cancelled';
   else if (eventType === 'booking.rescheduled') status = 'rescheduled';
+  else if (eventType === 'booking.unchanged') status = classification.existingStatus || 'scheduled';
 
   let appointmentId;
   if (classification.existingAppointmentId && eventType === 'booking.rescheduled') {

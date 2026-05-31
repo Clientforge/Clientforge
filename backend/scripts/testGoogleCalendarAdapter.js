@@ -45,6 +45,12 @@ const cancelled = normalizeGoogleCalendarEvent(
 );
 check('cancelled event type', cancelled?.eventType, 'booking.cancelled');
 
+const updated = normalizeGoogleCalendarEvent(
+  { ...guestEvent, created: '2026-05-01T10:00:00Z', updated: '2026-05-01T11:00:00Z' },
+  { ownerEmail: 'owner@spa.com' },
+);
+check('updated timestamp still booking.created', updated?.eventType, 'booking.created');
+
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
   process.exit(1);

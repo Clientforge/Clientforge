@@ -57,13 +57,7 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
   const firstName = nameParts[0] || null;
   const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null;
 
-  const cancelled = event.status === 'cancelled';
-  let eventType = 'booking.created';
-  if (cancelled) {
-    eventType = 'booking.cancelled';
-  } else if (event.updated && event.created && event.updated !== event.created) {
-    eventType = 'booking.rescheduled';
-  }
+  const eventType = event.status === 'cancelled' ? 'booking.cancelled' : 'booking.created';
 
   return {
     eventType,

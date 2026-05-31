@@ -49,7 +49,8 @@ const duplicate = resolveEventTypeFromExisting('booking.rescheduled', {
     status: 'scheduled',
   }],
 });
-failed += check('same time → booking.created', duplicate.eventType, 'booking.created');
+failed += check('same time → booking.unchanged', duplicate.eventType, 'booking.unchanged');
+failed += check('same time → existing id', duplicate.existingAppointmentId, 'appt-2');
 
 // Calendly-style: same external id, time changed
 const calendly = resolveEventTypeFromExisting('booking.rescheduled', {
@@ -87,6 +88,21 @@ const created = resolveEventTypeFromExisting('booking.created', {
   priorByContact: [],
 });
 failed += check('booking.created passthrough', created.eventType, 'booking.created');
+
+// Google Calendar re-sync: same external id, same time, active appointment
+const gcalResync = resolveEventTypeFromExisting('booking.created', {
+  scheduledAt: '2026-06-06T00:30:00.000Z',
+  serviceName: 'Test consult',
+  priorByExternalId: {
+    id: 'appt-gcal',
+    scheduled_at: '2026-06-06T00:30:00.000Z',
+    service_name: 'Test consult',
+    status: 'scheduled',
+  },
+  priorByContact: [],
+});
+failed += check('gcal re-sync → booking.unchanged', gcalResync.eventType, 'booking.unchanged');
+failed += check('gcal re-sync → same appointment', gcalResync.existingAppointmentId, 'appt-gcal');
 
 if (failed > 0) {
   console.error(`\n${failed} check(s) failed`);

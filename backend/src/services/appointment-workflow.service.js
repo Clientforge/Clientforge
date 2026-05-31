@@ -32,6 +32,10 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
     return;
   }
 
+  if (eventType === 'booking.unchanged') {
+    return;
+  }
+
   const config = automationService.normalizeConfig(tenant.appointment_automation_config);
   const templateContext = { tenant, contact, appointment };
   const vars = automationService.buildTemplateVars(templateContext);
