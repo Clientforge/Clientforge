@@ -644,6 +644,8 @@ a:hover { text-decoration: underline; }
 .modal-body { padding: 20px 24px; }
 .modal-desc { color: var(--text-2); font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.modal-actions-split { justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.modal-actions-right { display: flex; gap: 8px; margin-left: auto; }
 
 .form-error { padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #dc2626; font-size: 13px; margin-bottom: 16px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

@@ -290,6 +290,7 @@ function EditContactModal({ contact, onClose, onSuccess }) {
   });
   const [tagOptions, setTagOptions] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -319,6 +320,26 @@ function EditContactModal({ contact, onClose, onSuccess }) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.phone;
+    if (!confirm(
+      `Delete ${name}? This removes their appointments and scheduled automations. Message history is kept but unlinked. This cannot be undone.`,
+    )) {
+      return;
+    }
+
+    setDeleting(true);
+    setError('');
+    try {
+      await api.delete(`/contacts/${contact.id}`);
+      onSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -386,11 +407,21 @@ function EditContactModal({ contact, onClose, onSuccess }) {
               placeholder="Internal notes (optional)"
             />
           </div>
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save changes'}
+          <div className="modal-actions modal-actions-split">
+            <button
+              type="button"
+              className="btn-sm btn-danger-sm"
+              onClick={handleDelete}
+              disabled={saving || deleting}
+            >
+              {deleting ? 'Deleting…' : 'Delete contact'}
             </button>
+            <div className="modal-actions-right">
+              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={deleting}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving || deleting}>
+                {saving ? 'Saving...' : 'Save changes'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

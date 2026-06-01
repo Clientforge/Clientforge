@@ -159,6 +159,19 @@ const updateContact = async (tenantId, contactId, data) => {
   return formatContact(result.rows[0]);
 };
 
+const deleteContact = async (tenantId, contactId) => {
+  const result = await db.query(
+    'DELETE FROM contacts WHERE tenant_id = $1 AND id = $2 RETURNING id',
+    [tenantId, contactId],
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
+  }
+
+  return { deleted: true, id: result.rows[0].id };
+};
+
 const getContactStats = async (tenantId) => {
   const result = await db.query(
     `SELECT
@@ -204,6 +217,7 @@ module.exports = {
   createContact,
   getContact,
   updateContact,
+  deleteContact,
   getContactStats,
   listContactTags,
 };
