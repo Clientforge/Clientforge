@@ -317,7 +317,10 @@ function ImportModal({ onClose, onSuccess }) {
                 <span className="csv-col">tags</span>
                 <span className="csv-col">notes</span>
               </div>
-              <p className="hint">Only <strong>phone</strong> is required. Duplicates are auto-merged.</p>
+              <p className="hint">
+                Only <strong>phone</strong> is required. Duplicates are auto-merged.
+                Name columns accept <strong>first name</strong>, <strong>first_name</strong>, or <strong>First Name</strong> (same for last name).
+              </p>
 
               <div className="upload-area" onClick={() => fileRef.current.click()}>
                 {file ? (

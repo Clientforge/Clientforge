@@ -2,6 +2,25 @@ const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
 const { parse } = require('csv-parse/sync');
 
+/** Normalize CSV header for flexible matching (case, spaces, underscores). */
+function normalizeCsvKey(key) {
+  return String(key || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+}
+
+/** Pick first non-empty value from row using flexible column name aliases. */
+function pickCsvField(row, ...aliases) {
+  const wanted = new Set(aliases.map(normalizeCsvKey));
+  for (const [key, value] of Object.entries(row || {})) {
+    if (!wanted.has(normalizeCsvKey(key))) continue;
+    const trimmed = String(value ?? '').trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
+
 const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   const content = csvBuffer.toString('utf-8');
   const records = parse(content, {
@@ -16,16 +35,16 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   let errors = [];
 
   for (const row of records) {
-    const phone = row.phone || row.Phone || row.phone_number || row.mobile || row.Mobile || '';
+    const phone = pickCsvField(row, 'phone', 'phone_number', 'mobile', 'phonenumber');
     if (!phone) { skipped++; continue; }
 
     try {
       const normalizedPhone = normalizePhone(phone);
-      const firstName = row.first_name || row.firstName || row.First || row['First Name'] || '';
-      const lastName = row.last_name || row.lastName || row.Last || row['Last Name'] || '';
-      const email = row.email || row.Email || '';
-      const tags = row.tags || row.Tags || '';
-      const notes = row.notes || row.Notes || '';
+      const firstName = pickCsvField(row, 'first_name', 'firstname', 'first name', 'first');
+      const lastName = pickCsvField(row, 'last_name', 'lastname', 'last name', 'last');
+      const email = pickCsvField(row, 'email', 'e-mail');
+      const tags = pickCsvField(row, 'tags', 'tag');
+      const notes = pickCsvField(row, 'notes', 'note');
 
       const tagArray = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
