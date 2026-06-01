@@ -10,6 +10,8 @@ export default function ContactsPage() {
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const loadContacts = async (page = 1) => {
     setLoading(true);
@@ -32,6 +34,10 @@ export default function ContactsPage() {
 
   useEffect(() => { loadContacts(); }, []);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [contacts]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     loadContacts();
@@ -39,6 +45,52 @@ export default function ContactsPage() {
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+  const pageIds = contacts.map((c) => c.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    if (!confirm(
+      `Delete ${count} contact${count === 1 ? '' : 's'}? This removes their appointments and scheduled automations. Message history is kept but unlinked. This cannot be undone.`,
+    )) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    try {
+      await api.post('/contacts/bulk-delete', { ids: [...selectedIds] });
+      setSelectedIds(new Set());
+      await loadContacts(pagination.page || 1);
+    } catch (err) {
+      alert(err.message || 'Could not delete contacts.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   return (
     <div className="contacts-page">
@@ -89,6 +141,30 @@ export default function ContactsPage() {
           <button type="submit" className="btn btn-secondary btn-sm">Search</button>
         </form>
 
+        {selectedIds.size > 0 && (
+          <div className="contacts-bulk-bar">
+            <span>{selectedIds.size} selected on this page</span>
+            <div className="contacts-bulk-actions">
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={bulkDeleting}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className="btn-sm btn-danger-sm"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? 'Deleting…' : `Delete selected (${selectedIds.size})`}
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="page-loader">Loading contacts...</div>
         ) : contacts.length === 0 ? (
@@ -104,6 +180,17 @@ export default function ContactsPage() {
             <table className="leads-table">
               <thead>
                 <tr>
+                  <th className="col-checkbox">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all on this page"
+                      checked={allPageSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !allPageSelected && somePageSelected;
+                      }}
+                      onChange={toggleSelectAllPage}
+                    />
+                  </th>
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Email</th>
@@ -115,7 +202,15 @@ export default function ContactsPage() {
               </thead>
               <tbody>
                 {contacts.map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} className={selectedIds.has(c.id) ? 'row-selected' : ''}>
+                    <td className="col-checkbox">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${c.firstName || c.phone}`}
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleSelect(c.id)}
+                      />
+                    </td>
                     <td className="contact-name">
                       {c.firstName || ''} {c.lastName || ''}
                       {c.unsubscribed && <span className="badge-unsub">Opted out</span>}

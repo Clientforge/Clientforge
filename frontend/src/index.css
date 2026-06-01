@@ -211,6 +211,15 @@ a:hover { text-decoration: underline; }
 .leads-table th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-3); text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid var(--border); }
 .leads-table td { padding: 12px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
 .leads-table tr:hover td { background: var(--bg); }
+.leads-table tr.row-selected td { background: var(--primary-bg); }
+.leads-table .col-checkbox { width: 2.5rem; padding-left: 12px; padding-right: 0; }
+.leads-table .col-checkbox input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+.contacts-bulk-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 10px 14px; background: var(--primary-bg);
+  border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-sm); font-size: 13px;
+}
+.contacts-bulk-actions { display: flex; align-items: center; gap: 8px; }
 .lead-link { font-weight: 600; }
 .mono { font-family: 'SF Mono', Monaco, monospace; font-size: 12px; }
 .muted { color: var(--text-3); }

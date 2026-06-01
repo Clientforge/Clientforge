@@ -54,6 +54,13 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/bulk-delete', async (req, res, next) => {
+  try {
+    const result = await contactService.bulkDeleteContacts(req.tenantId, req.body?.ids);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const contact = await contactService.getContact(req.tenantId, req.params.id);

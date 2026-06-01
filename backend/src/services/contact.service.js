@@ -172,6 +172,37 @@ const deleteContact = async (tenantId, contactId) => {
   return { deleted: true, id: result.rows[0].id };
 };
 
+const bulkDeleteContacts = async (tenantId, ids) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw Object.assign(new Error('Select at least one contact to delete'), {
+      statusCode: 400,
+      isOperational: true,
+    });
+  }
+
+  const uniqueIds = [...new Set(ids.map((id) => String(id).trim()).filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    throw Object.assign(new Error('Select at least one contact to delete'), {
+      statusCode: 400,
+      isOperational: true,
+    });
+  }
+
+  if (uniqueIds.length > 100) {
+    throw Object.assign(new Error('Delete at most 100 contacts at a time'), {
+      statusCode: 400,
+      isOperational: true,
+    });
+  }
+
+  const result = await db.query(
+    'DELETE FROM contacts WHERE tenant_id = $1 AND id = ANY($2::uuid[]) RETURNING id',
+    [tenantId, uniqueIds],
+  );
+
+  return { deletedCount: result.rows.length, ids: result.rows.map((r) => r.id) };
+};
+
 const getContactStats = async (tenantId) => {
   const result = await db.query(
     `SELECT
@@ -218,6 +249,7 @@ module.exports = {
   getContact,
   updateContact,
   deleteContact,
+  bulkDeleteContacts,
   getContactStats,
   listContactTags,
 };
