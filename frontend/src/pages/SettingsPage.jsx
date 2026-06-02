@@ -783,7 +783,7 @@ function GoogleCalendarSection({ settings, onReload }) {
     setBusy('sync');
     setMsg('');
     try {
-      const result = await api.post('/integrations/google-calendar/sync');
+      const result = await api.post('/integrations/google-calendar/sync', { full: true });
       setMsg(`Sync complete — ${result.processed ?? 0} processed, ${result.skipped ?? 0} skipped`);
       await onReload();
     } catch (err) {
@@ -871,7 +871,7 @@ function GoogleCalendarSection({ settings, onReload }) {
 
       {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
       <span className="field-hint" style={{ display: 'block', marginTop: 12 }}>
-        Only events with an external guest attendee (client email) are imported. SMS automations require a phone on file — email-only guests receive email steps when configured.
+        Imports appointments from the selected calendar for clients already in your Contacts list (matched by email or name). GlossGenius titles like &quot;Jane Doe (GlossGenius Appointment)&quot; are supported. Unmatched events are skipped. SMS automations require a phone on the contact.
       </span>
     </div>
   );

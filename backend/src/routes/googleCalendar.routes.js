@@ -57,7 +57,8 @@ router.put('/', async (req, res, next) => {
  */
 router.post('/sync', async (req, res, next) => {
   try {
-    const result = await googleCalendarService.syncTenantCalendar(req.tenantId);
+    const fullResync = req.body?.full === true || req.query?.full === 'true';
+    const result = await googleCalendarService.syncTenantCalendar(req.tenantId, { fullResync });
     res.json(result);
   } catch (err) {
     next(err);

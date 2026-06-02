@@ -153,12 +153,44 @@ const findContactByName = async (tenantId, firstName, lastName) => {
   return result.rows[0]?.id || null;
 };
 
-const upsertContact = async (tenantId, contactData, source = 'calendly') => {
-  const phone = contactData.phone ? normalizePhone(contactData.phone) : null;
+/**
+ * Find an existing contact by phone, email, or exact name — never creates.
+ */
+const findExistingContact = async (tenantId, contactData) => {
+  const rawPhone = contactData.phone || null;
+  const phone = rawPhone
+    ? (String(rawPhone).startsWith('gcal-') ? null : normalizePhone(rawPhone))
+    : null;
   const email = (contactData.email || '').trim().toLowerCase() || null;
 
-  if (!phone && !email) {
-    throw Object.assign(new Error('Contact must have phone or email'), {
+  if (phone) {
+    const existing = await db.query(
+      'SELECT id FROM contacts WHERE tenant_id = $1 AND phone = $2',
+      [tenantId, phone],
+    );
+    if (existing.rows.length > 0) return existing.rows[0].id;
+  }
+
+  if (email) {
+    const existing = await db.query(
+      'SELECT id FROM contacts WHERE tenant_id = $1 AND LOWER(email) = $2',
+      [tenantId, email],
+    );
+    if (existing.rows.length > 0) return existing.rows[0].id;
+  }
+
+  return findContactByName(tenantId, contactData.firstName, contactData.lastName);
+};
+
+const upsertContact = async (tenantId, contactData, source = 'calendly') => {
+  const rawPhone = contactData.phone || contactData.syntheticPhone || null;
+  const phone = rawPhone
+    ? (String(rawPhone).startsWith('gcal-') ? String(rawPhone) : normalizePhone(rawPhone))
+    : null;
+  const email = (contactData.email || '').trim().toLowerCase() || null;
+
+  if (!phone && !email && !contactData.firstName) {
+    throw Object.assign(new Error('Contact must have phone, email, or name'), {
       statusCode: 400,
       isOperational: true,
     });
@@ -343,8 +375,15 @@ const maybeSyncLastVisit = async (tenantId, contactId, scheduledAt) => {
 /**
  * Process canonical event from adapter: upsert contact + appointment, return for workflow dispatch.
  */
-const processBookingEvent = async (tenantId, { eventType: incomingEventType, contact, appointment, contactSource }) => {
-  const contactId = await upsertContact(tenantId, contact, contactSource || appointment?.provider || 'calendly');
+const processBookingEvent = async (tenantId, {
+  eventType: incomingEventType,
+  contact,
+  appointment,
+  contactSource,
+  existingContactId,
+}) => {
+  const contactId = existingContactId
+    ?? await upsertContact(tenantId, contact, contactSource || appointment?.provider || 'calendly');
 
   const classification = await classifyBookingEvent(
     tenantId,
@@ -430,6 +469,8 @@ const cancelWorkflowJobsForAppointment = async (appointmentId) => {
 
 module.exports = {
   upsertContact,
+  findExistingContact,
+  findContactByName,
   upsertAppointment,
   processBookingEvent,
   scheduleWorkflowJob,

@@ -2,6 +2,8 @@
  * Google Calendar event → canonical booking event (same shape as Calendly / email adapters).
  */
 
+const crypto = require('crypto');
+
 function parseDurationMinutes(event) {
   const startRaw = event.start?.dateTime || event.start?.date;
   const endRaw = event.end?.dateTime || event.end?.date;
@@ -56,6 +58,52 @@ function parseNameFromSummary(summary) {
 }
 
 /**
+ * GlossGenius puts services in the event description, not the title.
+ */
+function parseServiceFromDescription(description) {
+  if (!description || !String(description).trim()) return null;
+  const firstLine = String(description).split('\n').map((l) => l.trim()).find(Boolean);
+  if (!firstLine) return null;
+
+  const segment = firstLine.split(',')[0].trim();
+  const cleaned = segment
+    .replace(/\s*\(GlossGenius[^)]*\)\s*$/i, '')
+    .replace(/\s*\([^)]*\)\s*$/g, '')
+    .trim();
+
+  return cleaned.length >= 2 ? cleaned : null;
+}
+
+function isFeedStyleBookingEvent(event) {
+  const summary = event.summary || '';
+  const description = event.description || '';
+  if (/glossgenius/i.test(summary) || /glossgenius/i.test(description)) return true;
+  if (/portrait care/i.test(summary) || /portrait care/i.test(description)) return true;
+  const { firstName } = parseNameFromSummary(summary);
+  return !!firstName;
+}
+
+function slugifyContactName(firstName, lastName) {
+  const slug = [firstName, lastName]
+    .filter(Boolean)
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (slug) return slug.slice(0, 80);
+  return crypto.createHash('sha1').update(`${firstName}|${lastName}`).digest('hex').slice(0, 16);
+}
+
+function resolveServiceName(event, hasGuestEmail) {
+  const summary = event.summary || '';
+  if (!hasGuestEmail || /glossgenius/i.test(summary) || /glossgenius/i.test(event.description || '')) {
+    const fromDesc = parseServiceFromDescription(event.description);
+    if (fromDesc) return fromDesc;
+  }
+  return summary || 'Appointment';
+}
+
+/**
  * Pick the client/guest attendee (not the calendar owner or organizer).
  */
 function pickGuestAttendee(event, ownerEmail) {
@@ -85,45 +133,53 @@ function pickGuestAttendee(event, ownerEmail) {
 const normalizeGoogleCalendarEvent = (event, context = {}) => {
   if (!event?.id) return null;
 
-  const guest = pickGuestAttendee(event, context.ownerEmail);
-  if (!guest?.email) {
-    return null;
-  }
-
   const startRaw = event.start?.dateTime || event.start?.date;
   if (!startRaw) return null;
 
-  const email = guest.email.trim().toLowerCase();
-  const displayName = (guest.displayName || '').trim();
+  const guest = pickGuestAttendee(event, context.ownerEmail);
+  const guestEmail = guest?.email?.trim().toLowerCase() || null;
+
   let firstName = null;
   let lastName = null;
 
-  if (displayName) {
-    const nameParts = displayName.split(/\s+/);
+  if (guest?.displayName?.trim()) {
+    const nameParts = guest.displayName.trim().split(/\s+/);
     firstName = nameParts[0] || null;
     lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null;
-  } else {
-    const fromSummary = parseNameFromSummary(event.summary);
-    firstName = fromSummary.firstName;
-    lastName = fromSummary.lastName;
+  }
+
+  const fromSummary = parseNameFromSummary(event.summary);
+  if (!firstName) firstName = fromSummary.firstName;
+  if (!lastName) lastName = fromSummary.lastName;
+
+  if (!guestEmail) {
+    if (!firstName || !isFeedStyleBookingEvent(event)) {
+      return null;
+    }
   }
 
   const eventType = event.status === 'cancelled' ? 'booking.cancelled' : 'booking.created';
+  const contact = {
+    firstName,
+    lastName,
+    phone: null,
+    email: guestEmail,
+  };
+
+  if (!guestEmail && firstName) {
+    contact.nameOnly = true;
+    contact.syntheticPhone = `gcal-${slugifyContactName(firstName, lastName)}`;
+  }
 
   return {
     eventType,
-    contact: {
-      firstName,
-      lastName,
-      phone: null,
-      email,
-    },
+    contact,
     appointment: {
       externalId: `gcal:${event.id}`,
       provider: 'google_calendar',
       scheduledAt: startRaw,
       timezone: event.start?.timeZone || event.timeZone || 'America/New_York',
-      serviceName: event.summary || 'Appointment',
+      serviceName: resolveServiceName(event, !!guestEmail),
       durationMinutes: parseDurationMinutes(event),
       rawPayload: event,
     },
@@ -134,5 +190,7 @@ module.exports = {
   normalizeGoogleCalendarEvent,
   pickGuestAttendee,
   parseNameFromSummary,
+  parseServiceFromDescription,
   splitFullName,
+  isFeedStyleBookingEvent,
 };

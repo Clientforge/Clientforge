@@ -4,6 +4,7 @@
 const {
   normalizeGoogleCalendarEvent,
   parseNameFromSummary,
+  parseServiceFromDescription,
 } = require('../src/adapters/googleCalendar.adapter');
 
 let failed = 0;
@@ -41,7 +42,7 @@ const solo = normalizeGoogleCalendarEvent(
   { id: 'solo', summary: 'Block', start: { dateTime: '2026-06-01T14:00:00Z' }, end: { dateTime: '2026-06-01T15:00:00Z' }, attendees: [] },
   { ownerEmail: 'owner@spa.com' },
 );
-check('skips event without guest', solo, null);
+check('skips event without guest or title name', solo, null);
 
 const cancelled = normalizeGoogleCalendarEvent(
   { ...guestEvent, status: 'cancelled' },
@@ -54,18 +55,19 @@ const glossGenius = normalizeGoogleCalendarEvent(
     id: 'gg1',
     status: 'confirmed',
     summary: 'Dacia Barton (GlossGenius Appointment)',
+    description: 'Tox Treatments (Daxxify), Fillers (GlossGenius Event)',
     start: { dateTime: '2026-06-01T13:00:00-04:00', timeZone: 'America/New_York' },
     end: { dateTime: '2026-06-01T15:30:00-04:00', timeZone: 'America/New_York' },
     organizer: { email: 'owner@spa.com', self: true },
-    attendees: [
-      { email: 'owner@spa.com', organizer: true },
-      { email: 'dacia@example.com', responseStatus: 'accepted' },
-    ],
+    attendees: [{ email: 'owner@spa.com', organizer: true }],
   },
   { ownerEmail: 'owner@spa.com' },
 );
-check('GlossGenius title first name', glossGenius?.contact?.firstName, 'Dacia');
-check('GlossGenius title last name', glossGenius?.contact?.lastName, 'Barton');
+check('GlossGenius no guest — first name', glossGenius?.contact?.firstName, 'Dacia');
+check('GlossGenius no guest — last name', glossGenius?.contact?.lastName, 'Barton');
+check('GlossGenius no guest — no email', glossGenius?.contact?.email, null);
+check('GlossGenius synthetic phone', glossGenius?.contact?.syntheticPhone, 'gcal-dacia-barton');
+check('GlossGenius service from description', glossGenius?.appointment?.serviceName, 'Tox Treatments');
 
 const portraitCare = normalizeGoogleCalendarEvent(
   {
@@ -88,6 +90,9 @@ check('Portrait Care for-clause last name', portraitCare?.contact?.lastName, 'Ak
 const fromSummary = parseNameFromSummary('Jane Smith - Botox');
 check('dash title first name', fromSummary.firstName, 'Jane');
 check('dash title last name', fromSummary.lastName, 'Smith');
+
+const fromDesc = parseServiceFromDescription('Tox Treatments (Daxxify), Fillers (GlossGenius Event)');
+check('description service parse', fromDesc, 'Tox Treatments');
 
 const displayNameWins = normalizeGoogleCalendarEvent(
   {

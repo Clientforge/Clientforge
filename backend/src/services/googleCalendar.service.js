@@ -370,18 +370,38 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
   if (!normalized) {
     await logSyncEvent(tenantId, googleEvent.id, {
       syncAction: 'skipped',
-      skipReason: 'no_external_guest_attendee',
+      skipReason: 'no_contact_identity',
       rawPayload: { id: googleEvent.id, summary: googleEvent.summary },
     });
-    return { skipped: true, reason: 'no_external_guest_attendee' };
+    return { skipped: true, reason: 'no_contact_identity' };
   }
 
-  if (!normalized.contact.email) {
+  if (!normalized.contact.email && !normalized.contact.firstName) {
     await logSyncEvent(tenantId, googleEvent.id, {
       syncAction: 'skipped',
-      skipReason: 'missing_contact_email',
+      skipReason: 'missing_contact_identity',
+      rawPayload: { id: googleEvent.id, summary: googleEvent.summary },
     });
-    return { skipped: true, reason: 'missing_contact_email' };
+    return { skipped: true, reason: 'missing_contact_identity' };
+  }
+
+  const existingContactId = await appointmentService.findExistingContact(
+    tenantId,
+    normalized.contact,
+  );
+  if (!existingContactId) {
+    await logSyncEvent(tenantId, googleEvent.id, {
+      syncAction: 'skipped',
+      skipReason: 'contact_not_in_list',
+      rawPayload: {
+        id: googleEvent.id,
+        summary: googleEvent.summary,
+        firstName: normalized.contact.firstName,
+        lastName: normalized.contact.lastName,
+        email: normalized.contact.email,
+      },
+    });
+    return { skipped: true, reason: 'contact_not_in_list' };
   }
 
   try {
@@ -390,6 +410,7 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
       contact: normalized.contact,
       appointment: normalized.appointment,
       contactSource: 'google_calendar',
+      existingContactId,
     });
 
     await appointmentWorkflowService.dispatchWorkflows(tenantId, result);
@@ -411,10 +432,18 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
   }
 }
 
-async function syncTenantCalendar(tenantId) {
+async function syncTenantCalendar(tenantId, { fullResync = false } = {}) {
   const connection = await getConnection(tenantId);
   if (!connection || connection.sync_enabled === false) {
     return { skipped: true, reason: 'not_connected_or_disabled' };
+  }
+
+  if (fullResync) {
+    await db.query(
+      `UPDATE tenant_google_calendar_connections SET sync_token = NULL, updated_at = NOW() WHERE tenant_id = $1`,
+      [tenantId],
+    );
+    connection.sync_token = null;
   }
 
   const calendarId = connection.calendar_id || 'primary';
