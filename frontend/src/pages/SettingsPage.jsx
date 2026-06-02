@@ -684,6 +684,10 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <hr className="settings-divider" />
 
+      <InstagramSection settings={settings} onReload={onReload} copyToClipboard={copyToClipboard} copying={copying} />
+
+      <hr className="settings-divider" />
+
       <h3>SMS Inbound Webhook (Twilio / Telnyx)</h3>
       <p className="settings-desc">Configure your SMS provider to receive inbound messages. Set this URL in Twilio or Telnyx messaging profile.</p>
       {smsInboundWebhookUrl && (
@@ -873,6 +877,96 @@ function GoogleCalendarSection({ settings, onReload }) {
       <span className="field-hint" style={{ display: 'block', marginTop: 12 }}>
         Imports current and upcoming appointments from the selected calendar for clients already in your Contacts list (matched by email or name). Past events and unmatched clients are skipped. GlossGenius titles like &quot;Jane Doe (GlossGenius Appointment)&quot; are supported. SMS automations require a phone on the contact.
       </span>
+    </div>
+  );
+}
+
+function InstagramSection({ settings, onReload, copyToClipboard, copying }) {
+  const ig = settings.integration?.instagram || {};
+  const metaWebhookUrl = settings.integration?.metaWebhookUrl || '';
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const connect = async () => {
+    setBusy('connect');
+    setMsg('');
+    try {
+      const { url } = await api.post('/integrations/instagram/connect');
+      window.location.href = url;
+    } catch (err) {
+      setMsg(err.message);
+      setBusy('');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Instagram? Incoming DMs will no longer sync to your inbox.')) return;
+    setBusy('disconnect');
+    setMsg('');
+    try {
+      await api.post('/integrations/instagram/disconnect');
+      await onReload();
+      setMsg('Instagram disconnected');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  if (!ig.configured) {
+    return (
+      <div className="integration-block">
+        <h3>Instagram DMs</h3>
+        <p className="settings-desc muted">
+          Instagram messaging is not configured on the server yet. Set <code>META_APP_ID</code>, <code>META_APP_SECRET</code>, and <code>META_WEBHOOK_VERIFY_TOKEN</code> in the backend environment.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="integration-block">
+      <h3>Instagram DMs</h3>
+      <p className="settings-desc">
+        Connect your Instagram Business account to receive DMs in Inbox and reply manually. AI auto-replies for Instagram are coming in a later update.
+      </p>
+
+      {metaWebhookUrl && (
+        <div style={{ marginBottom: 16 }}>
+          <label>Meta Webhook URL</label>
+          <div className="key-row">
+            <code className="key-value" style={{ fontSize: 12 }}>{metaWebhookUrl}</code>
+            <button type="button" className="btn-sm" onClick={() => copyToClipboard(metaWebhookUrl, 'meta')}>
+              {copying === 'meta' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <span className="field-hint">
+            In Meta Developer Console → your app → Instagram → Webhooks: paste this URL, use the same verify token as <code>META_WEBHOOK_VERIFY_TOKEN</code>, and subscribe to <strong>messages</strong>.
+          </span>
+        </div>
+      )}
+
+      {!ig.connected ? (
+        <button type="button" className="btn-primary" onClick={connect} disabled={!!busy}>
+          {busy === 'connect' ? 'Redirecting…' : 'Connect Instagram'}
+        </button>
+      ) : (
+        <>
+          <p className="field-hint" style={{ marginBottom: 8 }}>
+            Connected as {ig.instagramUsername ? `@${ig.instagramUsername}` : ig.pageName || 'Instagram Business'}
+            {ig.pageName && ig.instagramUsername ? ` · Page: ${ig.pageName}` : ''}
+          </p>
+          <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
+            {busy === 'disconnect' ? 'Disconnecting…' : 'Disconnect'}
+          </button>
+        </>
+      )}
+
+      {ig.lastWebhookError && (
+        <p className="form-error" style={{ marginTop: 12 }}>Last webhook error: {ig.lastWebhookError}</p>
+      )}
+      {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
     </div>
   );
 }

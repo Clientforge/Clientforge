@@ -4,11 +4,45 @@ const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
 const tenantPhoneService = require('./tenant-phone.service');
 const { normalizePhone } = require('./lead.service');
+const instagramService = require('./instagram.service');
 
-/**
- * Get distinct participant phones from messages for a tenant.
- * Participant phone = from_number (inbound) or to_number (outbound).
- */
+const sortAndPaginateConversations = (conversations, options = {}) => {
+  const { page = 1, limit = 25 } = options;
+
+  conversations.sort((a, b) => {
+    if (a.needsReply !== b.needsReply) return a.needsReply ? -1 : 1;
+    const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+    const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  const needsReplyCount = conversations.filter((c) => c.needsReply).length;
+
+  if (options.needsReply === 'true' || options.needsReply === true) {
+    const filtered = conversations.filter((c) => c.needsReply);
+    const total = filtered.length;
+    const offset = (page - 1) * limit;
+    return {
+      conversations: filtered.slice(offset, offset + limit),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      needsReplyCount,
+    };
+  }
+
+  const total = conversations.length;
+  const offset = (page - 1) * limit;
+  return {
+    conversations: conversations.slice(offset, offset + limit),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 1,
+    },
+    needsReplyCount,
+  };
+};
+
 const getParticipantPhones = async (tenantId) => {
   const result = await db.query(
     `SELECT DISTINCT (CASE WHEN direction = 'inbound' THEN from_number ELSE to_number END) AS phone
@@ -81,10 +115,10 @@ const getLastMessageForPhone = async (tenantId, phone) => {
 };
 
 /**
- * List conversations for a tenant. Each conversation = one participant (lead or contact) with last message.
+ * List conversations for a tenant (SMS + Instagram).
  */
 const listConversations = async (tenantId, options = {}) => {
-  const { page = 1, limit = 25, search } = options;
+  const { search } = options;
   const phones = await getParticipantPhones(tenantId);
 
   const conversations = [];
@@ -107,6 +141,7 @@ const listConversations = async (tenantId, options = {}) => {
     }
 
     conversations.push({
+      channel: 'sms',
       participantType: participant.participantType,
       participantId: participant.id,
       participant: {
@@ -118,54 +153,64 @@ const listConversations = async (tenantId, options = {}) => {
         status: participant.status,
         displayName,
       },
-      lastMessage: lastMsg
-        ? {
-            id: lastMsg.id,
-            body: lastMsg.body,
-            direction: lastMsg.direction,
-            messageType: lastMsg.message_type,
-            createdAt: lastMsg.created_at,
-          }
-        : null,
-      lastActivityAt: lastMsg?.created_at || null,
-      needsReply: lastMsg?.direction === 'inbound',
+      lastMessage: {
+        id: lastMsg.id,
+        body: lastMsg.body,
+        direction: lastMsg.direction,
+        messageType: lastMsg.message_type,
+        createdAt: lastMsg.created_at,
+      },
+      lastActivityAt: lastMsg.created_at || null,
+      needsReply: lastMsg.direction === 'inbound',
     });
   }
 
-  conversations.sort((a, b) => {
-    if (a.needsReply !== b.needsReply) return a.needsReply ? -1 : 1;
-    const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
-    const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
-    return bTime - aTime;
-  });
+  const igRows = await instagramService.listConversationRows(tenantId);
+  for (const row of igRows) {
+    const lastMsg = row.last_message;
+    if (!lastMsg) continue;
 
-  const needsReplyCount = conversations.filter((c) => c.needsReply).length;
+    const displayName = row.display_name
+      || (row.instagram_username ? `@${row.instagram_username}` : null)
+      || `Instagram ${String(row.instagram_user_id).slice(-6)}`;
 
-  if (options.needsReply === 'true' || options.needsReply === true) {
-    const filtered = conversations.filter((c) => c.needsReply);
-    const total = filtered.length;
-    const offset = (page - 1) * limit;
-    return {
-      conversations: filtered.slice(offset, offset + limit),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-      needsReplyCount,
-    };
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        displayName.toLowerCase().includes(searchLower) ||
+        (row.instagram_username || '').toLowerCase().includes(searchLower) ||
+        row.instagram_user_id.includes(search.replace(/\D/g, ''));
+      if (!matchesSearch) continue;
+    }
+
+    conversations.push({
+      channel: 'instagram',
+      participantType: 'instagram',
+      participantId: row.id,
+      participant: {
+        id: row.id,
+        firstName: row.display_name || row.instagram_username || null,
+        lastName: null,
+        phone: null,
+        email: null,
+        status: null,
+        displayName,
+        instagramUsername: row.instagram_username,
+        instagramUserId: row.instagram_user_id,
+      },
+      lastMessage: {
+        id: lastMsg.id,
+        body: lastMsg.body,
+        direction: lastMsg.direction,
+        messageType: lastMsg.message_type,
+        createdAt: lastMsg.created_at,
+      },
+      lastActivityAt: lastMsg.created_at || row.last_message_at || null,
+      needsReply: lastMsg.direction === 'inbound',
+    });
   }
 
-  const total = conversations.length;
-  const offset = (page - 1) * limit;
-  const paginated = conversations.slice(offset, offset + limit);
-
-  return {
-    conversations: paginated,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit) || 1,
-    },
-    needsReplyCount,
-  };
+  return sortAndPaginateConversations(conversations, options);
 };
 
 const getInboxSummary = async (tenantId) => {
@@ -195,6 +240,44 @@ const getInboxSummary = async (tenantId) => {
  * Get a single conversation thread (all messages for a participant).
  */
 const getConversation = async (tenantId, participantType, participantId) => {
+  if (participantType === 'instagram') {
+    const row = await instagramService.getConversationById(tenantId, participantId);
+    if (!row) {
+      throw Object.assign(new Error('Conversation not found'), { statusCode: 404, isOperational: true });
+    }
+
+    const displayName = row.display_name
+      || (row.instagram_username ? `@${row.instagram_username}` : null)
+      || `Instagram ${String(row.instagram_user_id).slice(-6)}`;
+
+    const messages = (await instagramService.getThreadMessages(tenantId, participantId)).map((msg) => ({
+      id: msg.id,
+      direction: msg.direction,
+      body: msg.body,
+      messageType: msg.message_type,
+      deliveryStatus: msg.delivery_status,
+      createdAt: msg.created_at,
+    }));
+
+    return {
+      channel: 'instagram',
+      participantType: 'instagram',
+      participant: {
+        id: row.id,
+        firstName: row.display_name || row.instagram_username || null,
+        lastName: null,
+        phone: null,
+        email: null,
+        status: null,
+        displayName,
+        instagramUsername: row.instagram_username,
+        instagramUserId: row.instagram_user_id,
+      },
+      messages,
+      aiReply: null,
+    };
+  }
+
   if (participantType !== 'lead' && participantType !== 'contact') {
     throw Object.assign(new Error('Invalid participant type'), { statusCode: 400, isOperational: true });
   }
@@ -270,6 +353,7 @@ const getConversation = async (tenantId, participantType, participantId) => {
   }));
 
   return {
+    channel: 'sms',
     participant,
     messages,
     participantType,
@@ -370,6 +454,10 @@ const getRecentThreadMessagesForAi = async (tenantId, participantType, participa
  * Send a manual reply to a participant.
  */
 const sendManualReply = async (tenantId, participantType, participantId, body) => {
+  if (participantType === 'instagram') {
+    return instagramService.sendReply(tenantId, participantId, body);
+  }
+
   const conv = await getConversation(tenantId, participantType, participantId);
   const { participant } = conv;
 

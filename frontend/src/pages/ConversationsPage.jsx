@@ -273,7 +273,12 @@ export default function ConversationsPage() {
                     </div>
                     <div className="inbox-item-body">
                       <div className="inbox-item-top">
-                        <span className="inbox-name">{c.participant.displayName || c.participant.phone}</span>
+                        <span className="inbox-name">
+                          {c.channel === 'instagram' && (
+                            <span className="inbox-channel-badge instagram" title="Instagram DM">IG</span>
+                          )}
+                          {c.participant.displayName || c.participant.phone}
+                        </span>
                         {c.lastMessage && (
                           <span className="inbox-time">{formatTime(c.lastMessage.createdAt)}</span>
                         )}
@@ -348,7 +353,15 @@ export default function ConversationsPage() {
                 <div className="inbox-thread-info">
                   <h3>{thread.participant.displayName || thread.participant.phone}</h3>
                   <div className="inbox-thread-meta">
-                    <span>{thread.participant.phone}</span>
+                    {thread.channel === 'instagram' ? (
+                      <span>
+                        {thread.participant.instagramUsername
+                          ? `@${thread.participant.instagramUsername}`
+                          : 'Instagram DM'}
+                      </span>
+                    ) : (
+                      <span>{thread.participant.phone}</span>
+                    )}
                     {thread.participant.status && (
                       <span
                         className="status-badge sm"
@@ -364,11 +377,11 @@ export default function ConversationsPage() {
                       <Link to={`/leads/${thread.participant.id}`} className="inbox-link">
                         View lead →
                       </Link>
-                    ) : (
+                    ) : thread.participantType === 'contact' ? (
                       <Link to="/contacts" className="inbox-link">
                         View {simple ? 'client' : 'contacts'} →
                       </Link>
-                    )}
+                    ) : null}
                   </div>
                   {thread.aiReply && (
                     <div className="inbox-ai-setting">
@@ -417,7 +430,7 @@ export default function ConversationsPage() {
 
               <form className="inbox-compose" onSubmit={sendReply}>
                 <textarea
-                  placeholder="Type your reply..."
+                  placeholder={thread.channel === 'instagram' ? 'Reply on Instagram…' : 'Type your reply…'}
                   value={composeBody}
                   onChange={(e) => setComposeBody(e.target.value)}
                   rows={2}

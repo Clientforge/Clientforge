@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_SCHEDULE, DEFAULT_OUTREACH_WINDOW } = require('./followup.service');
 const tenantPhoneService = require('./tenant-phone.service');
 const googleCalendarService = require('./googleCalendar.service');
+const instagramService = require('./instagram.service');
 
 const getSettings = async (tenantId) => {
   const result = await db.query(
@@ -26,6 +27,13 @@ const getSettings = async (tenantId) => {
   let googleCalendar = { connected: false, configured: googleCalendarService.isConfigured() };
   try {
     googleCalendar = (await googleCalendarService.getStatus(tenantId)) || googleCalendar;
+  } catch {
+    // ignore
+  }
+
+  let instagram = { connected: false, configured: instagramService.isConfigured() };
+  try {
+    instagram = (await instagramService.getStatus(tenantId)) || instagram;
   } catch {
     // ignore
   }
@@ -58,6 +66,8 @@ const getSettings = async (tenantId) => {
       voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
       googleCalendar,
+      instagram,
+      metaWebhookUrl: instagramService.webhookUrl(),
     },
     email: {
       fromName: t.email_from_name || '',

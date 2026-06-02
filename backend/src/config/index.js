@@ -42,10 +42,11 @@ const config = {
     defaultFrom: process.env.EMAIL_DEFAULT_FROM || 'ClientForge.ai <noreply@clientforge.ai>',
   },
 
-  googleCalendar: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: process.env.GOOGLE_REDIRECT_URI,
+  instagram: {
+    appId: process.env.META_APP_ID,
+    appSecret: process.env.META_APP_SECRET,
+    webhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN,
+    redirectUri: process.env.META_REDIRECT_URI,
   },
 };
 

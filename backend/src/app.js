@@ -36,7 +36,7 @@ app.use(cors({
 app.use(express.json({
   limit: '1mb',
   verify: (req, _res, buf) => {
-    if (req.originalUrl?.startsWith('/api/v1/webhook/calendly')) {
+    if (req.originalUrl?.startsWith('/api/v1/webhook/calendly') || req.originalUrl?.startsWith('/api/v1/webhook/meta')) {
       req.rawBody = buf.toString('utf8');
     }
   },
@@ -70,9 +70,11 @@ app.use('/api/v1/auth',    require('./routes/auth.routes'));
 app.use('/api/v1/webhook', require('./routes/webhook.routes'));
 app.use('/api/v1/webhook/calendly', require('./routes/calendly.webhook'));
 app.use('/api/v1/webhook/google-calendar', require('./routes/googleCalendar.webhook'));
+app.use('/api/v1/webhook/meta', require('./routes/meta.webhook'));
 app.use('/api/v1/voice',   require('./routes/voice.routes'));
 
 const googleCalendarService = require('./services/googleCalendar.service');
+const instagramService = require('./services/instagram.service');
 app.get('/api/v1/integrations/google-calendar/callback', async (req, res) => {
   const { code, state, error } = req.query;
   if (error) {
@@ -90,6 +92,25 @@ app.get('/api/v1/integrations/google-calendar/callback', async (req, res) => {
   }
 });
 
+app.get('/api/v1/integrations/instagram/callback', async (req, res) => {
+  const { code, state, error, error_description: errorDescription } = req.query;
+  if (error) {
+    return res.redirect(instagramService.appSettingsUrl(
+      `tab=integration&instagram=error&reason=${encodeURIComponent(errorDescription || error)}`,
+    ));
+  }
+  try {
+    if (!code || !state) throw new Error('Missing OAuth code or state');
+    await instagramService.handleOAuthCallback(code, state);
+    return res.redirect(instagramService.appSettingsUrl('tab=integration&instagram=connected'));
+  } catch (err) {
+    console.error('[IG] OAuth callback failed:', err.message);
+    return res.redirect(
+      instagramService.appSettingsUrl(`tab=integration&instagram=error&reason=${encodeURIComponent(err.message)}`),
+    );
+  }
+});
+
 // --------------- PROTECTED ROUTES ---------------
 
 app.use('/api/v1/leads',     authenticate, tenantScope, require('./routes/leads.routes'));
@@ -97,6 +118,7 @@ app.use('/api/v1/sms',       require('./routes/sms.routes'));
 app.use('/api/v1/dashboard', authenticate, tenantScope, require('./routes/dashboard.routes'));
 app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settings.routes'));
 app.use('/api/v1/integrations/google-calendar', authenticate, tenantScope, require('./routes/googleCalendar.routes'));
+app.use('/api/v1/integrations/instagram', authenticate, tenantScope, require('./routes/instagram.routes'));
 app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));
 app.use('/api/v1/conversations', authenticate, tenantScope, require('./routes/conversations.routes'));
 app.use('/api/v1/campaigns', authenticate, tenantScope, require('./routes/campaigns.routes'));
