@@ -30,8 +30,12 @@ function timeAgo(dateStr) {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
-function formatApptTime(d) {
-  return new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+function formatApptTime(d, timeZone = 'America/New_York') {
+  return new Date(d).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone,
+  });
 }
 
 function initials(name) {
@@ -76,7 +80,8 @@ export default function DashboardPage() {
   if (loading) return <div className="page-loader">Loading dashboard...</div>;
   if (!data) return <div className="page-loader">Could not load dashboard</div>;
 
-  const { impact, todayAppointments, recentConversations, liveActivity, winBack } = data;
+  const { impact, todayAppointments, recentConversations, liveActivity, winBack, timezone } = data;
+  const displayTz = timezone || 'America/New_York';
 
   return (
     <div className="dashboard ops-dashboard">
@@ -196,7 +201,7 @@ export default function DashboardPage() {
             <div className="ops-appt-list">
               {todayAppointments.map((a) => (
                 <div key={a.id} className="ops-appt-row">
-                  <div className="ops-appt-time">{formatApptTime(a.scheduledAt)}</div>
+                  <div className="ops-appt-time">{formatApptTime(a.scheduledAt, a.timezone || displayTz)}</div>
                   <div className="ops-appt-body">
                     <span className="ops-appt-name">{a.contactName}</span>
                     <span className="ops-appt-service">{a.serviceName || 'Appointment'}</span>

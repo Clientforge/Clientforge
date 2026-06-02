@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
+const { normalizePhone } = require('../src/services/lead.service');
 
 function normalizeCsvKey(key) {
   return String(key || '')
@@ -40,6 +41,9 @@ function check(label, actual, expected) {
 }
 
 check('phone', pickCsvField(row, 'phone', 'phone_number', 'mobile'), '2187907954.0');
+check('excel phone normalizes to E.164', normalizePhone('2187907954.0'), '+12187907954');
+check('excel phone with extra zeros', normalizePhone('4045551234.00'), '+14045551234');
+check('plain 10-digit phone', normalizePhone('4045551234'), '+14045551234');
 check('first name', pickCsvField(row, 'first_name', 'firstname', 'first name', 'first'), 'Aisha');
 check('last name', pickCsvField(row, 'last_name', 'lastname', 'last name', 'last'), 'Oh');
 

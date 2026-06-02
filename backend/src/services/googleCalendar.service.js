@@ -3,7 +3,10 @@ const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 const db = require('../db/connection');
 const { encrypt, decrypt } = require('../utils/tokenCrypto');
-const { normalizeGoogleCalendarEvent } = require('../adapters/googleCalendar.adapter');
+const {
+  normalizeGoogleCalendarEvent,
+  isPastGoogleEvent,
+} = require('../adapters/googleCalendar.adapter');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
 
@@ -366,6 +369,19 @@ async function logSyncEvent(tenantId, googleEventId, patch) {
 }
 
 async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
+  if (isPastGoogleEvent(googleEvent)) {
+    await logSyncEvent(tenantId, googleEvent.id, {
+      syncAction: 'skipped',
+      skipReason: 'past_event',
+      rawPayload: {
+        id: googleEvent.id,
+        summary: googleEvent.summary,
+        end: googleEvent.end?.dateTime || googleEvent.end?.date || null,
+      },
+    });
+    return { skipped: true, reason: 'past_event' };
+  }
+
   const normalized = normalizeGoogleCalendarEvent(googleEvent, { ownerEmail });
   if (!normalized) {
     await logSyncEvent(tenantId, googleEvent.id, {
@@ -469,7 +485,7 @@ async function syncTenantCalendar(tenantId, { fullResync = false } = {}) {
       } else if (syncToken) {
         params.syncToken = syncToken;
       } else {
-        const timeMin = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const timeMin = new Date().toISOString();
         const timeMax = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString();
         params.timeMin = timeMin;
         params.timeMax = timeMax;

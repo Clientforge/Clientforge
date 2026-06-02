@@ -6,10 +6,15 @@ const db = require('../db/connection');
  * Strips everything except digits, prepends +1 if 10 digits (US).
  */
 const normalizePhone = (phone) => {
-  const digits = phone.replace(/\D/g, '');
+  let raw = String(phone ?? '').trim();
+  // Excel/Sheets often export numeric phone columns as floats (e.g. 2187907954.0).
+  const excelFloat = raw.match(/^(\+?\d+)\.0+$/);
+  if (excelFloat) raw = excelFloat[1];
+
+  const digits = raw.replace(/\D/g, '');
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  if (digits.startsWith('+')) return phone.replace(/[^\d+]/g, '');
+  if (raw.startsWith('+')) return raw.replace(/[^\d+]/g, '');
   return `+${digits}`;
 };
 

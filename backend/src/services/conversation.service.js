@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const { getTenantTimezone, scheduledTodayInTimezone } = require('../utils/tenantTimezone');
 const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
 const tenantPhoneService = require('./tenant-phone.service');
@@ -172,14 +173,15 @@ const getInboxSummary = async (tenantId) => {
   const needsReplyCount = listed.needsReplyCount ?? 0;
   const totalConversations = listed.pagination?.total ?? 0;
 
+  const timezone = await getTenantTimezone(tenantId);
+  const todayClause = scheduledTodayInTimezone('a.scheduled_at', 2);
   const apptResult = await db.query(
     `SELECT COUNT(*)::int AS count
      FROM appointments a
      WHERE a.tenant_id = $1
        AND a.status IN ('scheduled', 'confirmed', 'rescheduled')
-       AND a.scheduled_at >= date_trunc('day', NOW())
-       AND a.scheduled_at < date_trunc('day', NOW()) + INTERVAL '1 day'`,
-    [tenantId],
+       AND ${todayClause}`,
+    [tenantId, timezone],
   );
 
   return {

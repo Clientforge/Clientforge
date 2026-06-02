@@ -4,6 +4,20 @@
 
 const crypto = require('crypto');
 
+function eventEndMs(event) {
+  const endRaw = event?.end?.dateTime || event?.end?.date;
+  if (!endRaw) return null;
+  const endMs = new Date(endRaw).getTime();
+  return Number.isNaN(endMs) ? null : endMs;
+}
+
+/** True when the event end time is at or before now (in-progress events are not past). */
+function isPastGoogleEvent(event, nowMs = Date.now()) {
+  const endMs = eventEndMs(event);
+  if (endMs == null) return false;
+  return endMs <= nowMs;
+}
+
 function parseDurationMinutes(event) {
   const startRaw = event.start?.dateTime || event.start?.date;
   const endRaw = event.end?.dateTime || event.end?.date;
@@ -193,4 +207,6 @@ module.exports = {
   parseServiceFromDescription,
   splitFullName,
   isFeedStyleBookingEvent,
+  isPastGoogleEvent,
+  eventEndMs,
 };

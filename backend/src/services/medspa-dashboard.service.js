@@ -4,6 +4,11 @@ const compliance = require('./compliance.service');
 const automationService = require('./appointment-automation.service');
 const tenantService = require('./tenant-service.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
+const {
+  getTenantTimezone,
+  scheduledTodayInTimezone,
+  formatTimeInTimezone,
+} = require('../utils/tenantTimezone');
 
 const DEFAULT_WINBACK_DAYS = 90;
 const ACTIVE_TODAY = ['scheduled', 'confirmed', 'rescheduled'];
@@ -15,10 +20,7 @@ const monthStart = () => {
   return d;
 };
 
-const formatTimeShort = (d) => {
-  if (!d) return '';
-  return new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-};
+const formatTimeShort = (d, timeZone) => formatTimeInTimezone(d, timeZone);
 
 const getWinBackContacts = async (tenantId, limit = 5) => {
   const result = await db.query(
@@ -72,8 +74,10 @@ const getWinBackContacts = async (tenantId, limit = 5) => {
   }));
 };
 
-const getImpactStats = async (tenantId) => {
+const getImpactStats = async (tenantId, timezone) => {
   const start = monthStart();
+  const tz = timezone || await getTenantTimezone(tenantId);
+  const todayClause = scheduledTodayInTimezone('scheduled_at', 3);
   const [missedCalls, remindersSent, appointmentsToday, needsReply, winBackRows] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::int AS count FROM messages
@@ -91,9 +95,8 @@ const getImpactStats = async (tenantId) => {
       `SELECT COUNT(*)::int AS count FROM appointments
        WHERE tenant_id = $1
          AND status = ANY($2::text[])
-         AND scheduled_at >= date_trunc('day', NOW())
-         AND scheduled_at < date_trunc('day', NOW()) + INTERVAL '1 day'`,
-      [tenantId, ACTIVE_TODAY],
+         AND ${todayClause}`,
+      [tenantId, ACTIVE_TODAY, tz],
     ),
     db.query(
       `SELECT COUNT(*)::int AS count FROM (
@@ -118,22 +121,24 @@ const getImpactStats = async (tenantId) => {
   };
 };
 
-const getTodayAppointments = async (tenantId) => {
+const getTodayAppointments = async (tenantId, timezone) => {
+  const tz = timezone || await getTenantTimezone(tenantId);
+  const todayClause = scheduledTodayInTimezone('a.scheduled_at', 3);
   const result = await db.query(
-    `SELECT a.id, a.scheduled_at, a.service_name, a.status,
+    `SELECT a.id, a.scheduled_at, a.timezone, a.service_name, a.status,
             c.id AS contact_id, c.first_name, c.last_name, c.phone
      FROM appointments a
      JOIN contacts c ON c.id = a.contact_id
      WHERE a.tenant_id = $1
        AND a.status = ANY($2::text[])
-       AND a.scheduled_at >= date_trunc('day', NOW())
-       AND a.scheduled_at < date_trunc('day', NOW()) + INTERVAL '1 day'
+       AND ${todayClause}
      ORDER BY a.scheduled_at ASC`,
-    [tenantId, ACTIVE_TODAY],
+    [tenantId, ACTIVE_TODAY, tz],
   );
 
   const appointments = [];
   for (const row of result.rows) {
+    const displayTz = row.timezone || tz;
     const jobsResult = await db.query(
       `SELECT job_type, status, scheduled_at, sent_at
        FROM appointment_workflow_jobs
@@ -152,12 +157,13 @@ const getTodayAppointments = async (tenantId) => {
       automationLabel = 'Reminded';
     } else if (nextPending) {
       automationStatus = 'scheduled';
-      automationLabel = `Sending ${formatTimeShort(nextPending.scheduled_at)}`;
+      automationLabel = `Sending ${formatTimeShort(nextPending.scheduled_at, displayTz)}`;
     }
 
     appointments.push({
       id: row.id,
       scheduledAt: row.scheduled_at,
+      timezone: displayTz,
       serviceName: row.service_name,
       status: row.status,
       contactId: row.contact_id,
@@ -397,15 +403,17 @@ const sendWinBackNudge = async (tenantId, contactId) => {
 };
 
 const getOverview = async (tenantId) => {
+  const timezone = await getTenantTimezone(tenantId);
   const [impact, todayAppointments, recentConversations, liveActivity, winBack] = await Promise.all([
-    getImpactStats(tenantId),
-    getTodayAppointments(tenantId),
+    getImpactStats(tenantId, timezone),
+    getTodayAppointments(tenantId, timezone),
     getRecentConversations(tenantId),
     getLiveActivity(tenantId),
     getWinBackContacts(tenantId, 5),
   ]);
 
   return {
+    timezone,
     impact,
     todayAppointments,
     recentConversations,

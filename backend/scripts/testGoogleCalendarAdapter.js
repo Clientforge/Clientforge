@@ -5,6 +5,7 @@ const {
   normalizeGoogleCalendarEvent,
   parseNameFromSummary,
   parseServiceFromDescription,
+  isPastGoogleEvent,
 } = require('../src/adapters/googleCalendar.adapter');
 
 let failed = 0;
@@ -107,6 +108,39 @@ const displayNameWins = normalizeGoogleCalendarEvent(
   { ownerEmail: 'owner@spa.com' },
 );
 check('displayName preferred over title', displayNameWins?.contact?.firstName, 'Jane');
+
+const now = new Date('2026-06-01T15:00:00-04:00').getTime();
+check(
+  'past event (ended)',
+  isPastGoogleEvent(
+    {
+      end: { dateTime: '2026-06-01T14:30:00-04:00' },
+    },
+    now,
+  ),
+  true,
+);
+check(
+  'in-progress event',
+  isPastGoogleEvent(
+    {
+      end: { dateTime: '2026-06-01T15:30:00-04:00' },
+    },
+    now,
+  ),
+  false,
+);
+check(
+  'future event',
+  isPastGoogleEvent(
+    {
+      end: { dateTime: '2026-06-10T10:00:00-04:00' },
+    },
+    now,
+  ),
+  false,
+);
+check('missing end is not past', isPastGoogleEvent({}, now), false);
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
