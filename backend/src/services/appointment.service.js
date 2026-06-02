@@ -274,6 +274,18 @@ const updateAppointmentById = async (
   return { id: appointmentId, status };
 };
 
+const maybeSyncLastVisit = async (tenantId, contactId, scheduledAt) => {
+  if (!scheduledAt) return;
+  const when = new Date(scheduledAt);
+  if (Number.isNaN(when.getTime()) || when > new Date()) return;
+  await db.query(
+    `UPDATE contacts
+     SET last_visit_at = GREATEST(COALESCE(last_visit_at, $3), $3), updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2`,
+    [contactId, tenantId, when],
+  );
+};
+
 /**
  * Process canonical event from adapter: upsert contact + appointment, return for workflow dispatch.
  */
@@ -314,6 +326,8 @@ const processBookingEvent = async (tenantId, { eventType: incomingEventType, con
       + (classification.existingAppointmentId ? ` (appointment ${classification.existingAppointmentId})` : ''),
     );
   }
+
+  await maybeSyncLastVisit(tenantId, contactId, appointment?.scheduledAt);
 
   return {
     contactId,

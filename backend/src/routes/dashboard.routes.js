@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const dashboardService = require('../services/dashboard.service');
+const medspaDashboardService = require('../services/medspa-dashboard.service');
 
 router.get('/stats', async (req, res, next) => {
   try {
@@ -28,6 +29,20 @@ router.get('/recent-leads', async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
     const leads = await dashboardService.getRecentLeads(req.tenantId, limit);
     res.json({ leads });
+  } catch (err) { next(err); }
+});
+
+router.get('/overview', async (req, res, next) => {
+  try {
+    const overview = await medspaDashboardService.getOverview(req.tenantId);
+    res.json(overview);
+  } catch (err) { next(err); }
+});
+
+router.post('/win-back/:contactId/nudge', async (req, res, next) => {
+  try {
+    const result = await medspaDashboardService.sendWinBackNudge(req.tenantId, req.params.contactId);
+    res.json(result);
   } catch (err) { next(err); }
 });
 

@@ -2,136 +2,179 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 
-const STATUS_COLORS = {
-  NEW: { bg: '#f3f4f6', color: '#6b7280' },
-  CONTACTED: { bg: '#dbeafe', color: '#2563eb' },
-  QUALIFYING: { bg: '#ede9fe', color: '#7c3aed' },
-  QUALIFIED: { bg: '#fef3c7', color: '#d97706' },
-  BOOKED: { bg: '#d1fae5', color: '#059669' },
-  UNRESPONSIVE: { bg: '#fee2e2', color: '#dc2626' },
+const BADGE_STYLES = {
+  booked: { bg: '#d1fae5', color: '#059669' },
+  pending: { bg: '#fef3c7', color: '#d97706' },
+  ai_resolved: { bg: '#dbeafe', color: '#2563eb' },
+  active: { bg: '#f3f4f6', color: '#6b7280' },
 };
 
-export default function DashboardPage() {
-  const [stats, setStats] = useState(null);
-  const [funnel, setFunnel] = useState(null);
-  const [recentLeads, setRecentLeads] = useState([]);
-  const [speedToLead, setSpeedToLead] = useState(null);
-  const [loading, setLoading] = useState(true);
+const ACTIVITY_ICONS = {
+  phone: '📞',
+  calendar: '📅',
+  rebook: '🔄',
+  ai: '✨',
+  star: '⭐',
+  message: '💬',
+};
 
-  const loadData = async () => {
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function formatApptTime(d) {
+  return new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function initials(name) {
+  const parts = (name || '?').trim().split(/\s+/);
+  return (parts[0]?.[0] || '?') + (parts[1]?.[0] || '');
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [nudging, setNudging] = useState(null);
+
+  const load = async () => {
     try {
-      const [s, f, r, stl] = await Promise.all([
-        api.get('/dashboard/stats'),
-        api.get('/dashboard/funnel'),
-        api.get('/dashboard/recent-leads'),
-        api.get('/dashboard/speed-to-lead'),
-      ]);
-      setStats(s);
-      setFunnel(f);
-      setRecentLeads(r.leads);
-      setSpeedToLead(stl);
+      const overview = await api.get('/dashboard/overview');
+      setData(overview);
     } catch (err) {
-      console.error('Dashboard load error:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000);
-    return () => clearInterval(interval);
+    load();
+    const iv = setInterval(load, 30000);
+    return () => clearInterval(iv);
   }, []);
 
-  if (loading) return <div className="page-loader">Loading dashboard...</div>;
-
-  const formatMs = (ms) => {
-    if (!ms) return '—';
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
+  const handleNudge = async (contactId) => {
+    setNudging(contactId);
+    try {
+      await api.post(`/dashboard/win-back/${contactId}/nudge`);
+      await load();
+    } catch (err) {
+      alert(err.message || 'Failed to send nudge');
+    } finally {
+      setNudging(null);
+    }
   };
 
+  if (loading) return <div className="page-loader">Loading dashboard...</div>;
+  if (!data) return <div className="page-loader">Could not load dashboard</div>;
+
+  const { impact, todayAppointments, recentConversations, liveActivity, winBack } = data;
+
   return (
-    <div className="dashboard">
+    <div className="dashboard ops-dashboard">
       <div className="page-header">
-        <h1>Dashboard</h1>
-        <span className="live-badge"><span className="live-dot"></span> Live</span>
+        <div>
+          <h1>Dashboard</h1>
+          <p className="page-subtitle">Automation impact and today&apos;s schedule</p>
+        </div>
+        <span className="live-badge"><span className="live-dot" /> Live</span>
+      </div>
+
+      <div className="ops-hero card">
+        <div className="ops-hero-main">
+          <span className="ops-hero-label">Automation impact this month</span>
+          <div className="ops-hero-stats-inline">
+            <div><strong>{impact.remindersSent}</strong> reminders sent</div>
+            <div><strong>{impact.missedCallsCaptured}</strong> missed calls captured</div>
+            <div><strong>{impact.winBackDueCount}</strong> clients due for win-back</div>
+          </div>
+        </div>
+        <div className="ops-hero-side">
+          <span className="ops-hero-big">{impact.appointmentsToday}</span>
+          <span className="ops-hero-side-label">appointments today</span>
+        </div>
       </div>
 
       <div className="stat-cards">
         <div className="stat-card">
           <div className="stat-top">
-            <span className="stat-label">TOTAL LEADS</span>
-            <span className="stat-icon icon-leads">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/></svg>
-            </span>
+            <span className="stat-label">MISSED CALLS</span>
+            <span className="stat-icon icon-missed">📞</span>
           </div>
-          <div className="stat-value">{stats?.total_leads ?? 0}</div>
-          <div className="stat-change positive">{stats?.new_today ?? 0} new today</div>
+          <div className="stat-value">{impact.missedCallsCaptured}</div>
+          <div className="stat-change neutral">Captured by AI this month</div>
         </div>
-
         <div className="stat-card">
           <div className="stat-top">
-            <span className="stat-label">QUALIFIED</span>
-            <span className="stat-icon icon-qualified">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </span>
+            <span className="stat-label">REMINDERS</span>
+            <span className="stat-icon icon-reminders">🔔</span>
           </div>
-          <div className="stat-value">{stats?.qualified ?? 0}</div>
-          <div className="stat-change neutral">{stats?.booking_links_sent ?? 0} booking links sent</div>
+          <div className="stat-value">{impact.remindersSent}</div>
+          <div className="stat-change neutral">Sent this month</div>
         </div>
-
         <div className="stat-card">
           <div className="stat-top">
-            <span className="stat-label">BOOKED</span>
-            <span className="stat-icon icon-booked">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            </span>
+            <span className="stat-label">TODAY</span>
+            <span className="stat-icon icon-booked">📅</span>
           </div>
-          <div className="stat-value">{stats?.booked ?? 0}</div>
-          <div className="stat-change positive">{stats?.conversionRate ?? 0}% conversion</div>
+          <div className="stat-value">{impact.appointmentsToday}</div>
+          <div className="stat-change neutral">On the calendar</div>
         </div>
-
         <div className="stat-card">
           <div className="stat-top">
-            <span className="stat-label">IN FOLLOW-UP</span>
-            <span className="stat-icon icon-followup">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            </span>
+            <span className="stat-label">NEEDS REPLY</span>
+            <span className="stat-icon icon-followup">💬</span>
           </div>
-          <div className="stat-value">{stats?.in_followup ?? 0}</div>
-          <div className="stat-change neutral">Active sequences</div>
+          <div className="stat-value">{impact.needsReplyCount}</div>
+          <div className="stat-change neutral">
+            <Link to="/conversations">Open inbox →</Link>
+          </div>
         </div>
       </div>
 
-      {speedToLead?.avg_ms && (
-        <div className="speed-bar">
-          <span className="speed-label">Avg Speed-to-Lead:</span>
-          <span className="speed-value">{formatMs(speedToLead.avg_ms)}</span>
-          <span className="speed-detail">Median: {formatMs(speedToLead.median_ms)} &middot; Best: {formatMs(speedToLead.min_ms)}</span>
-        </div>
-      )}
-
-      <div className="dashboard-grid">
-        <div className="card recent-leads-card">
-          <h3>Recent Leads</h3>
-          {recentLeads.length === 0 ? (
+      <div className="dashboard-grid ops-grid-main">
+        <div className="card">
+          <div className="card-header-row">
+            <h3>Recent conversations</h3>
+            <Link to="/conversations" className="card-link">See all</Link>
+          </div>
+          {recentConversations.length === 0 ? (
             <div className="empty-state">
-              <svg width="40" height="40" fill="none" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#d1d5db" strokeWidth="2"/></svg>
-              <p>No leads yet</p>
-              <span>New inbound leads will appear here</span>
+              <p>No conversations yet</p>
+              <span>Inbound texts and AI replies will show here</span>
             </div>
           ) : (
-            <div className="leads-list">
-              {recentLeads.map((lead) => (
-                <Link to={`/leads/${lead.id}`} key={lead.id} className="lead-row">
-                  <div className="lead-avatar">{(lead.firstName?.[0] || '?')}{(lead.lastName?.[0] || '')}</div>
-                  <div className="lead-info">
-                    <span className="lead-name">{lead.firstName || 'Unknown'} {lead.lastName || ''}</span>
-                    <span className="lead-source">{lead.source || 'Direct'}</span>
+            <div className="ops-convo-list">
+              {recentConversations.map((c) => (
+                <Link
+                  key={`${c.participantType}-${c.participantId}`}
+                  to="/conversations"
+                  className="ops-convo-row"
+                >
+                  <div className="ops-avatar">{initials(c.displayName)}</div>
+                  <div className="ops-convo-body">
+                    <div className="ops-convo-top">
+                      <span className="ops-convo-name">{c.displayName}</span>
+                      <span className="ops-convo-time">{timeAgo(c.createdAt)}</span>
+                    </div>
+                    <p className="ops-convo-preview">{c.preview || '—'}</p>
                   </div>
-                  <span className="status-badge" style={{ background: STATUS_COLORS[lead.status]?.bg, color: STATUS_COLORS[lead.status]?.color }}>
-                    {lead.status}
+                  <span
+                    className="status-badge sm"
+                    style={{
+                      background: BADGE_STYLES[c.badge]?.bg,
+                      color: BADGE_STYLES[c.badge]?.color,
+                    }}
+                  >
+                    {c.badgeLabel}
                   </span>
                 </Link>
               ))}
@@ -139,31 +182,95 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="card funnel-card">
-          <h3>Conversion Funnel</h3>
-          {funnel?.funnel?.length > 0 ? (
-            <div className="funnel-list">
-              {funnel.funnel.map((item) => (
-                <div key={item.status} className="funnel-item">
-                  <div className="funnel-header">
-                    <span className="funnel-label">{item.status}</span>
-                    <span className="funnel-count">{item.count} <span className="funnel-pct">{item.percentage}%</span></span>
+        <div className="card">
+          <div className="card-header-row">
+            <h3>Today&apos;s appointments</h3>
+            <Link to="/automations" className="card-link">Automations</Link>
+          </div>
+          {todayAppointments.length === 0 ? (
+            <div className="empty-state">
+              <p>No appointments today</p>
+              <span>Synced from Google Calendar or booking emails</span>
+            </div>
+          ) : (
+            <div className="ops-appt-list">
+              {todayAppointments.map((a) => (
+                <div key={a.id} className="ops-appt-row">
+                  <div className="ops-appt-time">{formatApptTime(a.scheduledAt)}</div>
+                  <div className="ops-appt-body">
+                    <span className="ops-appt-name">{a.contactName}</span>
+                    <span className="ops-appt-service">{a.serviceName || 'Appointment'}</span>
                   </div>
-                  <div className="funnel-bar">
-                    <div
-                      className="funnel-fill"
-                      style={{
-                        width: `${item.percentage}%`,
-                        background: STATUS_COLORS[item.status]?.color || '#6b7280',
-                      }}
-                    ></div>
+                  {a.automationLabel && (
+                    <span className={`ops-appt-badge ${a.automationStatus || ''}`}>
+                      {a.automationStatus === 'reminded' ? '✓ ' : ''}{a.automationLabel}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="dashboard-grid ops-grid-secondary">
+        <div className="card">
+          <div className="card-header-row">
+            <h3>⚡ Live activity</h3>
+          </div>
+          {liveActivity.length === 0 ? (
+            <div className="empty-state">
+              <p>No recent activity</p>
+              <span>Automations and AI actions will appear here</span>
+            </div>
+          ) : (
+            <div className="ops-activity-list">
+              {liveActivity.map((item) => (
+                <div key={item.id} className="ops-activity-row">
+                  <span className="ops-activity-icon">{ACTIVITY_ICONS[item.icon] || '💬'}</span>
+                  <div className="ops-activity-body">
+                    <p>{item.text}</p>
+                    <span>{timeAgo(item.at)}</span>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-header-row">
+            <h3>🚨 Win-back needed</h3>
+            {impact.winBackDueCount > winBack.length && (
+              <Link to="/contacts" className="card-link">View {impact.winBackDueCount} →</Link>
+            )}
+          </div>
+          {winBack.length === 0 ? (
             <div className="empty-state">
-              <p>No data yet</p>
+              <p>All caught up</p>
+              <span>Clients past their rebook interval will show here</span>
+            </div>
+          ) : (
+            <div className="ops-winback-list">
+              {winBack.map((w) => (
+                <div key={w.contactId} className="ops-winback-row">
+                  <div className="ops-avatar">{initials(w.displayName)}</div>
+                  <div className="ops-winback-body">
+                    <span className="ops-convo-name">{w.displayName}</span>
+                    <span className="ops-winback-meta">
+                      Last visit {w.daysSinceVisit} days ago · {w.serviceName || 'Service'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-nudge"
+                    disabled={nudging === w.contactId}
+                    onClick={() => handleNudge(w.contactId)}
+                  >
+                    {nudging === w.contactId ? 'Sending…' : 'Nudge'}
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
