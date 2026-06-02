@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { homePath } from '../utils/uiMode';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -16,7 +17,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await login(email, password);
-      navigate(data.user.role === 'superadmin' ? '/admin' : '/dashboard');
+      navigate(data.user.role === 'superadmin' ? '/admin' : homePath(data.tenant));
     } catch (err) {
       setError(err.message);
     } finally {

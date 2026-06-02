@@ -59,8 +59,16 @@ export function AuthProvider({ children }) {
     setTenant(null);
   };
 
+  const updateTenant = (patch) => {
+    setTenant((prev) => {
+      const next = { ...prev, ...patch };
+      localStorage.setItem('tenant', JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, tenant, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, tenant, login, register, logout, updateTenant, loading }}>
       {children}
     </AuthContext.Provider>
   );

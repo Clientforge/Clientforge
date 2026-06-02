@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { homePath } from '../utils/uiMode';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -16,8 +17,8 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await register(form);
-      navigate('/dashboard');
+      const data = await register(form);
+      navigate(homePath(data.tenant));
     } catch (err) {
       setError(err.message);
     } finally {

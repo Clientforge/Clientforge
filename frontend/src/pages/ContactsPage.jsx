@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { isSimpleMode } from '../utils/uiMode';
 
 export default function ContactsPage() {
+  const { tenant } = useAuth();
+  const simple = isSimpleMode(tenant);
   const [contacts, setContacts] = useState([]);
   const [stats, setStats] = useState({});
   const [pagination, setPagination] = useState({});
@@ -96,8 +100,12 @@ export default function ContactsPage() {
     <div className="contacts-page">
       <div className="page-header">
         <div>
-          <h1>Contacts</h1>
-          <p className="page-subtitle">Manage your customer list for re-engagement campaigns</p>
+          <h1>{simple ? 'Clients' : 'Contacts'}</h1>
+          <p className="page-subtitle">
+            {simple
+              ? 'Your customer list — import, edit, and message from here'
+              : 'Manage your customer list for re-engagement campaigns'}
+          </p>
         </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={() => setShowImport(true)}>

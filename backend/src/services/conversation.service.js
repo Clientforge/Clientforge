@@ -127,15 +127,29 @@ const listConversations = async (tenantId, options = {}) => {
           }
         : null,
       lastActivityAt: lastMsg?.created_at || null,
+      needsReply: lastMsg?.direction === 'inbound',
     });
   }
 
-  // Sort by last activity descending
   conversations.sort((a, b) => {
+    if (a.needsReply !== b.needsReply) return a.needsReply ? -1 : 1;
     const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
     const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
     return bTime - aTime;
   });
+
+  const needsReplyCount = conversations.filter((c) => c.needsReply).length;
+
+  if (options.needsReply === 'true' || options.needsReply === true) {
+    const filtered = conversations.filter((c) => c.needsReply);
+    const total = filtered.length;
+    const offset = (page - 1) * limit;
+    return {
+      conversations: filtered.slice(offset, offset + limit),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      needsReplyCount,
+    };
+  }
 
   const total = conversations.length;
   const offset = (page - 1) * limit;
@@ -147,8 +161,31 @@ const listConversations = async (tenantId, options = {}) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     },
+    needsReplyCount,
+  };
+};
+
+const getInboxSummary = async (tenantId) => {
+  const listed = await listConversations(tenantId, { page: 1, limit: 10000 });
+  const needsReplyCount = listed.needsReplyCount ?? 0;
+  const totalConversations = listed.pagination?.total ?? 0;
+
+  const apptResult = await db.query(
+    `SELECT COUNT(*)::int AS count
+     FROM appointments a
+     WHERE a.tenant_id = $1
+       AND a.status IN ('scheduled', 'confirmed', 'rescheduled')
+       AND a.scheduled_at >= date_trunc('day', NOW())
+       AND a.scheduled_at < date_trunc('day', NOW()) + INTERVAL '1 day'`,
+    [tenantId],
+  );
+
+  return {
+    needsReplyCount,
+    totalConversations,
+    appointmentsToday: apptResult.rows[0]?.count ?? 0,
   };
 };
 
@@ -375,6 +412,7 @@ const sendManualReply = async (tenantId, participantType, participantId, body) =
 module.exports = {
   listConversations,
   getConversation,
+  getInboxSummary,
   sendManualReply,
   updateAiReplyOverride,
   getEffectiveAiAutoReply,

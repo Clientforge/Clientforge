@@ -5,13 +5,23 @@ const conversationService = require('../services/conversation.service');
 /**
  * GET /api/v1/conversations — List all conversations for the tenant.
  */
+router.get('/summary', async (req, res, next) => {
+  try {
+    const summary = await conversationService.getInboxSummary(req.tenantId);
+    res.json(summary);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/', async (req, res, next) => {
   try {
-    const { page, limit, search } = req.query;
+    const { page, limit, search, needsReply } = req.query;
     const result = await conversationService.listConversations(req.tenantId, {
       page: parseInt(page, 10) || 1,
       limit: Math.min(parseInt(limit, 10) || 25, 100),
       search: search || undefined,
+      needsReply,
     });
     res.json(result);
   } catch (err) {

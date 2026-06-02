@@ -95,12 +95,13 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
         lastName: user.last_name,
         role: user.role,
       },
-      tenant: {
-        id: tenant.id,
-        name: tenant.name,
-        industry: tenant.industry,
-        plan: tenant.plan,
-      },
+    tenant: {
+      id: tenant.id,
+      name: tenant.name,
+      industry: tenant.industry,
+      plan: tenant.plan,
+      uiMode: tenant.ui_mode || 'simple',
+    },
       ...tokens,
     };
   } catch (err) {
@@ -117,7 +118,7 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
 const login = async ({ email, password }) => {
   const result = await db.query(
     `SELECT u.id, u.tenant_id, u.email, u.password_hash, u.first_name, u.last_name, u.role, u.active,
-            t.name as tenant_name, t.plan as tenant_plan, t.active as tenant_active
+            t.name as tenant_name, t.plan as tenant_plan, t.active as tenant_active, t.ui_mode as tenant_ui_mode
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.email = $1`,
@@ -172,6 +173,7 @@ const login = async ({ email, password }) => {
       id: user.tenant_id,
       name: user.tenant_name,
       plan: user.tenant_plan,
+      uiMode: user.tenant_ui_mode || 'simple',
     },
     ...tokens,
   };
@@ -217,7 +219,7 @@ const getProfile = async (userId) => {
   const result = await db.query(
     `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.created_at,
             t.id as tenant_id, t.name as tenant_name, t.industry, t.plan,
-            t.phone_number, t.booking_link, t.timezone
+            t.phone_number, t.booking_link, t.timezone, t.ui_mode
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.id = $1`,
@@ -250,6 +252,7 @@ const getProfile = async (userId) => {
       phoneNumber: row.phone_number,
       bookingLink: row.booking_link,
       timezone: row.timezone,
+      uiMode: row.ui_mode || 'simple',
     },
   };
 };

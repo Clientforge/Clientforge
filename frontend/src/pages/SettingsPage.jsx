@@ -15,7 +15,7 @@ const DAYS = [
 const TONES = ['friendly', 'professional', 'casual', 'urgent', 'warm'];
 
 export default function SettingsPage() {
-  const { tenant } = useAuth();
+  const { tenant, updateTenant } = useAuth();
   const [tab, setTab] = useState('business');
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +55,9 @@ export default function SettingsPage() {
     try {
       const updated = await api.put('/settings', payload);
       setSettings(updated);
+      if (payload.business?.uiMode !== undefined) {
+        updateTenant({ uiMode: payload.business.uiMode });
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) { setError(err.message); }
@@ -104,6 +107,7 @@ function BusinessTab({ settings, onSave, saving }) {
     smsKeywordOptInEnabled: !!settings.business.smsKeywordOptInEnabled,
     smsKeywordPhrasesText: (settings.business.smsKeywordOptInPhrases || []).join('\n'),
     smsKeywordWelcomeMessage: settings.business.smsKeywordWelcomeMessage || '',
+    uiMode: settings.business.uiMode || 'simple',
   });
 
   useEffect(() => {
@@ -227,6 +231,21 @@ function BusinessTab({ settings, onSave, saving }) {
         <span className="field-hint">
           Use <code>{'{businessName}'}</code> for your business name. Sent only the first time we create the contact from a keyword.
         </span>
+      </div>
+
+      <hr className="settings-divider" />
+
+      <h3>App layout</h3>
+      <p className="settings-desc">
+        Simple mode opens to your inbox with a streamlined menu — best for day-to-day client messaging.
+        Full mode includes dashboard, leads, and automations for power users.
+      </p>
+      <div className="field">
+        <label>Interface mode</label>
+        <select value={form.uiMode} onChange={set('uiMode')}>
+          <option value="simple">Simple — Inbox, Clients, Outreach</option>
+          <option value="full">Full — Dashboard, Leads, Automations</option>
+        </select>
       </div>
 
       <hr className="settings-divider" />

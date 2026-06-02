@@ -10,7 +10,7 @@ const getSettings = async (tenantId) => {
             plan, api_key, followup_config, description, target_audience, tone,
             email_from_name, email_from_address, calendly_webhook_signing_key,
             ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
-            sms_keyword_welcome_message, created_at
+            sms_keyword_welcome_message, ui_mode, created_at
      FROM tenants WHERE id = $1`,
     [tenantId],
   );
@@ -49,6 +49,7 @@ const getSettings = async (tenantId) => {
         ? t.sms_keyword_opt_in_phrases
         : [],
       smsKeywordWelcomeMessage: t.sms_keyword_welcome_message || '',
+      uiMode: t.ui_mode || 'simple',
     },
     integration: {
       apiKey: t.api_key,
@@ -109,6 +110,11 @@ const updateSettings = async (tenantId, updates) => {
     if (business.smsKeywordWelcomeMessage !== undefined) {
       sets.push(`sms_keyword_welcome_message = $${idx++}`);
       params.push(business.smsKeywordWelcomeMessage || '');
+    }
+    if (business.uiMode !== undefined) {
+      const mode = business.uiMode === 'full' ? 'full' : 'simple';
+      sets.push(`ui_mode = $${idx++}`);
+      params.push(mode);
     }
   }
 

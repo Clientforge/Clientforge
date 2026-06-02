@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { isSimpleMode } from '../utils/uiMode';
 
 const STATUS_STYLES = {
   draft: { bg: '#f3f4f6', color: '#6b7280' },
@@ -16,6 +18,8 @@ const CHANNEL_ICONS = {
 };
 
 export default function CampaignsPage() {
+  const { tenant } = useAuth();
+  const simple = isSimpleMode(tenant);
   const [campaigns, setCampaigns] = useState([]);
   const [stats, setStats] = useState({});
   const [pagination, setPagination] = useState({});
@@ -46,8 +50,12 @@ export default function CampaignsPage() {
     <div className="campaigns-page">
       <div className="page-header">
         <div>
-          <h1>Campaigns</h1>
-          <p className="page-subtitle">Re-engage past customers with targeted multi-wave sequences</p>
+          <h1>{simple ? 'Outreach' : 'Campaigns'}</h1>
+          <p className="page-subtitle">
+            {simple
+              ? 'Send targeted messages to re-engage your clients'
+              : 'Re-engage past customers with targeted multi-wave sequences'}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ New Campaign</button>
       </div>

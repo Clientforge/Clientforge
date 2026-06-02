@@ -22,7 +22,7 @@ import GoldenCrownDemoPage from './pages/demos/GoldenCrownDemoPage';
 import G2GLayout from './pages/demos/graceToGrace/G2GLayout';
 import G2GHome from './pages/demos/graceToGrace/G2GHome';
 import G2GOffer from './pages/demos/graceToGrace/G2GOffer';
-import G2GContact from './pages/demos/graceToGrace/G2GContact';
+import HomeRedirect from './components/HomeRedirect';
 
 const G2G_BASE = '/demo/grace-to-grace';
 
@@ -44,7 +44,7 @@ export default function App() {
 
           {/* Tenant routes */}
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<HomeRedirect />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="conversations" element={<ConversationsPage />} />
             <Route path="leads" element={<LeadsPage />} />
