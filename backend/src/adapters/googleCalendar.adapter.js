@@ -12,6 +12,49 @@ function parseDurationMinutes(event) {
   return Math.max(1, Math.round((endMs - startMs) / 60000));
 }
 
+function splitFullName(full) {
+  const cleaned = String(full || '').replace(/\s+/g, ' ').trim();
+  if (!cleaned) return { firstName: null, lastName: null };
+  const parts = cleaned.split(' ');
+  if (parts.length === 1) return { firstName: parts[0], lastName: null };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
+/**
+ * Extract client name from event title when attendee displayName is missing.
+ * Supports GlossGenius, Portrait Care / booking-system title patterns.
+ */
+function parseNameFromSummary(summary) {
+  if (!summary || !String(summary).trim()) {
+    return { firstName: null, lastName: null };
+  }
+
+  const s = String(summary).trim();
+
+  const forMatch = s.match(/\sfor\s+(.+)$/i);
+  if (forMatch) {
+    return splitFullName(forMatch[1].trim());
+  }
+
+  const parenMatch = s.match(/^(.+?)\s*\([^)]+\)\s*$/);
+  if (parenMatch) {
+    const inner = parenMatch[1].trim();
+    if (inner && !/^service:/i.test(inner)) {
+      return splitFullName(inner);
+    }
+  }
+
+  const dashMatch = s.match(/^([^-]+?)\s*-\s*.+$/);
+  if (dashMatch) {
+    const inner = dashMatch[1].trim();
+    if (inner.length >= 2 && !/^service:/i.test(inner)) {
+      return splitFullName(inner);
+    }
+  }
+
+  return { firstName: null, lastName: null };
+}
+
 /**
  * Pick the client/guest attendee (not the calendar owner or organizer).
  */
@@ -27,7 +70,6 @@ function pickGuestAttendee(event, ownerEmail) {
     if (owner && email === owner) return false;
     if (organizerEmail && email === organizerEmail && a.organizer) return false;
     if (organizerEmail && email === organizerEmail && !a.organizer) {
-      // Guest might be marked organizer on some shared calendars — still allow if only attendee
       return attendees.filter((x) => x.email && !x.resource).length === 1;
     }
     if (organizerEmail && email === organizerEmail) return false;
@@ -53,9 +95,18 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
 
   const email = guest.email.trim().toLowerCase();
   const displayName = (guest.displayName || '').trim();
-  const nameParts = displayName ? displayName.split(/\s+/) : [];
-  const firstName = nameParts[0] || null;
-  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null;
+  let firstName = null;
+  let lastName = null;
+
+  if (displayName) {
+    const nameParts = displayName.split(/\s+/);
+    firstName = nameParts[0] || null;
+    lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null;
+  } else {
+    const fromSummary = parseNameFromSummary(event.summary);
+    firstName = fromSummary.firstName;
+    lastName = fromSummary.lastName;
+  }
 
   const eventType = event.status === 'cancelled' ? 'booking.cancelled' : 'booking.created';
 
@@ -79,4 +130,9 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
   };
 };
 
-module.exports = { normalizeGoogleCalendarEvent, pickGuestAttendee };
+module.exports = {
+  normalizeGoogleCalendarEvent,
+  pickGuestAttendee,
+  parseNameFromSummary,
+  splitFullName,
+};

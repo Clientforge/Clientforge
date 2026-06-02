@@ -122,6 +122,37 @@ const classifyBookingEvent = async (tenantId, contactId, incomingEventType, appo
 /**
  * Upsert contact from booking event. Match by tenant_id + phone (or email if no phone).
  */
+const findContactByName = async (tenantId, firstName, lastName) => {
+  const fn = (firstName || '').trim().toLowerCase();
+  const ln = (lastName || '').trim().toLowerCase();
+  if (!fn) return null;
+
+  let result;
+  if (ln) {
+    result = await db.query(
+      `SELECT id FROM contacts
+       WHERE tenant_id = $1
+         AND LOWER(TRIM(COALESCE(first_name, ''))) = $2
+         AND LOWER(TRIM(COALESCE(last_name, ''))) = $3
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [tenantId, fn, ln],
+    );
+  } else {
+    result = await db.query(
+      `SELECT id FROM contacts
+       WHERE tenant_id = $1
+         AND LOWER(TRIM(COALESCE(first_name, ''))) = $2
+         AND (last_name IS NULL OR TRIM(last_name) = '')
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [tenantId, fn],
+    );
+  }
+
+  return result.rows[0]?.id || null;
+};
+
 const upsertContact = async (tenantId, contactData, source = 'calendly') => {
   const phone = contactData.phone ? normalizePhone(contactData.phone) : null;
   const email = (contactData.email || '').trim().toLowerCase() || null;
@@ -173,6 +204,29 @@ const upsertContact = async (tenantId, contactData, source = 'calendly') => {
       );
       return id;
     }
+  }
+
+  const nameMatchId = await findContactByName(tenantId, contactData.firstName, contactData.lastName);
+  if (nameMatchId) {
+    await db.query(
+      `UPDATE contacts SET
+        first_name = COALESCE(NULLIF($2, ''), first_name),
+        last_name = COALESCE(NULLIF($3, ''), last_name),
+        email = COALESCE(NULLIF($4, ''), email),
+        phone = COALESCE(NULLIF($5, ''), phone),
+        source = CASE WHEN source = 'import' THEN $6 ELSE source END,
+        updated_at = NOW()
+       WHERE id = $1`,
+      [
+        nameMatchId,
+        contactData.firstName || '',
+        contactData.lastName || '',
+        email || '',
+        phone || '',
+        source,
+      ],
+    );
+    return nameMatchId;
   }
 
   const insertPhone = phone || (email ? `e-${email}` : `unknown-${Date.now()}`);
