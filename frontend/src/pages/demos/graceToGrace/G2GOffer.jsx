@@ -405,6 +405,7 @@ function buildSellConditionSummary({
 
 export default function G2GOffer() {
   const flowEndRef = useRef(null);
+  const leadGateRef = useRef(null);
   const vinFirstInputRef = useRef(null);
   const [searchParams] = useSearchParams();
   const vinDeepLinkApplied = useRef(false);
@@ -420,13 +421,13 @@ export default function G2GOffer() {
   const [zipLookupErr, setZipLookupErr] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
   const [contactErr, setContactErr] = useState('');
-  const contactReady = Boolean(contact);
+  const [showLeadGate, setShowLeadGate] = useState(false);
 
   useEffect(() => {
-    document.title = contactReady
-      ? 'See what your car is worth — Grace to Grace'
-      : 'Get your estimate — Grace to Grace';
-  }, [contactReady]);
+    document.title = result
+      ? 'Your offer — Grace to Grace'
+      : 'See what your car is worth — Grace to Grace';
+  }, [result]);
 
   useEffect(() => {
     const digits = leadZip.replace(/\D/g, '').slice(0, 5);
@@ -516,7 +517,7 @@ export default function G2GOffer() {
   const [sellOk, setSellOk] = useState(false);
 
   const handleContactSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setContactErr('');
     if (!leadFirstName.trim() || leadFirstName.trim().length < 2) {
       setContactErr('Enter your first name.');
@@ -567,10 +568,138 @@ export default function G2GOffer() {
       setSellPickupZip(zipClean);
       setSellCity(saved.city);
       setSellState(saved.state);
+      setShowLeadGate(false);
+      await runEstimate(saved);
     } catch (err) {
       setContactErr(err.message || 'Something went wrong.');
     } finally {
       setContactBusy(false);
+    }
+  };
+
+  const resolveMakeModel = () => {
+    const makeFinal =
+      makeSelect === OTHER_VALUE ? makeOther.trim() : makeSelect.trim();
+    const modelFinal =
+      makeSelect === OTHER_VALUE
+        ? modelOther.trim()
+        : modelSelect === OTHER_VALUE
+          ? modelOther.trim()
+          : modelSelect.trim();
+    return { makeFinal, modelFinal };
+  };
+
+  const validateVehicleForEstimate = () => {
+    const { makeFinal, modelFinal } = resolveMakeModel();
+    if (!year.trim() || !makeFinal || !modelFinal) {
+      return { error: 'Complete the vehicle steps: year, make, and model.' };
+    }
+    const mileageMiles = parseMileageInput(mileageOdometer);
+    if (mileageMiles == null) {
+      return { error: `Enter odometer miles (1–${MAX_ODOMETER_MILES.toLocaleString()}).` };
+    }
+    if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
+      return { error: 'Enter a 5-digit ZIP code.' };
+    }
+    if (
+      battery == null
+      || key == null
+      || startDrive == null
+      || tireCondition == null
+      || exterior == null
+      || exteriorComplete == null
+      || catalytic == null
+      || interiorQuality == null
+      || bodyDamage.glass == null
+    ) {
+      return { error: 'Answer each condition question to get an estimate.' };
+    }
+    return { makeFinal, modelFinal, mileageMiles };
+  };
+
+  const runEstimate = async (contactSnapshot) => {
+    const validation = validateVehicleForEstimate();
+    if (validation.error) {
+      setFormError(validation.error);
+      return;
+    }
+    const { makeFinal, modelFinal, mileageMiles } = validation;
+    const activeContact = contactSnapshot ?? contact;
+    setSubmitting(true);
+    const drives = startDrive === START_DRIVE.does_not_start ? 'no' : 'yes';
+    const tireLegacy = legacyTireFieldsFromCondition(tireCondition);
+    try {
+      const range = await postGraceEstimate({
+        sessionId: getOrCreateG2gSessionId(),
+        year: year.trim(),
+        make: makeFinal,
+        model: modelFinal,
+        bodyClass,
+        zip: zip.trim().replace(/\D/g, '').slice(0, 5),
+        mileageMidpoint: String(mileageMiles),
+        titleStatus,
+        vin: normalizeVin(vin) || undefined,
+        assessment: {
+          startDrive,
+          drives,
+          battery,
+          key,
+          tireCondition,
+          tiresInflated: tireLegacy.tiresInflated,
+          tiresAttached: tireLegacy.tiresAttached,
+          exterior,
+          exteriorComplete,
+          catalytic,
+          interior: interiorQuality,
+          body: bodyDamage,
+        },
+      });
+      setResult(range);
+      setShowLeadGate(false);
+      if (activeContact) {
+        const displayRange = formatOfferRange(range);
+        const rangeLoHi = getDisplayRangeLoHi(range);
+        const conditionLabel = buildSellConditionSummary({
+          titleStatus,
+          mileageOdometer,
+          battery,
+          key,
+          startDrive,
+          tireCondition,
+          exterior,
+          exteriorComplete,
+          catalytic,
+          interiorQuality,
+          bodyDamage,
+        });
+        const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
+        const miParsed = parseMileageInput(mileageOdometer);
+        postG2gNotifyEstimate({
+          firstName: activeContact.firstName,
+          phone: activeContact.phone,
+          email: activeContact.email,
+          zip: zipClean,
+          city: activeContact.city,
+          state: activeContact.state,
+          leadId: activeContact.leadId,
+          sessionId: getOrCreateG2gSessionId(),
+          year: year.trim(),
+          make: makeFinal,
+          model: modelFinal,
+          vin: normalizeVin(vin) || undefined,
+          mileage: miParsed != null ? formatMileageDisplay(miParsed) : undefined,
+          conditionLabel,
+          estimateLow: rangeLoHi?.lo ?? (range.low != null ? range.low : undefined),
+          estimateHigh: rangeLoHi?.hi ?? (range.high != null ? range.high : undefined),
+          estimateDisplay: displayRange || undefined,
+        }).catch((err) => {
+          console.warn('[G2G] Estimate team notify failed:', err?.message || err);
+        });
+      }
+    } catch (err) {
+      setFormError(err.message || 'Could not reach pricing service.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -790,118 +919,26 @@ export default function G2GOffer() {
     setResult(null);
     setSellOk(false);
     setSellOpen(false);
-    const makeFinal =
-      makeSelect === OTHER_VALUE
-        ? makeOther.trim()
-        : makeSelect.trim();
-    const modelFinal =
-      makeSelect === OTHER_VALUE
-        ? modelOther.trim()
-        : modelSelect === OTHER_VALUE
-          ? modelOther.trim()
-          : modelSelect.trim();
-    if (!year.trim() || !makeFinal || !modelFinal) {
-      setFormError('Complete the vehicle steps: year, make, and model.');
+
+    const validation = validateVehicleForEstimate();
+    if (validation.error) {
+      setFormError(validation.error);
       return;
     }
-    const mileageMiles = parseMileageInput(mileageOdometer);
-    if (mileageMiles == null) {
-      setFormError(`Enter odometer miles (1–${MAX_ODOMETER_MILES.toLocaleString()}).`);
-      return;
-    }
-    if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
-      setFormError('Enter a 5-digit ZIP code.');
-      return;
-    }
-    if (
-      battery == null
-      || key == null
-      || startDrive == null
-      || tireCondition == null
-      || exterior == null
-      || exteriorComplete == null
-      || catalytic == null
-      || interiorQuality == null
-      || bodyDamage.glass == null
-    ) {
-      setFormError('Answer each condition question to get an estimate.');
-      return;
-    }
-    setSubmitting(true);
-    const drives = startDrive === START_DRIVE.does_not_start ? 'no' : 'yes';
-    const tireLegacy = legacyTireFieldsFromCondition(tireCondition);
-    try {
-      const range = await postGraceEstimate({
-        sessionId: getOrCreateG2gSessionId(),
-        year: year.trim(),
-        make: makeFinal,
-        model: modelFinal,
-        bodyClass,
-        zip: zip.trim().replace(/\D/g, '').slice(0, 5),
-        mileageMidpoint: String(mileageMiles),
-        titleStatus,
-        vin: normalizeVin(vin) || undefined,
-        assessment: {
-          startDrive,
-          drives,
-          battery,
-          key,
-          tireCondition,
-          tiresInflated: tireLegacy.tiresInflated,
-          tiresAttached: tireLegacy.tiresAttached,
-          exterior,
-          exteriorComplete,
-          catalytic,
-          interior: interiorQuality,
-          body: bodyDamage,
-        },
-      });
-      setResult(range);
-      if (contact) {
-        const displayRange = formatOfferRange(range);
-        const rangeLoHi = getDisplayRangeLoHi(range);
-        const conditionLabel = buildSellConditionSummary({
-          titleStatus,
-          mileageOdometer,
-          battery,
-          key,
-          startDrive,
-          tireCondition,
-          exterior,
-          exteriorComplete,
-          catalytic,
-          interiorQuality,
-          bodyDamage,
-        });
-        const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
-        const miParsed = parseMileageInput(mileageOdometer);
-        postG2gNotifyEstimate({
-          firstName: contact.firstName,
-          phone: contact.phone,
-          email: contact.email,
-          zip: zipClean,
-          city: contact.city,
-          state: contact.state,
-          leadId: contact.leadId,
-          sessionId: getOrCreateG2gSessionId(),
-          year: year.trim(),
-          make: makeFinal,
-          model: modelFinal,
-          vin: normalizeVin(vin) || undefined,
-          mileage: miParsed != null ? formatMileageDisplay(miParsed) : undefined,
-          conditionLabel,
-          estimateLow: rangeLoHi?.lo ?? (range.low != null ? range.low : undefined),
-          estimateHigh: rangeLoHi?.hi ?? (range.high != null ? range.high : undefined),
-          estimateDisplay: displayRange || undefined,
-        }).catch((err) => {
-          console.warn('[G2G] Estimate team notify failed:', err?.message || err);
-        });
+
+    if (!contact) {
+      const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
+      if (zipClean.length === 5) {
+        setLeadZip(zipClean);
       }
-    } catch (err) {
-      setFormError(err.message || 'Could not reach pricing service.');
-    } finally {
-      setSubmitting(false);
+      setShowLeadGate(true);
+      requestAnimationFrame(() => {
+        leadGateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      return;
     }
+
+    await runEstimate();
   };
 
   const handleSellSubmit = async (e) => {
@@ -1053,109 +1090,6 @@ export default function G2GOffer() {
     display: formatOfferRange(result) || undefined,
     pointDisplay: formatPointOffer(result) || undefined,
   });
-
-  if (!contactReady) {
-    return (
-      <>
-        <h1 className="g2g-page-title">Get your estimate</h1>
-        <p className="g2g-page-lead">
-          Enter your contact info so we can send your estimate and follow up if you have questions. Next, you&apos;ll
-          add your vehicle details — same quick flow as before.
-        </p>
-        <form className="g2g-form" onSubmit={handleContactSubmit}>
-          <div className="g2g-field">
-            <label htmlFor="g2g-lead-first-name">First name</label>
-            <input
-              id="g2g-lead-first-name"
-              name="firstName"
-              autoComplete="given-name"
-              value={leadFirstName}
-              onChange={(ev) => setLeadFirstName(ev.target.value)}
-              required
-            />
-          </div>
-          <div className="g2g-field g2g-mt">
-            <label htmlFor="g2g-lead-phone">Phone number</label>
-            <input
-              id="g2g-lead-phone"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              value={leadPhone}
-              onChange={(ev) => setLeadPhone(ev.target.value)}
-              required
-            />
-          </div>
-          <div className="g2g-field g2g-mt">
-            <label htmlFor="g2g-lead-email">Email address</label>
-            <input
-              id="g2g-lead-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={leadEmail}
-              onChange={(ev) => setLeadEmail(ev.target.value)}
-              required
-            />
-          </div>
-          <div className="g2g-field g2g-mt">
-            <label htmlFor="g2g-lead-zip">ZIP code</label>
-            <input
-              id="g2g-lead-zip"
-              name="zip"
-              inputMode="numeric"
-              autoComplete="postal-code"
-              placeholder="30260"
-              maxLength={10}
-              value={leadZip}
-              onChange={(ev) => setLeadZip(ev.target.value)}
-              required
-            />
-            {zipLookupBusy ? (
-              <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
-                Looking up city and state…
-              </p>
-            ) : null}
-            {zipLookupErr ? (
-              <p className="g2g-field-hint g2g-field-hint--error" style={{ margin: '0.35rem 0 0' }}>
-                {zipLookupErr}
-              </p>
-            ) : null}
-          </div>
-          <div className="g2g-field g2g-mt">
-            <div className="g2g-row">
-              <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
-                <label htmlFor="g2g-lead-city">City</label>
-                <input
-                  id="g2g-lead-city"
-                  name="city"
-                  autoComplete="address-level2"
-                  value={leadCity}
-                  readOnly
-                  placeholder={zipLookupBusy ? 'Looking up…' : 'Enter ZIP first'}
-                />
-              </div>
-              <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
-                <label htmlFor="g2g-lead-state">State</label>
-                <input
-                  id="g2g-lead-state"
-                  name="state"
-                  autoComplete="address-level1"
-                  value={leadState}
-                  readOnly
-                  placeholder="—"
-                />
-              </div>
-            </div>
-          </div>
-          {contactErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{contactErr}</div> : null}
-          <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={contactBusy}>
-            {contactBusy ? 'Saving…' : 'Continue to estimate'}
-          </button>
-        </form>
-      </>
-    );
-  }
 
   return (
     <>
@@ -1630,9 +1564,114 @@ export default function G2GOffer() {
 
           <span ref={flowEndRef} className="g2g-flow-anchor" />
 
+          {showLeadGate && !result ? (
+            <div ref={leadGateRef} className="g2g-flow-block g2g-flow-block--current g2g-lead-gate">
+              <div className="g2g-flow-block-title">Almost done — see your estimate</div>
+              <p className="g2g-flow-block-lead">
+                Enter your contact info and we&apos;ll show your vehicle&apos;s estimated value.
+              </p>
+              <div className="g2g-form">
+                <div className="g2g-field">
+                  <label htmlFor="g2g-lead-first-name">First name</label>
+                  <input
+                    id="g2g-lead-first-name"
+                    name="firstName"
+                    autoComplete="given-name"
+                    value={leadFirstName}
+                    onChange={(ev) => setLeadFirstName(ev.target.value)}
+                    required
+                  />
+                </div>
+                <div className="g2g-field g2g-mt">
+                  <label htmlFor="g2g-lead-phone">Phone number</label>
+                  <input
+                    id="g2g-lead-phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={leadPhone}
+                    onChange={(ev) => setLeadPhone(ev.target.value)}
+                    required
+                  />
+                </div>
+                <div className="g2g-field g2g-mt">
+                  <label htmlFor="g2g-lead-email">Email address</label>
+                  <input
+                    id="g2g-lead-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={leadEmail}
+                    onChange={(ev) => setLeadEmail(ev.target.value)}
+                    required
+                  />
+                </div>
+                <div className="g2g-field g2g-mt">
+                  <label htmlFor="g2g-lead-zip">ZIP code</label>
+                  <input
+                    id="g2g-lead-zip"
+                    name="zip"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="30260"
+                    maxLength={10}
+                    value={leadZip}
+                    onChange={(ev) => setLeadZip(ev.target.value)}
+                    required
+                  />
+                  {zipLookupBusy ? (
+                    <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
+                      Looking up city and state…
+                    </p>
+                  ) : null}
+                  {zipLookupErr ? (
+                    <p className="g2g-field-hint g2g-field-hint--error" style={{ margin: '0.35rem 0 0' }}>
+                      {zipLookupErr}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="g2g-field g2g-mt">
+                  <div className="g2g-row">
+                    <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
+                      <label htmlFor="g2g-lead-city">City</label>
+                      <input
+                        id="g2g-lead-city"
+                        name="city"
+                        autoComplete="address-level2"
+                        value={leadCity}
+                        readOnly
+                        placeholder={zipLookupBusy ? 'Looking up…' : 'Enter ZIP first'}
+                      />
+                    </div>
+                    <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
+                      <label htmlFor="g2g-lead-state">State</label>
+                      <input
+                        id="g2g-lead-state"
+                        name="state"
+                        autoComplete="address-level1"
+                        value={leadState}
+                        readOnly
+                        placeholder="—"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {contactErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{contactErr}</div> : null}
+                <button
+                  type="button"
+                  className="g2g-btn g2g-btn--primary g2g-mt"
+                  disabled={contactBusy || submitting}
+                  onClick={handleContactSubmit}
+                >
+                  {contactBusy || submitting ? 'Calculating…' : 'Show my estimate'}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {formError ? <div className="g2g-alert g2g-alert--error">{formError}</div> : null}
 
-          {canSubmitEstimate ? (
+          {canSubmitEstimate && !showLeadGate ? (
             <button type="submit" className="g2g-btn g2g-btn--primary g2g-submit-sticky" disabled={submitting}>
               {submitting ? 'Calculating…' : 'See what your car is worth'}
             </button>

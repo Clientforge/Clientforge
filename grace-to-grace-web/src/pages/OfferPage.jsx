@@ -22,6 +22,7 @@ import { lookupUsZipCityState } from '../lib/zipLookup.js';
 
 export default function OfferPage() {
   const vinInputRef = useRef(null);
+  const leadGateRef = useRef(null);
   const [searchParams] = useSearchParams();
 
   const [contact, setContact] = useState(() => loadG2gContact());
@@ -35,8 +36,7 @@ export default function OfferPage() {
   const [zipLookupErr, setZipLookupErr] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
   const [contactErr, setContactErr] = useState('');
-
-  const contactReady = Boolean(contact);
+  const [showLeadGate, setShowLeadGate] = useState(false);
 
   useEffect(() => {
     const digits = leadZip.replace(/\D/g, '').slice(0, 5);
@@ -82,7 +82,7 @@ export default function OfferPage() {
   }, []);
 
   useEffect(() => {
-    if (!contactReady || searchParams.get('start') !== 'vin') return undefined;
+    if (searchParams.get('start') !== 'vin') return undefined;
     const id = requestAnimationFrame(() => {
       const el = vinInputRef.current;
       if (!el) return;
@@ -90,7 +90,7 @@ export default function OfferPage() {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     return () => cancelAnimationFrame(id);
-  }, [searchParams, contactReady]);
+  }, [searchParams]);
 
   const [vin, setVin] = useState('');
   const [decoding, setDecoding] = useState(false);
@@ -103,7 +103,7 @@ export default function OfferPage() {
   const [engineNote, setEngineNote] = useState('');
 
   const [mileage, setMileage] = useState('');
-  const [zip, setZip] = useState(() => loadG2gContact()?.zip || '');
+  const [zip, setZip] = useState('');
   const [conditionId, setConditionId] = useState(CONDITION_OPTIONS[0].id);
 
   const [result, setResult] = useState(null);
@@ -121,8 +121,87 @@ export default function OfferPage() {
   const [sellErr, setSellErr] = useState('');
   const [sellOk, setSellOk] = useState(false);
 
+  const conditionLabel =
+    CONDITION_OPTIONS.find((o) => o.id === conditionId)?.label || conditionId;
+
+  const validateVehicleForEstimate = () => {
+    if (!year.trim() || !make.trim() || !model.trim()) {
+      return { error: 'Year, make, and model are required (use VIN decode or enter manually).' };
+    }
+    if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
+      return { error: 'Enter a 5-digit ZIP code.' };
+    }
+    return {};
+  };
+
+  const runEstimate = (contactSnapshot) => {
+    const validation = validateVehicleForEstimate();
+    if (validation.error) {
+      setFormError(validation.error);
+      return;
+    }
+    const activeContact = contactSnapshot ?? contact;
+    setFormError('');
+    setSellOk(false);
+    setSellOpen(false);
+
+    const range = computeOfferRange({
+      year: year.trim(),
+      bodyClass,
+      conditionId,
+      zip: zip.trim(),
+      mileage: mileage.trim(),
+    });
+    setResult(range);
+    setShowLeadGate(false);
+
+    const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
+    const snapshotInput = {
+      year: year.trim(),
+      make: make.trim(),
+      model: model.trim(),
+      zip: zipClean,
+      vin: normalizeVin(vin) || undefined,
+      mileage: mileage.trim() || undefined,
+      conditionId,
+      bodyClass: bodyClass || undefined,
+      engineNote: engineNote || undefined,
+    };
+    postGraceEstimateSnapshot({
+      sessionId: getOrCreateG2gSessionId(),
+      input: snapshotInput,
+      result: range,
+    }).catch(() => {});
+
+    if (activeContact) {
+      const displayRange = formatOfferRange(range);
+      const rangeLoHi = getDisplayRangeLoHi(range);
+      postG2gNotifyEstimate({
+        firstName: activeContact.firstName,
+        phone: activeContact.phone,
+        email: activeContact.email,
+        zip: zipClean,
+        city: activeContact.city,
+        state: activeContact.state,
+        leadId: activeContact.leadId,
+        sessionId: getOrCreateG2gSessionId(),
+        year: year.trim(),
+        make: make.trim(),
+        model: model.trim(),
+        vin: normalizeVin(vin) || undefined,
+        mileage: mileage.trim() || undefined,
+        conditionLabel,
+        estimateLow: rangeLoHi?.lo ?? range.low,
+        estimateHigh: rangeLoHi?.hi ?? range.high,
+        estimateDisplay: displayRange || undefined,
+      }).catch((err) => {
+        console.warn('[G2G] Estimate team notify failed:', err?.message || err);
+      });
+    }
+  };
+
   const handleContactSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setContactErr('');
     if (!leadFirstName.trim() || leadFirstName.trim().length < 2) {
       setContactErr('Enter your first name.');
@@ -173,6 +252,7 @@ export default function OfferPage() {
       setSellPickupZip(zipClean);
       setSellCity(saved.city);
       setSellState(saved.state);
+      runEstimate(saved);
     } catch (err) {
       setContactErr(err.message || 'Something went wrong.');
     } finally {
@@ -204,72 +284,31 @@ export default function OfferPage() {
 
   const handleEstimate = (e) => {
     e.preventDefault();
-    setFormError('');
     setResult(null);
     setSellOk(false);
     setSellOpen(false);
-    if (!year.trim() || !make.trim() || !model.trim()) {
-      setFormError('Year, make, and model are required (use VIN decode or enter manually).');
-      return;
-    }
-    if (!zip.trim() || zip.replace(/\D/g, '').length < 5) {
-      setFormError('Enter a 5-digit ZIP code.');
-      return;
-    }
-    const range = computeOfferRange({
-      year: year.trim(),
-      bodyClass,
-      conditionId,
-      zip: zip.trim(),
-      mileage: mileage.trim(),
-    });
-    setResult(range);
-    const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
-    const snapshotInput = {
-      year: year.trim(),
-      make: make.trim(),
-      model: model.trim(),
-      zip: zipClean,
-      vin: normalizeVin(vin) || undefined,
-      mileage: mileage.trim() || undefined,
-      conditionId,
-      bodyClass: bodyClass || undefined,
-      engineNote: engineNote || undefined,
-    };
-    postGraceEstimateSnapshot({
-      sessionId: getOrCreateG2gSessionId(),
-      input: snapshotInput,
-      result: range,
-    }).catch(() => {});
-    if (contact) {
-      const displayRange = formatOfferRange(range);
-      const rangeLoHi = getDisplayRangeLoHi(range);
-      postG2gNotifyEstimate({
-        firstName: contact.firstName,
-        phone: contact.phone,
-        email: contact.email,
-        zip: zipClean,
-        city: contact.city,
-        state: contact.state,
-        leadId: contact.leadId,
-        sessionId: getOrCreateG2gSessionId(),
-        year: year.trim(),
-        make: make.trim(),
-        model: model.trim(),
-        vin: normalizeVin(vin) || undefined,
-        mileage: mileage.trim() || undefined,
-        conditionLabel,
-        estimateLow: rangeLoHi?.lo ?? range.low,
-        estimateHigh: rangeLoHi?.hi ?? range.high,
-        estimateDisplay: displayRange || undefined,
-      }).catch((err) => {
-        console.warn('[G2G] Estimate team notify failed:', err?.message || err);
-      });
-    }
-  };
 
-  const conditionLabel =
-    CONDITION_OPTIONS.find((o) => o.id === conditionId)?.label || conditionId;
+    const validation = validateVehicleForEstimate();
+    if (validation.error) {
+      setFormError(validation.error);
+      return;
+    }
+    setFormError('');
+
+    if (!contact) {
+      const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
+      if (zipClean.length === 5) {
+        setLeadZip(zipClean);
+      }
+      setShowLeadGate(true);
+      requestAnimationFrame(() => {
+        leadGateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      return;
+    }
+
+    runEstimate();
+  };
 
   const handleSellSubmit = async (e) => {
     e.preventDefault();
@@ -337,109 +376,6 @@ export default function OfferPage() {
       setSellBusy(false);
     }
   };
-
-  if (!contactReady) {
-    return (
-      <>
-        <h1 className="g2g-page-title">Get your estimate</h1>
-        <p className="g2g-page-lead">
-          Enter your contact info so we can send your estimate and follow up if you have questions. Next, you&apos;ll
-          add your vehicle details — same quick flow as before.
-        </p>
-        <form className="g2g-form" onSubmit={handleContactSubmit}>
-          <div className="g2g-field">
-            <label htmlFor="lead-first-name">First name</label>
-            <input
-              id="lead-first-name"
-              name="firstName"
-              autoComplete="given-name"
-              value={leadFirstName}
-              onChange={(ev) => setLeadFirstName(ev.target.value)}
-              required
-            />
-          </div>
-          <div className="g2g-field g2g-mt">
-            <label htmlFor="lead-phone">Phone number</label>
-            <input
-              id="lead-phone"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              value={leadPhone}
-              onChange={(ev) => setLeadPhone(ev.target.value)}
-              required
-            />
-          </div>
-          <div className="g2g-field g2g-mt">
-            <label htmlFor="lead-email">Email address</label>
-            <input
-              id="lead-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={leadEmail}
-              onChange={(ev) => setLeadEmail(ev.target.value)}
-              required
-            />
-          </div>
-          <div className="g2g-field g2g-mt">
-            <label htmlFor="lead-zip">ZIP code</label>
-            <input
-              id="lead-zip"
-              name="zip"
-              inputMode="numeric"
-              autoComplete="postal-code"
-              placeholder="30260"
-              maxLength={10}
-              value={leadZip}
-              onChange={(ev) => setLeadZip(ev.target.value)}
-              required
-            />
-            {zipLookupBusy ? (
-              <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
-                Looking up city and state…
-              </p>
-            ) : null}
-            {zipLookupErr ? (
-              <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0', color: 'var(--g2g-danger)' }}>
-                {zipLookupErr}
-              </p>
-            ) : null}
-          </div>
-          <div className="g2g-field g2g-mt">
-            <div className="g2g-row">
-              <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
-                <label htmlFor="lead-city">City</label>
-                <input
-                  id="lead-city"
-                  name="city"
-                  autoComplete="address-level2"
-                  value={leadCity}
-                  readOnly
-                  placeholder={zipLookupBusy ? 'Looking up…' : 'Enter ZIP first'}
-                />
-              </div>
-              <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
-                <label htmlFor="lead-state">State</label>
-                <input
-                  id="lead-state"
-                  name="state"
-                  autoComplete="address-level1"
-                  value={leadState}
-                  readOnly
-                  placeholder="—"
-                />
-              </div>
-            </div>
-          </div>
-          {contactErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{contactErr}</div> : null}
-          <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={contactBusy}>
-            {contactBusy ? 'Saving…' : 'Continue to estimate'}
-          </button>
-        </form>
-      </>
-    );
-  }
 
   return (
     <>
@@ -535,11 +471,113 @@ export default function OfferPage() {
           </select>
         </div>
 
+        {showLeadGate && !result ? (
+          <div ref={leadGateRef} className="g2g-lead-gate g2g-mt">
+            <h2 className="g2g-flow-block-title" style={{ marginTop: 0 }}>
+              Almost done — see your estimate
+            </h2>
+            <p className="g2g-page-lead" style={{ marginBottom: '1rem' }}>
+              Enter your contact info and we&apos;ll show your vehicle&apos;s estimated value.
+            </p>
+            <div className="g2g-field">
+              <label htmlFor="lead-first-name">First name</label>
+              <input
+                id="lead-first-name"
+                name="firstName"
+                autoComplete="given-name"
+                value={leadFirstName}
+                onChange={(ev) => setLeadFirstName(ev.target.value)}
+                required
+              />
+            </div>
+            <div className="g2g-field g2g-mt">
+              <label htmlFor="lead-phone">Phone number</label>
+              <input
+                id="lead-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                value={leadPhone}
+                onChange={(ev) => setLeadPhone(ev.target.value)}
+                required
+              />
+            </div>
+            <div className="g2g-field g2g-mt">
+              <label htmlFor="lead-email">Email address</label>
+              <input
+                id="lead-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={leadEmail}
+                onChange={(ev) => setLeadEmail(ev.target.value)}
+                required
+              />
+            </div>
+            <div className="g2g-field g2g-mt">
+              <label htmlFor="lead-zip">ZIP code</label>
+              <input
+                id="lead-zip"
+                name="leadZip"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                placeholder="30260"
+                maxLength={10}
+                value={leadZip}
+                onChange={(ev) => setLeadZip(ev.target.value)}
+                required
+              />
+              {zipLookupBusy ? (
+                <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
+                  Looking up city and state…
+                </p>
+              ) : null}
+              {zipLookupErr ? (
+                <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0', color: 'var(--g2g-danger)' }}>
+                  {zipLookupErr}
+                </p>
+              ) : null}
+            </div>
+            <div className="g2g-field g2g-mt">
+              <div className="g2g-row">
+                <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
+                  <label htmlFor="lead-city">City</label>
+                  <input
+                    id="lead-city"
+                    name="city"
+                    autoComplete="address-level2"
+                    value={leadCity}
+                    readOnly
+                    placeholder={zipLookupBusy ? 'Looking up…' : 'Enter ZIP first'}
+                  />
+                </div>
+                <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
+                  <label htmlFor="lead-state">State</label>
+                  <input
+                    id="lead-state"
+                    name="state"
+                    autoComplete="address-level1"
+                    value={leadState}
+                    readOnly
+                    placeholder="—"
+                  />
+                </div>
+              </div>
+            </div>
+            {contactErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{contactErr}</div> : null}
+            <button type="button" className="g2g-btn g2g-btn--primary g2g-mt" disabled={contactBusy} onClick={handleContactSubmit}>
+              {contactBusy ? 'Calculating…' : 'Show my estimate'}
+            </button>
+          </div>
+        ) : null}
+
         {formError ? <div className="g2g-alert g2g-alert--error">{formError}</div> : null}
 
-        <button type="submit" className="g2g-btn g2g-btn--primary">
-          See what your car is worth
-        </button>
+        {!showLeadGate ? (
+          <button type="submit" className="g2g-btn g2g-btn--primary">
+            See what your car is worth
+          </button>
+        ) : null}
       </form>
 
       {result && hasDisplayableOffer(result) ? (
