@@ -424,12 +424,6 @@ export default function G2GOffer() {
   const [showLeadGate, setShowLeadGate] = useState(false);
 
   useEffect(() => {
-    document.title = result
-      ? 'Your offer — Grace to Grace'
-      : 'See what your car is worth — Grace to Grace';
-  }, [result]);
-
-  useEffect(() => {
     const digits = leadZip.replace(/\D/g, '').slice(0, 5);
     if (digits.length !== 5) {
       setLeadCity('');
@@ -515,6 +509,12 @@ export default function G2GOffer() {
   const [sellBusy, setSellBusy] = useState(false);
   const [sellErr, setSellErr] = useState('');
   const [sellOk, setSellOk] = useState(false);
+
+  useEffect(() => {
+    document.title = result
+      ? 'Your offer — Grace to Grace'
+      : 'See what your car is worth — Grace to Grace';
+  }, [result]);
 
   const handleContactSubmit = async (e) => {
     e?.preventDefault();
