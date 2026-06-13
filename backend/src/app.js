@@ -168,6 +168,15 @@ app.get('/cherished-review/feedback', (req, res) => {
 app.get('/cherished-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-review-thanks.html'));
 });
+app.get('/sluice-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'sluice-drip-spa-review.html'));
+});
+app.get('/sluice-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'sluice-drip-spa-review-feedback.html'));
+});
+app.get('/sluice-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'sluice-drip-spa-review-thanks.html'));
+});
 app.get('/cherished-onboarding', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-onboarding.html'));
 });
@@ -231,6 +240,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/cherished-review' || req.path.startsWith('/cherished-review/')) {
+    return next();
+  }
+  if (req.path === '/sluice-review' || req.path.startsWith('/sluice-review/')) {
     return next();
   }
   if (req.path === '/cherished-onboarding' || req.path.startsWith('/cherished-onboarding/')) {

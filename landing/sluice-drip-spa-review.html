@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sluice Drip Spa — Share your IV wellness experience. Rate your visit in Peachtree City, GA.">
+  <title>How was your visit? — Sluice Drip Spa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3f7f8;
+      --paper: #fcfdfd;
+      --ink: #1a2428;
+      --muted: #5a656b;
+      --accent: #2a6b7a;
+      --accent-dark: #1a4d5c;
+      --gold: #ffd700;
+      --gold-light: #fff4a8;
+      --gold-mid: #ffd700;
+      --gold-dark: #b8860b;
+      --line: #dce6ea;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(26, 36, 40, 0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(42, 107, 122, 0.18), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(26, 77, 92, 0.1), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; position: relative; z-index: 1; }
+    header {
+      text-align: center;
+      padding: 48px 22px 36px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand-name {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(1.75rem, 5vw, 2.35rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--accent-dark);
+      margin-bottom: 8px;
+      line-height: 1.15;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 600;
+      font-size: clamp(1.85rem, 5vw, 2.6rem);
+      line-height: 1.15;
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto 8px;
+    }
+    .tagline {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(42, 107, 122, 0.1);
+      color: var(--accent-dark);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .star-hint {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 28px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .star-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(6px, 2vw, 16px);
+      margin: 12px 0 28px;
+      padding: 8px 0 20px;
+    }
+    .star-row a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: clamp(3.25rem, 14vw, 6.5rem);
+      line-height: 1;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-mid) 35%, #e6b800 70%, var(--gold-dark) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 2px 6px rgba(184, 134, 11, 0.45));
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .star-row a:hover,
+    .star-row a:focus {
+      transform: scale(1.12);
+      background: linear-gradient(180deg, #fff8c8 0%, #ffec8b 30%, var(--gold-mid) 60%, #daa520 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.55));
+      outline: none;
+    }
+    .star-row a:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
+    .cta-block {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-ghost {
+      background: var(--paper);
+      color: var(--ink);
+      border: 1.5px solid var(--line);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      border: none;
+      box-shadow: 0 8px 24px rgba(26, 77, 92, 0.28);
+    }
+    section { padding: 40px 0; }
+    section h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .locations {
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .card h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: var(--accent-dark);
+    }
+    .card p { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.5rem; }
+    .card a { color: var(--accent-dark); font-weight: 600; text-decoration: none; }
+    .card a:hover { text-decoration: underline; }
+    footer {
+      text-align: center;
+      padding: 28px 22px 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <p class="brand-name">Sluice Drip Spa</p>
+    <p class="badge">IV Wellness Spa</p>
+    <h1>How was your experience?</h1>
+    <p class="sub">Your feedback helps us refine every IV drip—from hydration and immunity to wellness and recovery. Tap a star; it only takes a moment.</p>
+    <p class="tagline">IV Drip · Hydration · NAD+ · Wellness</p>
+
+    <p class="star-hint" id="star-label">Rate your visit</p>
+    <div class="star-row" role="group" aria-labelledby="star-label">
+      <a href="/sluice-review/feedback?stars=1" aria-label="1 out of 5 stars">★</a>
+      <a href="/sluice-review/feedback?stars=2" aria-label="2 out of 5 stars">★</a>
+      <a href="/sluice-review/feedback?stars=3" aria-label="3 out of 5 stars">★</a>
+      <a href="/sluice-review/thanks?stars=4" aria-label="4 out of 5 stars">★</a>
+      <a href="/sluice-review/thanks?stars=5" aria-label="5 out of 5 stars">★</a>
+    </div>
+
+    <div class="cta-block">
+      <a class="btn btn-primary" href="https://sluicedripspa.com/" target="_blank" rel="noopener noreferrer">Book an appointment</a>
+      <a class="btn btn-ghost" href="https://sluicedripspa.com/" target="_blank" rel="noopener noreferrer">Visit website</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>Our location</h2>
+      <div class="locations">
+        <div class="card">
+          <h3>Peachtree City</h3>
+          <p>23 Eastbrook Bend, Suite 202<br>Peachtree City, GA 30269</p>
+          <p><a href="tel:+16784896725">(678) 489-6725</a></p>
+          <p style="margin-top: 10px;">
+            <a href="https://www.google.com/maps/search/?api=1&amp;query=23%20Eastbrook%20Bend%20Suite%20202%20Peachtree%20City%20GA%2030269" target="_blank" rel="noopener noreferrer">Get directions →</a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="y"></span> Sluice Drip Spa
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  </footer>
+
+</body>
+</html>
