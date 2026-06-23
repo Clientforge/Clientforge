@@ -229,15 +229,24 @@ Set `BASE_URL` to your production URL (e.g. `https://api.clientforge.ai`) so the
 
 ## Missed Call Text-Back
 
-When a call to the business's number is not answered, they can configure **conditional call forwarding** on their carrier to forward the call to their platform Twilio number. Our system detects the forwarded call and automatically texts the caller back.
+When a call to the business's number is not answered, configure **conditional call forwarding** on the carrier to forward the call to the tenant's platform number (Twilio or Telnyx). The app detects the forwarded call and automatically texts the caller back.
 
-### Setup
+### Twilio Voice
 
-1. In **Settings → Business**, set your **SMS Phone Number** to your Twilio number (this is the number that receives forwarded calls).
-2. In **Settings → Integration**, copy the **Voice Webhook URL**.
-3. In Twilio Console: **Phone Numbers** → select your number → **Voice** → **A CALL COMES IN** → set Webhook URL to the Voice Webhook URL.
-4. In **Settings → Follow-up Engine**, customize the **Missed Call Message** (default: "Sorry we missed your call! How can we help? Reply to this message.").
-5. Configure **conditional call forwarding** on your business's carrier (Verizon, AT&T, T-Mobile, etc.) to forward unanswered/busy/unreachable calls to your Twilio number.
+1. In **Settings → Business**, set **SMS Phone Number** to your Twilio number and **SMS Provider** to **Twilio**.
+2. In **Settings → Integration**, copy **Voice Webhook URL (Twilio)**.
+3. In Twilio Console: **Phone Numbers** → [number] → **Voice** → **A CALL COMES IN** → webhook URL above.
+4. In **Settings → Follow-up Engine**, enable missed-call text-back and customize the message.
+5. Forward unanswered/busy/unreachable calls from the business line to the Twilio number.
+
+### Telnyx Voice
+
+1. In **Settings → Business**, set **SMS Phone Number** to your Telnyx toll-free and **SMS Provider** to **Telnyx**.
+2. In **Settings → Integration**, copy **Voice Webhook URL (Telnyx)**.
+3. In Telnyx Portal: **Voice → Voice API Applications** → create or edit app → **Webhook URL** (API v2) → paste URL above.
+4. On step **Numbers**, assign your toll-free to the Voice API Application (keep the same number on your Messaging Profile for SMS).
+5. In **Settings → Follow-up Engine**, enable missed-call text-back and customize the message.
+6. Forward unanswered/busy/unreachable calls from the business line to the Telnyx toll-free.
 
 ### Safeguards
 

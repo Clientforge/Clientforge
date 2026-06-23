@@ -41,29 +41,29 @@ const wasRecentlySent = async (tenantId, callerPhone) => {
 
 /**
  * Process an inbound voice call (forwarded missed call).
- * 1. Find tenant by To (Twilio number)
+ * 1. Find tenant by To (platform SMS/voice number)
  * 2. Upsert contact
  * 3. Log missed call
  * 4. Send SMS if allowed (opt-out, dedup)
  */
 const processMissedCall = async ({ from, to, callSid }) => {
-  const callerPhone = normalizePhone(from);
-  const twilioTo = to ? normalizePhone(to) : null;
+  const callerPhone = from ? normalizePhone(from) : null;
+  const inboundTo = to ? normalizePhone(to) : null;
 
-  if (!callerPhone || !twilioTo) {
+  if (!callerPhone || !inboundTo) {
     console.warn('[MISSED-CALL] Missing From or To');
     return { action: 'skipped', reason: 'missing_params' };
   }
 
-  // Find tenant by the Twilio number that received the call
-  const tenantId = await tenantPhoneService.findTenantIdByInboundSmsNumber(twilioTo);
+  // Find tenant by the platform number that received the call (Twilio or Telnyx).
+  const tenantId = await tenantPhoneService.findTenantIdByInboundSmsNumber(inboundTo);
   if (!tenantId) {
-    console.warn(`[MISSED-CALL] No tenant found for number ${twilioTo}`);
+    console.warn(`[MISSED-CALL] No tenant found for number ${inboundTo}`);
     return { action: 'skipped', reason: 'tenant_not_found' };
   }
 
   const tenantResult = await db.query(
-    'SELECT id, name, phone_number, followup_config FROM tenants WHERE id = $1 AND active = true',
+    'SELECT id, name, phone_number, sms_provider, followup_config FROM tenants WHERE id = $1 AND active = true',
     [tenantId],
   );
   if (tenantResult.rows.length === 0) {
@@ -80,7 +80,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
     await db.query(
       `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number)
        VALUES ($1, $2, $3, $4, $5)`,
-      [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+      [tenantId, contact.id, callerPhone, callSid || null, inboundTo],
     );
     return { action: 'skipped', reason: 'opt_out', contactId: contact.id };
   }
@@ -91,7 +91,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
     await db.query(
       `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number)
        VALUES ($1, $2, $3, $4, $5)`,
-      [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+      [tenantId, contact.id, callerPhone, callSid || null, inboundTo],
     );
     return { action: 'skipped', reason: 'dedup', contactId: contact.id };
   }
@@ -102,7 +102,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
     await db.query(
       `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number)
        VALUES ($1, $2, $3, $4, $5)`,
-      [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+      [tenantId, contact.id, callerPhone, callSid || null, inboundTo],
     );
     return { action: 'skipped', reason: 'opt_out', contactId: contact.id };
   }
@@ -112,7 +112,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
     await db.query(
       `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number)
        VALUES ($1, $2, $3, $4, $5)`,
-      [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+      [tenantId, contact.id, callerPhone, callSid || null, inboundTo],
     );
     return { action: 'skipped', reason: 'feature_disabled', contactId: contact.id };
   }
@@ -127,7 +127,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
       leadId: null,
       contactId: contact.id,
       to: callerPhone,
-      from: tenantPhoneService.resolveEffectiveSmsFrom(tenant.phone_number).from,
+      from: tenantPhoneService.resolveEffectiveSmsFrom(tenant.phone_number, tenant.sms_provider).from,
       body: messageBody,
       messageType: 'missed_call_followup',
     });
@@ -136,7 +136,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
     await db.query(
       `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number)
        VALUES ($1, $2, $3, $4, $5)`,
-      [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+      [tenantId, contact.id, callerPhone, callSid || null, inboundTo],
     );
     return { action: 'error', reason: err.message, contactId: contact.id };
   }
@@ -145,7 +145,7 @@ const processMissedCall = async ({ from, to, callSid }) => {
   await db.query(
     `INSERT INTO missed_calls (tenant_id, contact_id, caller_phone, twilio_call_sid, twilio_to_number, sms_sent_at)
      VALUES ($1, $2, $3, $4, $5, NOW())`,
-    [tenantId, contact.id, callerPhone, callSid || null, twilioTo],
+    [tenantId, contact.id, callerPhone, callSid || null, inboundTo],
   );
 
   return { action: 'sms_sent', contactId: contact.id };

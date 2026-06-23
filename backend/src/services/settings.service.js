@@ -71,6 +71,7 @@ const getSettings = async (tenantId) => {
       calendlyWebhookSigningKey: t.calendly_webhook_signing_key || '',
       calendlyWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/calendly/${tenantId}`,
       voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
+      telnyxVoiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/telnyx`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
       googleCalendar,
       instagram,

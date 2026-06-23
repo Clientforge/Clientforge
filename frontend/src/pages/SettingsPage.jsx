@@ -606,6 +606,7 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
   const apiKey = settings.integration?.apiKey;
   const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
   const voiceWebhookUrl = settings.integration?.voiceWebhookUrl || '';
+  const telnyxVoiceWebhookUrl = settings.integration?.telnyxVoiceWebhookUrl || '';
   const smsInboundWebhookUrl = settings.integration?.smsInboundWebhookUrl || '';
 
   const copyToClipboard = async (text, label) => {
@@ -720,8 +721,16 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <hr className="settings-divider" />
 
-      <h3>Missed Call Text-Back (Twilio Voice)</h3>
-      <p className="settings-desc">Configure your Twilio number to receive forwarded calls. When a call is forwarded (no answer/busy), we text the caller back automatically.</p>
+      <h3>Missed Call Text-Back</h3>
+      <p className="settings-desc">
+        Forward unanswered or busy calls from your business line to your platform number.
+        When a forwarded call arrives, we text the caller back automatically (enable in Follow-up Engine).
+      </p>
+
+      <h4 style={{ fontSize: '0.95rem', margin: '1rem 0 0.5rem' }}>Twilio Voice</h4>
+      <p className="settings-desc" style={{ marginTop: 0 }}>
+        Use your Twilio number as SMS Phone Number with SMS Provider set to Twilio.
+      </p>
       {voiceWebhookUrl && (
         <div className="integration-block">
           <label>Voice Webhook URL (Twilio)</label>
@@ -731,7 +740,24 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
               {copying === 'voice' ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <span className="field-hint">In Twilio: Phone Numbers → [Your Number] → Voice → A CALL COMES IN → Webhook URL. Set to this URL.</span>
+          <span className="field-hint">Twilio: Phone Numbers → [Number] → Voice → A CALL COMES IN → Webhook URL.</span>
+        </div>
+      )}
+
+      <h4 style={{ fontSize: '0.95rem', margin: '1.25rem 0 0.5rem' }}>Telnyx Voice</h4>
+      <p className="settings-desc" style={{ marginTop: 0 }}>
+        Use your Telnyx toll-free as SMS Phone Number with SMS Provider set to Telnyx. Assign the same number to a Telnyx Voice API Application.
+      </p>
+      {telnyxVoiceWebhookUrl && (
+        <div className="integration-block">
+          <label>Voice Webhook URL (Telnyx)</label>
+          <div className="key-row">
+            <code className="key-value" style={{ fontSize: 12 }}>{telnyxVoiceWebhookUrl}</code>
+            <button type="button" className="btn-sm" onClick={() => copyToClipboard(telnyxVoiceWebhookUrl, 'telnyx-voice')}>
+              {copying === 'telnyx-voice' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <span className="field-hint">Telnyx: Voice → Voice API Applications → Webhook URL (API v2). Keep Messaging Profile SMS webhook separate.</span>
         </div>
       )}
 
