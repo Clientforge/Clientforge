@@ -42,9 +42,16 @@ router.get('/tenants/:id', async (req, res, next) => {
 
 router.patch('/tenants/:id', async (req, res, next) => {
   try {
-    const { phoneNumber } = req.body;
-    const result = await adminService.updateTenantPhone(req.params.id, phoneNumber);
-    res.json(result);
+    const { phoneNumber, smsProvider } = req.body;
+    if (phoneNumber !== undefined) {
+      const result = await adminService.updateTenantPhone(req.params.id, phoneNumber, smsProvider);
+      return res.json(result);
+    }
+    if (smsProvider !== undefined) {
+      const result = await adminService.updateTenantSmsProvider(req.params.id, smsProvider);
+      return res.json(result);
+    }
+    res.status(400).json({ error: 'phoneNumber or smsProvider is required' });
   } catch (err) { next(err); }
 });
 

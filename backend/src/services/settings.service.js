@@ -2,12 +2,13 @@ const db = require('../db/connection');
 const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_SCHEDULE, DEFAULT_OUTREACH_WINDOW } = require('./followup.service');
 const tenantPhoneService = require('./tenant-phone.service');
+const smsProviderService = require('./sms-provider.service');
 const googleCalendarService = require('./googleCalendar.service');
 const instagramService = require('./instagram.service');
 
 const getSettings = async (tenantId) => {
   const result = await db.query(
-    `SELECT id, name, industry, timezone, phone_number, booking_link,
+    `SELECT id, name, industry, timezone, phone_number, sms_provider, booking_link,
             plan, api_key, followup_config, description, target_audience, tone,
             email_from_name, email_from_address, calendly_webhook_signing_key,
             ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
@@ -22,7 +23,11 @@ const getSettings = async (tenantId) => {
 
   const t = result.rows[0];
   const config = t.followup_config || {};
-  const smsFrom = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number);
+  const smsFrom = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number, t.sms_provider);
+  const effectiveSmsProvider = smsProviderService.resolveSmsProviderFromContext({
+    tenantSmsProvider: t.sms_provider,
+    fromNumber: smsFrom.from,
+  });
 
   let googleCalendar = { connected: false, configured: googleCalendarService.isConfigured() };
   try {
@@ -44,7 +49,9 @@ const getSettings = async (tenantId) => {
       industry: t.industry,
       timezone: t.timezone,
       phoneNumber: t.phone_number,
+      smsProvider: t.sms_provider,
       effectiveSmsFrom: smsFrom.from,
+      effectiveSmsProvider,
       smsFromSource: smsFrom.source,
       bookingLink: t.booking_link,
       plan: t.plan,
@@ -88,6 +95,10 @@ const updateSettings = async (tenantId, updates) => {
 
   if (business?.phoneNumber !== undefined) {
     await tenantPhoneService.assignPhoneNumberToTenant(tenantId, business.phoneNumber);
+  }
+
+  if (business?.smsProvider !== undefined) {
+    await tenantPhoneService.assignSmsProviderToTenant(tenantId, business.smsProvider);
   }
 
   const sets = [];

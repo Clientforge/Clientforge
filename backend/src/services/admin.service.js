@@ -140,7 +140,7 @@ const getTenantDetail = async (tenantId) => {
   return {
     tenant: {
       id: t.id, name: t.name, industry: t.industry, timezone: t.timezone,
-      plan: t.plan, active: t.active, phoneNumber: t.phone_number,
+      plan: t.plan, active: t.active, phoneNumber: t.phone_number, smsProvider: t.sms_provider,
       bookingLink: t.booking_link, apiKey: t.api_key, createdAt: t.created_at,
     },
     stats: {
@@ -169,8 +169,12 @@ const formatTenantRow = (row) => ({
   leadCount: row.lead_count, lastLeadAt: row.last_lead_at,
 });
 
-const updateTenantPhone = async (tenantId, phoneNumber) => {
-  return tenantPhoneService.assignPhoneNumberToTenant(tenantId, phoneNumber);
+const updateTenantPhone = async (tenantId, phoneNumber, smsProvider) => {
+  return tenantPhoneService.assignPhoneNumberToTenant(tenantId, phoneNumber, smsProvider);
+};
+
+const updateTenantSmsProvider = async (tenantId, smsProvider) => {
+  return tenantPhoneService.assignSmsProviderToTenant(tenantId, smsProvider);
 };
 
 const sendWelcomeEmailToTenant = async (tenantId) => {
@@ -204,4 +208,4 @@ const sendWelcomeEmailToTenant = async (tenantId) => {
   return { sent: result.status === 'sent', to: user.email };
 };
 
-module.exports = { getPlatformStats, getTenantList, getTenantDetail, updateTenantPhone, sendWelcomeEmailToTenant };
+module.exports = { getPlatformStats, getTenantList, getTenantDetail, updateTenantPhone, updateTenantSmsProvider, sendWelcomeEmailToTenant };

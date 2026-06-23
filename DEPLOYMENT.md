@@ -148,7 +148,27 @@ Single **Web Service** + **PostgreSQL**. The API serves the built Vite apps (`fr
 
 ## SMS Provider Setup
 
-### Option A: Twilio
+The app supports **dual-provider SMS**: each tenant can send via **Twilio** or **Telnyx**. Set per-tenant **SMS Provider** in **Settings → Business** (or in Admin → tenant detail). Inbound webhooks from both providers use the same URL.
+
+When `SMS_MODE=live` in production, configure **both** credential sets on the server:
+
+```bash
+SMS_MODE=live
+SMS_PROVIDER=twilio          # fallback when tenant has no sms_provider set
+
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_DEFAULT_FROM=+1...    # platform default Twilio number
+
+TELNYX_API_KEY=...
+TELNYX_PHONE_NUMBER=+1...    # platform default Telnyx number
+TELNYX_MESSAGING_PROFILE_ID=...
+BASE_URL=https://app.clientforge-ai.com
+```
+
+**Routing order:** tenant `sms_provider` → match `from` number to `TELNYX_PHONE_NUMBER` / `TWILIO_DEFAULT_FROM` → `SMS_PROVIDER` env fallback.
+
+### Option A: Twilio (per tenant or platform default)
 
 1. Get a phone number from [twilio.com/console](https://twilio.com/console)
 2. Set these environment variables:
@@ -156,7 +176,7 @@ Single **Web Service** + **PostgreSQL**. The API serves the built Vite apps (`fr
    - `TWILIO_AUTH_TOKEN`
    - `TWILIO_DEFAULT_FROM` (your Twilio phone number)
    - `SMS_MODE=live`
-   - `SMS_PROVIDER=twilio` (or omit, twilio is default)
+   - Set tenant **SMS Provider** to **Twilio** in Settings (or leave Auto if using `TWILIO_DEFAULT_FROM`)
 3. Configure Twilio webhooks:
    - **Inbound messages URL**: `https://yourdomain.com/api/v1/sms/inbound`
    - **Status callback URL**: `https://yourdomain.com/api/v1/sms/status`
@@ -170,7 +190,7 @@ Single **Web Service** + **PostgreSQL**. The API serves the built Vite apps (`fr
    - `TELNYX_PHONE_NUMBER` (your Telnyx number)
    - `TELNYX_MESSAGING_PROFILE_ID` (optional, if not using default)
    - `SMS_MODE=live`
-   - `SMS_PROVIDER=telnyx`
+   - Set tenant **SMS Provider** to **Telnyx** in Settings (or leave Auto if using `TELNYX_PHONE_NUMBER`)
 3. In Telnyx Messaging Profile → Inbound: set **Webhook URL** to `https://yourdomain.com/api/v1/sms/inbound`
 4. In **Settings → Business**, set **SMS Phone Number** to your Telnyx number
 

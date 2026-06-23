@@ -99,6 +99,7 @@ function BusinessTab({ settings, onSave, saving }) {
     industry: settings.business.industry || '',
     timezone: settings.business.timezone || 'America/New_York',
     phoneNumber: settings.business.phoneNumber || '',
+    smsProvider: settings.business.smsProvider || '',
     bookingLink: settings.business.bookingLink || '',
     description: settings.business.description || '',
     targetAudience: settings.business.targetAudience || '',
@@ -114,8 +115,9 @@ function BusinessTab({ settings, onSave, saving }) {
     setForm((prev) => ({
       ...prev,
       phoneNumber: settings.business.phoneNumber || '',
+      smsProvider: settings.business.smsProvider || '',
     }));
-  }, [settings.business.phoneNumber]);
+  }, [settings.business.phoneNumber, settings.business.smsProvider]);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -250,25 +252,38 @@ function BusinessTab({ settings, onSave, saving }) {
 
       <hr className="settings-divider" />
 
-      <div className="field">
-        <label>SMS Phone Number</label>
-        <input value={form.phoneNumber} onChange={set('phoneNumber')} placeholder="+15551234567" />
-        <span className="field-hint">
-          Your dedicated Twilio number in E.164 format (e.g. +12405551234).
-          {settings.business.smsFromSource === 'platform_default' ? (
-            <>
-              {' '}No dedicated number is set — outbound SMS currently sends from{' '}
-              <strong>{settings.business.effectiveSmsFrom || 'the platform default'}</strong>.
-            </>
-          ) : (
-            <>
-              {' '}Outbound SMS will send from{' '}
-              <strong>{settings.business.effectiveSmsFrom || form.phoneNumber}</strong>.
-            </>
-          )}
-          {' '}Assigning a number here automatically removes it from any other account.
-        </span>
+      <div className="field-row">
+        <div className="field">
+          <label>SMS Phone Number</label>
+          <input value={form.phoneNumber} onChange={set('phoneNumber')} placeholder="+15551234567" />
+        </div>
+        <div className="field">
+          <label>SMS Provider</label>
+          <select value={form.smsProvider} onChange={set('smsProvider')}>
+            <option value="">Auto (match number or platform default)</option>
+            <option value="twilio">Twilio</option>
+            <option value="telnyx">Telnyx</option>
+          </select>
+        </div>
       </div>
+      <p className="field-hint" style={{ marginTop: '-8px', marginBottom: '16px' }}>
+        Your dedicated SMS number in E.164 format. The provider must match where the number is registered
+        (Twilio or Telnyx).
+        {settings.business.smsFromSource === 'platform_default' ? (
+          <>
+            {' '}No dedicated number is set — outbound SMS currently sends from{' '}
+            <strong>{settings.business.effectiveSmsFrom || 'the platform default'}</strong>
+            {' '}via <strong>{settings.business.effectiveSmsProvider || 'twilio'}</strong>.
+          </>
+        ) : (
+          <>
+            {' '}Outbound SMS will send from{' '}
+            <strong>{settings.business.effectiveSmsFrom || form.phoneNumber}</strong>
+            {' '}via <strong>{settings.business.effectiveSmsProvider || 'twilio'}</strong>.
+          </>
+        )}
+        {' '}Assigning a number here automatically removes it from any other account.
+      </p>
       <div className="field">
         <label>Booking Link</label>
         <input value={form.bookingLink} onChange={set('bookingLink')} placeholder="https://calendly.com/your-link" />

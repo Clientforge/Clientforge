@@ -1,9 +1,9 @@
 const db = require('../db/connection');
-const config = require('../config');
 const { normalizePhone } = require('./lead.service');
 const { sendSms } = require('./sms.service');
 const { sendEmail } = require('./email.service');
 const { tenantIdForG2g, updateLeadAfterEstimate } = require('./graceG2gLead.service');
+const smsProviderService = require('./sms-provider.service');
 
 class SellIntentError extends Error {
   constructor(message, statusCode = 400) {
@@ -128,11 +128,10 @@ function buildNotifySmsBody(v) {
 }
 
 async function resolveFromNumber(tenantId) {
-  const r = await db.query('SELECT phone_number FROM tenants WHERE id = $1', [tenantId]);
+  const r = await db.query('SELECT phone_number, sms_provider FROM tenants WHERE id = $1', [tenantId]);
   const row = r.rows[0];
   if (row?.phone_number) return row.phone_number;
-  const provider = config.sms.provider || 'twilio';
-  return provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom;
+  return smsProviderService.getPlatformDefaultFrom(row?.sms_provider);
 }
 
 /**

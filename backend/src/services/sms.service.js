@@ -3,6 +3,7 @@ const config = require('../config');
 const compliance = require('./compliance.service');
 const { normalizePhone } = require('./lead.service');
 const tenantPhoneService = require('./tenant-phone.service');
+const smsProviderService = require('./sms-provider.service');
 const trackedLinkService = require('./trackedLink.service');
 
 /**
@@ -17,7 +18,7 @@ const trySmsKeywordOptIn = async ({
   twilioSid,
 }) => {
   const tenantRes = await db.query(
-    `SELECT id, name, phone_number, sms_keyword_opt_in_enabled,
+    `SELECT id, name, phone_number, sms_provider, sms_keyword_opt_in_enabled,
             sms_keyword_opt_in_phrases, sms_keyword_welcome_message
      FROM tenants WHERE id = $1`,
     [tenantId],
@@ -75,7 +76,7 @@ const trySmsKeywordOptIn = async ({
     const ok = await compliance.canSendToContact(contactId);
     if (ok) {
       const personalized = welcomeTemplate.replace(/\{businessName\}/gi, t.name || '');
-      const fromNumber = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number).from;
+      const fromNumber = tenantPhoneService.resolveEffectiveSmsFrom(t.phone_number, t.sms_provider).from;
       await sendSms({
         tenantId,
         leadId: null,
@@ -97,8 +98,42 @@ const trySmsKeywordOptIn = async ({
  *
  * Regardless of mode, every message is logged to the messages table.
  * In mock mode, the message is printed to console.
- * In live mode, it's sent via Twilio or Telnyx (SMS_PROVIDER).
+ * In live mode, it's sent via Twilio or Telnyx based on per-tenant sms_provider.
  */
+const sendViaTelnyx = async (fromNumber, to, finalBody) => {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const res = await fetch('https://api.telnyx.com/v2/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.telnyx.apiKey}`,
+    },
+    body: JSON.stringify({
+      from: fromNumber,
+      to,
+      text: finalBody,
+      ...(config.telnyx.messagingProfileId && { messaging_profile_id: config.telnyx.messagingProfileId }),
+      webhook_url: `${baseUrl}/api/v1/sms/status`,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.errors?.[0]?.detail || data.message || 'Telnyx API error');
+  }
+  return { messageId: data.data?.id, deliveryStatus: data.data?.status || 'queued' };
+};
+
+const sendViaTwilio = async (fromNumber, to, finalBody) => {
+  const twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
+  const message = await twilio.messages.create({
+    body: finalBody,
+    from: fromNumber,
+    to,
+    statusCallback: `${process.env.BASE_URL || 'http://localhost:3000'}/api/v1/sms/status`,
+  });
+  return { messageId: message.sid, deliveryStatus: message.status };
+};
+
 const sendSms = async ({
   tenantId,
   leadId,
@@ -119,49 +154,30 @@ const sendSms = async ({
     });
   }
 
-  const effective = tenantPhoneService.resolveEffectiveSmsFrom(from);
+  let tenantSmsProvider = null;
+  if (tenantId) {
+    const tenantRow = await db.query('SELECT sms_provider FROM tenants WHERE id = $1', [tenantId]);
+    tenantSmsProvider = tenantRow.rows[0]?.sms_provider ?? null;
+  }
+
+  const effective = tenantPhoneService.resolveEffectiveSmsFrom(from, tenantSmsProvider);
   const fromNumber = effective.from;
-  const provider = config.sms.provider || 'twilio';
+  const provider = smsProviderService.resolveSmsProviderFromContext({
+    tenantSmsProvider,
+    fromNumber,
+  });
   let messageId = null;
   let deliveryStatus = 'sent';
 
   if (config.sms.mode === 'live') {
     try {
-      if (provider === 'telnyx') {
-        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-        const res = await fetch('https://api.telnyx.com/v2/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.telnyx.apiKey}`,
-          },
-          body: JSON.stringify({
-            from: fromNumber,
-            to,
-            text: finalBody,
-            ...(config.telnyx.messagingProfileId && { messaging_profile_id: config.telnyx.messagingProfileId }),
-            webhook_url: `${baseUrl}/api/v1/sms/status`,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.errors?.[0]?.detail || data.message || 'Telnyx API error');
-        }
-        messageId = data.data?.id;
-        deliveryStatus = data.data?.status || 'queued';
-      } else {
-        const twilio = require('twilio')(config.twilio.accountSid, config.twilio.authToken);
-        const message = await twilio.messages.create({
-          body: finalBody,
-          from: fromNumber,
-          to,
-          statusCallback: `${process.env.BASE_URL || 'http://localhost:3000'}/api/v1/sms/status`,
-        });
-        messageId = message.sid;
-        deliveryStatus = message.status;
-      }
+      const result = provider === 'telnyx'
+        ? await sendViaTelnyx(fromNumber, to, finalBody)
+        : await sendViaTwilio(fromNumber, to, finalBody);
+      messageId = result.messageId;
+      deliveryStatus = result.deliveryStatus;
     } catch (err) {
-      console.error(`[SMS][LIVE] Failed to send to ${to}: ${err.message}`);
+      console.error(`[SMS][LIVE][${provider}] Failed to send to ${to}: ${err.message}`);
       deliveryStatus = 'failed';
     }
   } else {
@@ -170,7 +186,7 @@ const sendSms = async ({
     console.log(`\n[SMS][MOCK] ─────────────────────────────────`);
     console.log(`  To:   ${to}`);
     console.log(`  From: ${fromNumber}`);
-    console.log(`  Type: ${messageType}`);
+    console.log(`  Provider: ${provider}`);
     console.log(`  Body: ${finalBody}`);
     console.log(`[SMS][MOCK] ─────────────────────────────────\n`);
   }

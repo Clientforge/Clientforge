@@ -35,7 +35,7 @@ function portraitUrl() {
 async function resolveCherishedTenantId() {
   const explicit = (process.env.CHERISHED_TENANT_ID || '').trim();
   if (explicit) {
-    const row = await db.query('SELECT id, name, phone_number FROM tenants WHERE id = $1 AND active = true', [explicit]);
+    const row = await db.query('SELECT id, name, phone_number, sms_provider FROM tenants WHERE id = $1 AND active = true', [explicit]);
     if (row.rows[0]) return row.rows[0];
   }
 
@@ -46,7 +46,7 @@ async function resolveCherishedTenantId() {
   }
 
   const full = await db.query(
-    'SELECT id, name, phone_number FROM tenants WHERE id = $1 AND active = true',
+    'SELECT id, name, phone_number, sms_provider FROM tenants WHERE id = $1 AND active = true',
     [tenant.id],
   );
   if (!full.rows[0]) {
@@ -108,7 +108,7 @@ async function maybeSendWelcomeSms(tenant, contactId, contact, portraitLink) {
     .replace(/\{businessName\}/gi, tenant.name || 'Cherished Aesthetics')
     .replace(/\{portraitLink\}/gi, portraitLink);
 
-  const from = tenantPhoneService.resolveEffectiveSmsFrom(tenant.phone_number).from;
+  const from = tenantPhoneService.resolveEffectiveSmsFrom(tenant.phone_number, tenant.sms_provider).from;
   await smsService.sendSms({
     tenantId: tenant.id,
     leadId: null,

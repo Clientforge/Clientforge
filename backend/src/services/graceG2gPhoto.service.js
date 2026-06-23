@@ -130,8 +130,9 @@ function buildNotifySms({ contact, vehicle, estimate, reviewUrl, photoCount }) {
 }
 
 async function resolveFromNumber(tenantId) {
-  const r = await db.query('SELECT phone_number FROM tenants WHERE id = $1', [tenantId]);
-  return tenantPhoneService.resolveEffectiveSmsFrom(r.rows[0]?.phone_number).from;
+  const r = await db.query('SELECT phone_number, sms_provider FROM tenants WHERE id = $1', [tenantId]);
+  const row = r.rows[0];
+  return tenantPhoneService.resolveEffectiveSmsFrom(row?.phone_number, row?.sms_provider).from;
 }
 
 function resolveNotifyPhone() {

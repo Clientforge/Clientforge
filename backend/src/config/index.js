@@ -52,11 +52,13 @@ const config = {
 
 if (config.env === 'production') {
   const required = ['DATABASE_URL', 'JWT_SECRET'];
-  const smsProvider = process.env.SMS_PROVIDER || 'twilio';
-  if (smsProvider === 'telnyx') {
-    required.push('TELNYX_API_KEY');
-  } else {
-    required.push('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN');
+  if (config.sms.mode === 'live') {
+    if (process.env.TWILIO_DEFAULT_FROM || process.env.SMS_PROVIDER === 'twilio') {
+      required.push('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN');
+    }
+    if (process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_DEFAULT_FROM || process.env.SMS_PROVIDER === 'telnyx') {
+      required.push('TELNYX_API_KEY');
+    }
   }
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {

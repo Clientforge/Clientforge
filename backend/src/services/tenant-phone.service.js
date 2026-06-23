@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const config = require('../config');
 const { normalizePhone } = require('./lead.service');
+const smsProviderService = require('./sms-provider.service');
 
 /**
  * Normalize tenant SMS phone input. Empty / whitespace → null (use platform default).
@@ -12,15 +13,13 @@ const parseTenantPhoneInput = (input) => {
   return normalizePhone(trimmed);
 };
 
-const getPlatformDefaultSmsFrom = () => {
-  const provider = config.sms.provider || 'twilio';
-  return provider === 'telnyx' ? config.telnyx.defaultFrom : config.twilio.defaultFrom;
-};
+const getPlatformDefaultSmsFrom = (smsProvider = null) =>
+  smsProviderService.getPlatformDefaultFrom(smsProvider);
 
 /**
  * Resolve the number that will actually be used as SMS "From" for a tenant.
  */
-const resolveEffectiveSmsFrom = (storedPhoneNumber) => {
+const resolveEffectiveSmsFrom = (storedPhoneNumber, smsProvider = null) => {
   const trimmed = String(storedPhoneNumber ?? '').trim();
   if (trimmed) {
     try {
@@ -29,7 +28,15 @@ const resolveEffectiveSmsFrom = (storedPhoneNumber) => {
       return { from: trimmed, source: 'tenant' };
     }
   }
-  return { from: getPlatformDefaultSmsFrom(), source: 'platform_default' };
+  const provider = smsProviderService.resolveSmsProviderFromContext({
+    tenantSmsProvider: smsProvider,
+    fromNumber: null,
+  });
+  return {
+    from: getPlatformDefaultSmsFrom(provider),
+    source: 'platform_default',
+    smsProvider: provider,
+  };
 };
 
 const phonesMatch = (a, b) => {
@@ -107,7 +114,7 @@ const clearPhoneFromOtherTenants = async (normalizedPhone, exceptTenantId) => {
 /**
  * Assign (or clear) a tenant's dedicated SMS number. Clears duplicates elsewhere.
  */
-const assignPhoneNumberToTenant = async (tenantId, rawInput) => {
+const assignPhoneNumberToTenant = async (tenantId, rawInput, smsProviderInput) => {
   const parsed = parseTenantPhoneInput(rawInput);
   if (parsed === undefined) {
     throw Object.assign(new Error('Phone number input is required'), { statusCode: 400, isOperational: true });
@@ -117,18 +124,65 @@ const assignPhoneNumberToTenant = async (tenantId, rawInput) => {
     await clearPhoneFromOtherTenants(parsed, tenantId);
   }
 
+  let smsProviderSql = '';
+  const params = [parsed, tenantId];
+  if (smsProviderInput !== undefined) {
+    const normalized = smsProviderService.normalizeSmsProvider(smsProviderInput);
+    smsProviderSql = ', sms_provider = $3';
+    params.push(normalized);
+  }
+
   const result = await db.query(
-    `UPDATE tenants SET phone_number = $1, updated_at = NOW() WHERE id = $2 RETURNING phone_number`,
-    [parsed, tenantId],
+    `UPDATE tenants SET phone_number = $1, updated_at = NOW()${smsProviderSql} WHERE id = $2
+     RETURNING phone_number, sms_provider`,
+    params,
   );
   if (result.rows.length === 0) {
     throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
   }
 
-  const effective = resolveEffectiveSmsFrom(result.rows[0].phone_number);
+  const row = result.rows[0];
+  const effective = resolveEffectiveSmsFrom(row.phone_number, row.sms_provider);
+  const resolvedProvider = smsProviderService.resolveSmsProviderFromContext({
+    tenantSmsProvider: row.sms_provider,
+    fromNumber: effective.from,
+  });
+
   return {
-    phoneNumber: result.rows[0].phone_number,
+    phoneNumber: row.phone_number,
+    smsProvider: row.sms_provider,
     effectiveSmsFrom: effective.from,
+    effectiveSmsProvider: resolvedProvider,
+    smsFromSource: effective.source,
+  };
+};
+
+/**
+ * Update sms_provider only (Settings / admin).
+ */
+const assignSmsProviderToTenant = async (tenantId, smsProviderInput) => {
+  const normalized = smsProviderService.normalizeSmsProvider(smsProviderInput);
+  const result = await db.query(
+    `UPDATE tenants SET sms_provider = $1, updated_at = NOW() WHERE id = $2
+     RETURNING phone_number, sms_provider`,
+    [normalized, tenantId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
+  }
+
+  const row = result.rows[0];
+  const effective = resolveEffectiveSmsFrom(row.phone_number, row.sms_provider);
+  const resolvedProvider = smsProviderService.resolveSmsProviderFromContext({
+    tenantSmsProvider: row.sms_provider,
+    fromNumber: effective.from,
+  });
+
+  return {
+    phoneNumber: row.phone_number,
+    smsProvider: row.sms_provider,
+    effectiveSmsFrom: effective.from,
+    effectiveSmsProvider: resolvedProvider,
     smsFromSource: effective.source,
   };
 };
@@ -140,5 +194,6 @@ module.exports = {
   findTenantIdByInboundSmsNumber,
   clearPhoneFromOtherTenants,
   assignPhoneNumberToTenant,
+  assignSmsProviderToTenant,
   phonesMatch,
 };

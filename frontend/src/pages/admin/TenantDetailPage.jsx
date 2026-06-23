@@ -2,18 +2,27 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../../api/client';
 
-function PhoneNumberEditor({ tenantId, value, onSaved }) {
+function PhoneNumberEditor({ tenantId, value, smsProvider, onSaved }) {
   const [edit, setEdit] = useState(false);
   const [phone, setPhone] = useState(value || '');
+  const [provider, setProvider] = useState(smsProvider || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setPhone(value || '');
+    setProvider(smsProvider || '');
+  }, [value, smsProvider]);
 
   const handleSave = async () => {
     setError('');
     setSaving(true);
     try {
-      const { phoneNumber } = await api.patch(`/admin/tenants/${tenantId}`, { phoneNumber: phone.trim() || null });
-      onSaved(phoneNumber);
+      const result = await api.patch(`/admin/tenants/${tenantId}`, {
+        phoneNumber: phone.trim() || null,
+        smsProvider: provider || null,
+      });
+      onSaved(result);
       setEdit(false);
     } catch (err) {
       setError(err.message);
@@ -33,10 +42,15 @@ function PhoneNumberEditor({ tenantId, value, onSaved }) {
           className="config-edit-input"
           autoFocus
         />
+        <select value={provider} onChange={(e) => setProvider(e.target.value)} className="config-edit-input">
+          <option value="">Auto</option>
+          <option value="twilio">Twilio</option>
+          <option value="telnyx">Telnyx</option>
+        </select>
         <button type="button" onClick={handleSave} className="btn btn-primary btn-sm" disabled={saving}>
           {saving ? 'Saving...' : 'Save'}
         </button>
-        <button type="button" onClick={() => { setEdit(false); setPhone(value || ''); setError(''); }} className="btn btn-ghost btn-sm">
+        <button type="button" onClick={() => { setEdit(false); setPhone(value || ''); setProvider(smsProvider || ''); setError(''); }} className="btn btn-ghost btn-sm">
           Cancel
         </button>
         {error && <span className="config-edit-error">{error}</span>}
@@ -44,9 +58,14 @@ function PhoneNumberEditor({ tenantId, value, onSaved }) {
     );
   }
 
+  const providerLabel = smsProvider ? smsProvider.charAt(0).toUpperCase() + smsProvider.slice(1) : 'Auto';
+
   return (
     <div className="config-value-row">
-      <span className="config-value">{value || 'Not set'}</span>
+      <span className="config-value">
+        {value || 'Not set'}
+        {value && <span style={{ color: '#6b7280', marginLeft: 8 }}>({providerLabel})</span>}
+      </span>
       <button type="button" onClick={() => setEdit(true)} className="btn btn-ghost btn-sm config-edit-btn">
         {value ? 'Edit' : 'Assign'}
       </button>
@@ -188,7 +207,19 @@ export default function TenantDetailPage() {
           <div><span className="config-label">Booking Link</span><span className="config-value">{tenant.bookingLink || 'Not set'}</span></div>
           <div>
             <span className="config-label">SMS Phone Number</span>
-            <PhoneNumberEditor tenantId={tenant.id} value={tenant.phoneNumber} onSaved={(v) => setData((d) => ({ ...d, tenant: { ...d.tenant, phoneNumber: v } }))} />
+            <PhoneNumberEditor
+              tenantId={tenant.id}
+              value={tenant.phoneNumber}
+              smsProvider={tenant.smsProvider}
+              onSaved={(result) => setData((d) => ({
+                ...d,
+                tenant: {
+                  ...d.tenant,
+                  phoneNumber: result.phoneNumber,
+                  smsProvider: result.smsProvider,
+                },
+              }))}
+            />
           </div>
           <div><span className="config-label">API Key</span><span className="config-value mono">{tenant.apiKey || 'Not generated'}</span></div>
           <div><span className="config-label">Signed Up</span><span className="config-value">{formatDate(tenant.createdAt)}</span></div>
