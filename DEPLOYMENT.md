@@ -227,6 +227,30 @@ Connect Calendly to automatically create contacts, track appointments, and trigg
 
 Set `BASE_URL` to your production URL (e.g. `https://api.clientforge.ai`) so the webhook URL shown in Settings is correct.
 
+## OptiMantra Integration
+
+Connect OptiMantra (EMR) to automatically create contacts, track appointments, and trigger reminders, confirmations, and post-visit follow-ups when patients book inside OptiMantra.
+
+### Setup
+
+1. In **Settings → Integration**, copy your **OptiMantra Webhook URL** (e.g. `https://yourdomain.com/api/v1/webhook/optimantra/{tenantId}`).
+2. In OptiMantra: **Settings → Marketing → CRM Integration → Add New Out-Bound Webhook**.
+3. Paste the URL, set **Webhook type** to **PUT**, and choose trigger **When an Appointment is Booked**.
+4. Select **all available data fields** (phone, email, name, appointment date, service/treatment type, appointment ID).
+5. Optional: set a shared secret in ClientForge **OptiMantra Webhook Secret** and send it as header `x-optimantra-webhook-secret` on each request (if your middleware supports custom headers).
+
+### Workflows
+
+Uses the same appointment automation pipeline as Calendly (reminders, confirmations, cancellation/reschedule handling, rebooking).
+
+### Testing
+
+Before going live, capture a sample payload with [webhook.site](https://webhook.site) or book a test appointment after pointing OptiMantra at your URL. Update `backend/fixtures/optimantra-sample-booking.json` with the real JSON and run:
+
+```bash
+node scripts/testOptimantraAdapter.js
+```
+
 ## Missed Call Text-Back
 
 When a call to the business's number is not answered, configure **conditional call forwarding** on the carrier to forward the call to the tenant's platform number (Twilio or Telnyx). The app detects the forwarded call and automatically texts the caller back.

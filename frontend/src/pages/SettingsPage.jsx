@@ -603,8 +603,14 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
     setCalendlyKey(settings.integration?.calendlyWebhookSigningKey || '');
   }, [settings.integration?.calendlyWebhookSigningKey]);
 
+  const [optimantraSecret, setOptimantraSecret] = useState(settings.integration?.optimantraWebhookSecret || '');
+  useEffect(() => {
+    setOptimantraSecret(settings.integration?.optimantraWebhookSecret || '');
+  }, [settings.integration?.optimantraWebhookSecret]);
+
   const apiKey = settings.integration?.apiKey;
   const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
+  const optimantraWebhookUrl = settings.integration?.optimantraWebhookUrl || '';
   const voiceWebhookUrl = settings.integration?.voiceWebhookUrl || '';
   const telnyxVoiceWebhookUrl = settings.integration?.telnyxVoiceWebhookUrl || '';
   const smsInboundWebhookUrl = settings.integration?.smsInboundWebhookUrl || '';
@@ -630,6 +636,11 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
   const saveCalendly = (e) => {
     e.preventDefault();
     onSave({ integration: { calendlyWebhookSigningKey: calendlyKey || null } });
+  };
+
+  const saveOptimantra = (e) => {
+    e.preventDefault();
+    onSave({ integration: { optimantraWebhookSecret: optimantraSecret || null } });
   };
 
   return (
@@ -691,6 +702,48 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
         )}
         <button type="submit" className="btn-primary" style={{ marginTop: 12 }} disabled={saving}>
           {saving ? 'Saving...' : 'Save Calendly Config'}
+        </button>
+      </form>
+
+      <hr className="settings-divider" />
+
+      <h3>OptiMantra Integration</h3>
+      <p className="settings-desc">
+        Connect OptiMantra to automatically create contacts, track appointments, and send reminders,
+        confirmations, and post-visit follow-ups. Configure message content and timing in{' '}
+        <strong>Automations</strong>.
+      </p>
+      <form onSubmit={saveOptimantra} className="integration-block">
+        <div className="field">
+          <label>OptiMantra Webhook Secret</label>
+          <input
+            type="password"
+            value={optimantraSecret}
+            onChange={(e) => setOptimantraSecret(e.target.value)}
+            placeholder="Optional shared secret"
+          />
+          <span className="field-hint">
+            Optional. When set, requests must include header <code>x-optimantra-webhook-secret</code> with this value.
+          </span>
+        </div>
+        {optimantraWebhookUrl && (
+          <div className="integration-block" style={{ marginTop: 12 }}>
+            <label>OptiMantra Webhook URL</label>
+            <div className="key-row">
+              <code className="key-value" style={{ fontSize: 12 }}>{optimantraWebhookUrl}</code>
+              <button type="button" className="btn-sm" onClick={() => copyToClipboard(optimantraWebhookUrl, 'optimantra')}>
+                {copying === 'optimantra' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <span className="field-hint">
+              In OptiMantra: Settings → Marketing → CRM Integration → Add New Out-Bound Webhook.
+              Paste this URL, set type to <strong>PUT</strong>, trigger <strong>When an Appointment is Booked</strong>,
+              and select all available data fields (phone, service, appointment date, etc.).
+            </span>
+          </div>
+        )}
+        <button type="submit" className="btn-primary" style={{ marginTop: 12 }} disabled={saving}>
+          {saving ? 'Saving...' : 'Save OptiMantra Config'}
         </button>
       </form>
 

@@ -69,6 +69,7 @@ app.use('/api/v1/g2g-owner', require('./routes/g2gOwner.routes'));
 app.use('/api/v1/auth',    require('./routes/auth.routes'));
 app.use('/api/v1/webhook', require('./routes/webhook.routes'));
 app.use('/api/v1/webhook/calendly', require('./routes/calendly.webhook'));
+app.use('/api/v1/webhook/optimantra', require('./routes/optimantra.webhook'));
 app.use('/api/v1/webhook/google-calendar', require('./routes/googleCalendar.webhook'));
 app.use('/api/v1/webhook/meta', require('./routes/meta.webhook'));
 app.use('/api/v1/voice',   require('./routes/voice.routes'));

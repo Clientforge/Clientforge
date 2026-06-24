@@ -11,6 +11,7 @@ const getSettings = async (tenantId) => {
     `SELECT id, name, industry, timezone, phone_number, sms_provider, booking_link,
             plan, api_key, followup_config, description, target_audience, tone,
             email_from_name, email_from_address, calendly_webhook_signing_key,
+            optimantra_webhook_secret,
             ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
             sms_keyword_welcome_message, ui_mode, created_at
      FROM tenants WHERE id = $1`,
@@ -70,6 +71,8 @@ const getSettings = async (tenantId) => {
       apiKey: t.api_key,
       calendlyWebhookSigningKey: t.calendly_webhook_signing_key || '',
       calendlyWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/calendly/${tenantId}`,
+      optimantraWebhookSecret: t.optimantra_webhook_secret || '',
+      optimantraWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/optimantra/${tenantId}`,
       voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
       telnyxVoiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/telnyx`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
@@ -144,6 +147,10 @@ const updateSettings = async (tenantId, updates) => {
     if (updates.integration.calendlyWebhookSigningKey !== undefined) {
       sets.push(`calendly_webhook_signing_key = $${idx++}`);
       params.push(updates.integration.calendlyWebhookSigningKey || null);
+    }
+    if (updates.integration.optimantraWebhookSecret !== undefined) {
+      sets.push(`optimantra_webhook_secret = $${idx++}`);
+      params.push(updates.integration.optimantraWebhookSecret || null);
     }
   }
 
