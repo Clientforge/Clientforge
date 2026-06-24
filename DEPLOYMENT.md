@@ -239,6 +239,18 @@ Connect OptiMantra (EMR) to automatically create contacts, track appointments, a
 4. Select **all available data fields** (phone, email, name, appointment date, service/treatment type, appointment ID).
 5. Optional: set a shared secret in ClientForge **OptiMantra Webhook Secret** and send it as header `x-optimantra-webhook-secret` on each request (if your middleware supports custom headers).
 
+### Confirmed webhook fields (live sample)
+
+| OptiMantra field | ClientForge |
+|------------------|-------------|
+| `firstName`, `lastName` | Contact name |
+| `phone`, `email` | Contact phone / email |
+| `apptDate` | Appointment datetime (e.g. `Thu Jun 25 20:00:00 2026`) |
+| `apptStartTime` | Used when `apptDate` has no embedded time |
+| `patientDOB` | Stored in `raw_payload` only |
+
+Enable **service/treatment** and **appointment ID** in OptiMantra when available — otherwise service defaults to `Appointment` and dedupe uses a generated hash.
+
 ### Workflows
 
 Uses the same appointment automation pipeline as Calendly (reminders, confirmations, cancellation/reschedule handling, rebooking).

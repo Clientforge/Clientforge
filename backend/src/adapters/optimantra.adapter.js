@@ -1,8 +1,10 @@
 /**
  * OptiMantra outbound webhook → canonical booking event (same shape as Calendly / email adapters).
  *
- * Field names are inferred from common OptiMantra CRM webhook payloads until a live sample
- * confirms exact keys — update OPTIMANTRA_* key lists when the client provides JSON.
+ * Confirmed live payload fields (Sluice Drip Spa sample):
+ *   firstName, lastName, phone, email, patientDOB, apptDate, apptStartTime
+ *
+ * Enable in OptiMantra webhook when available: service/treatment type, appointment ID.
  */
 
 const crypto = require('crypto');
@@ -38,10 +40,12 @@ const APPOINTMENT_ID_KEYS = [
   'appointment.id',
 ];
 
-const SCHEDULED_AT_KEYS = [
+const APPT_DATE_KEYS = [
   'apptDate', 'appt_date', 'appointmentDate', 'appointment_date', 'scheduledAt', 'scheduled_at',
-  'startTime', 'start_time', 'dateTime', 'date_time',
+  'dateTime', 'date_time',
 ];
+
+const APPT_START_TIME_KEYS = ['apptStartTime', 'appt_start_time', 'startTime', 'start_time'];
 
 const SERVICE_NAME_KEYS = [
   'serviceName', 'service_name', 'service', 'treatment', 'treatmentName', 'treatment_name',
@@ -57,6 +61,8 @@ const EVENT_TYPE_KEYS = ['eventType', 'event_type', 'trigger', 'action', 'event'
 
 const CANCEL_PATTERNS = /cancel/i;
 const RESCHEDULE_PATTERNS = /reschedul/i;
+
+const EMBEDDED_TIME_PATTERN = /\d{1,2}:\d{2}/;
 
 function getByPath(obj, path) {
   if (!obj || typeof obj !== 'object') return undefined;
@@ -85,8 +91,39 @@ function splitFullName(full) {
   return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
 }
 
+function hasEmbeddedTime(dateStr) {
+  return EMBEDDED_TIME_PATTERN.test(String(dateStr));
+}
+
+/**
+ * Parse OptiMantra apptStartTime — "20:00", "20:00:00", or "8:00 PM".
+ */
+function parseApptStartTime(timeStr) {
+  const text = String(timeStr).trim();
+  const m24 = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (m24) {
+    return {
+      hours: parseInt(m24[1], 10),
+      minutes: parseInt(m24[2], 10),
+    };
+  }
+
+  const m12 = text.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (m12) {
+    let hours = parseInt(m12[1], 10);
+    const minutes = parseInt(m12[2], 10);
+    const ampm = m12[3].toUpperCase();
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    return { hours, minutes };
+  }
+
+  return null;
+}
+
 /**
  * Parse OptiMantra apptDate strings and ISO timestamps to ISO string.
+ * Supports "Thu Jun 25 20:00:00 2026" and "Wed Jun 11 2025 09:00:00 GMT-0400 (...)".
  */
 function parseScheduledAt(raw) {
   if (raw == null || raw === '') return null;
@@ -97,6 +134,32 @@ function parseScheduledAt(raw) {
   if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
 
   return null;
+}
+
+/**
+ * Resolve appointment datetime from apptDate and optional apptStartTime.
+ * When apptDate has no time component, apptStartTime is applied (local server TZ).
+ */
+function resolveScheduledAt(payload) {
+  const apptDate = pickFirst(payload, APPT_DATE_KEYS);
+  const apptStartTime = pickFirst(payload, APPT_START_TIME_KEYS);
+
+  if (!apptDate && !apptStartTime) return null;
+
+  if (apptDate && hasEmbeddedTime(apptDate)) {
+    return parseScheduledAt(apptDate);
+  }
+
+  if (apptDate && apptStartTime) {
+    const base = new Date(apptDate);
+    const timeParts = parseApptStartTime(apptStartTime);
+    if (!Number.isNaN(base.getTime()) && timeParts) {
+      base.setHours(timeParts.hours, timeParts.minutes, 0, 0);
+      return base.toISOString();
+    }
+  }
+
+  return parseScheduledAt(apptDate || apptStartTime);
 }
 
 function parseDurationMinutes(raw) {
@@ -149,7 +212,7 @@ function normalizeOptimantraPayload(raw) {
 
   const phone = pickFirst(payload, PHONE_KEYS);
   const email = pickFirst(payload, EMAIL_KEYS);
-  const scheduledAt = parseScheduledAt(pickFirst(payload, SCHEDULED_AT_KEYS));
+  const scheduledAt = resolveScheduledAt(payload);
   const externalId = resolveExternalId(payload);
   const serviceName = pickFirst(payload, SERVICE_NAME_KEYS) || 'Appointment';
   const timezone = pickFirst(payload, TIMEZONE_KEYS) || 'America/New_York';
@@ -197,6 +260,8 @@ module.exports = {
   normalizeOptimantraPayload,
   pickFirst,
   parseScheduledAt,
+  resolveScheduledAt,
+  parseApptStartTime,
   resolveEventType,
   resolveExternalId,
   splitFullName,
