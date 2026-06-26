@@ -204,6 +204,15 @@ app.get('/sluice-review/feedback', (req, res) => {
 app.get('/sluice-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'sluice-drip-spa-review-thanks.html'));
 });
+app.get('/soothing-intention-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'soothing-intention-review.html'));
+});
+app.get('/soothing-intention-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'soothing-intention-review-feedback.html'));
+});
+app.get('/soothing-intention-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'soothing-intention-review-thanks.html'));
+});
 app.get('/cherished-onboarding', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-onboarding.html'));
 });
@@ -270,6 +279,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/sluice-review' || req.path.startsWith('/sluice-review/')) {
+    return next();
+  }
+  if (req.path === '/soothing-intention-review' || req.path.startsWith('/soothing-intention-review/')) {
     return next();
   }
   if (req.path === '/cherished-onboarding' || req.path.startsWith('/cherished-onboarding/')) {
