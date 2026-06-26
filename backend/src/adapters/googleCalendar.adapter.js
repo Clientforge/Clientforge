@@ -90,28 +90,86 @@ function isSquareAppointmentsEvent(event) {
   return false;
 }
 
+function isSquareNoiseLine(line) {
+  const s = String(line || '').trim();
+  if (!s) return true;
+  if (/^\*{2,}/.test(s)) return true;
+  if (/^please make changes/i.test(s)) return true;
+  if (/^https?:\/\//i.test(s)) return true;
+  if (/overwritten during the next sync/i.test(s)) return true;
+  return false;
+}
+
+function isSquareServiceLine(line) {
+  const s = String(line || '').trim();
+  if (!s || isSquareNoiseLine(s)) return false;
+  if (/\$\d/.test(s)) return true;
+  return /\d+\s*(?:hour|minute|min|hr)s?\b/i.test(s) && /\s-\s/.test(s);
+}
+
+function normalizeSquareServiceLine(line) {
+  const s = String(line || '').trim();
+  const withPrice = s.match(/^(.+?)\s*-\s*.+\s*-\s*\$\d[\d,.]*\s*$/);
+  if (withPrice) return withPrice[1].trim();
+  return s;
+}
+
+function parsePhoneEmailCompact(line) {
+  const s = String(line || '').trim();
+  const emailMatch = s.match(/([^\s@]+@[^\s@]+\.[^\s@]+)\s*$/);
+  if (!emailMatch) return { phone: null, email: null };
+  const email = emailMatch[1].toLowerCase();
+  const phone = s.slice(0, emailMatch.index).replace(/\s*-\s*$/, '').trim() || null;
+  return { phone, email };
+}
+
+function looksLikePersonName(line) {
+  const s = String(line || '').trim();
+  if (!s || /\$/.test(s) || /@/.test(s) || /\(\d{3}\)/.test(s)) return false;
+  const parts = s.split(/\s+/);
+  if (parts.length < 2) return false;
+  return parts.every((part) => /^[A-Za-z'.-]+$/.test(part));
+}
+
 /**
- * Parse Square's structured description block (Name / Phone / Email / service line).
+ * Parse Square description — labeled (Name:/Phone:/Email:) and compact (name, phone-email, service) formats.
  */
 function parseSquareDescription(description) {
   if (!description || !String(description).trim()) return null;
 
   const text = stripHtml(description);
-  const nameRaw = text.match(/(?:^|\n)\s*Name:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
-  const phoneRaw = text.match(/(?:^|\n)\s*Phone:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
-  const emailRaw = text.match(/(?:^|\n)\s*Email:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
+  let nameRaw = text.match(/(?:^|\n)\s*Name:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
+  let phoneRaw = text.match(/(?:^|\n)\s*Phone:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
+  let emailRaw = text.match(/(?:^|\n)\s*Email:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
 
   let serviceName = null;
   const afterEmail = text.match(/(?:^|\n)\s*Email:\s*[^\n]+\n+([^\n]+)/i);
   if (afterEmail) {
     const candidate = afterEmail[1].trim();
-    if (
-      candidate
-      && !/^https?:\/\//i.test(candidate)
-      && !/^\*{2,}/.test(candidate)
-      && !/^please make changes/i.test(candidate)
-    ) {
-      serviceName = candidate;
+    if (candidate && !isSquareNoiseLine(candidate) && !/^https?:\/\//i.test(candidate)) {
+      serviceName = normalizeSquareServiceLine(candidate);
+    }
+  }
+
+  for (const line of text.split('\n').map((l) => l.trim()).filter(Boolean)) {
+    if (isSquareNoiseLine(line)) continue;
+
+    if (!serviceName && isSquareServiceLine(line)) {
+      serviceName = normalizeSquareServiceLine(line);
+      continue;
+    }
+
+    if (!emailRaw) {
+      const compact = parsePhoneEmailCompact(line);
+      if (compact.email && /\d/.test(line)) {
+        emailRaw = compact.email;
+        if (!phoneRaw) phoneRaw = compact.phone;
+        continue;
+      }
+    }
+
+    if (!nameRaw && looksLikePersonName(line) && !isSquareServiceLine(line)) {
+      nameRaw = line;
     }
   }
 
@@ -174,6 +232,7 @@ function resolveServiceName(event, hasGuestEmail) {
   if (isSquareAppointmentsEvent(event)) {
     const square = parseSquareDescription(description);
     if (square?.serviceName) return square.serviceName;
+    return summary || 'Appointment';
   }
 
   if (!hasGuestEmail || /glossgenius/i.test(summary) || /glossgenius/i.test(description)) {

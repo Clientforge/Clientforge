@@ -167,7 +167,7 @@ check('Square description email', squareParsed?.email, 'ngray105@gmail.com');
 check(
   'Square description service',
   squareParsed?.serviceName,
-  'Neuromuscular therapy medical massage - 1 hour - $119.99',
+  'Neuromuscular therapy medical massage',
 );
 
 const squareEvent = normalizeGoogleCalendarEvent(
@@ -191,7 +191,7 @@ check('Square event no synthetic phone when email present', squareEvent?.contact
 check(
   'Square event service',
   squareEvent?.appointment?.serviceName,
-  'Neuromuscular therapy medical massage - 1 hour - $119.99',
+  'Neuromuscular therapy medical massage',
 );
 
 const squareTitleOnly = normalizeGoogleCalendarEvent(
@@ -207,6 +207,42 @@ const squareTitleOnly = normalizeGoogleCalendarEvent(
   { ownerEmail: 'owner@spa.com' },
 );
 check('Square title-only still parses', squareTitleOnly?.contact?.firstName, 'NICOLE');
+
+const squareCompactDescription = `*** Please make changes to this appointment in the Square Appointments calendar. Any changes made here will be overwritten during the next sync.
+
+Calista Butler
+(678) 977-5200 - butler.calista@gmail.com
+Neuromuscular therapy medical massage - 1 hour 30 minutes - $155
+
+https://app.squareup.com/appointments/reservations/abc123/edit`;
+
+const squareCompactParsed = parseSquareDescription(squareCompactDescription);
+check('Square compact first name', squareCompactParsed?.firstName, 'Calista');
+check('Square compact last name', squareCompactParsed?.lastName, 'Butler');
+check('Square compact phone', squareCompactParsed?.phone, '(678) 977-5200');
+check('Square compact email', squareCompactParsed?.email, 'butler.calista@gmail.com');
+check(
+  'Square compact service',
+  squareCompactParsed?.serviceName,
+  'Neuromuscular therapy medical massage',
+);
+
+const squareCompactEvent = normalizeGoogleCalendarEvent(
+  {
+    id: 'sq3',
+    status: 'confirmed',
+    summary: 'Calista Butler',
+    description: squareCompactDescription,
+    start: { dateTime: '2026-06-29T13:30:00-04:00', timeZone: 'America/New_York' },
+    end: { dateTime: '2026-06-29T15:00:00-04:00', timeZone: 'America/New_York' },
+    organizer: { email: 'owner@spa.com', self: true },
+    attendees: [{ email: 'owner@spa.com', organizer: true }],
+  },
+  { ownerEmail: 'owner@spa.com' },
+);
+check('Square compact event service not warning text', squareCompactEvent?.appointment?.serviceName, 'Neuromuscular therapy medical massage');
+check('Square compact event email', squareCompactEvent?.contact?.email, 'butler.calista@gmail.com');
+check('Square compact event phone', squareCompactEvent?.contact?.phone, '(678) 977-5200');
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
