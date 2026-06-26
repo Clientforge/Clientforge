@@ -9,6 +9,7 @@ const {
 } = require('../adapters/googleCalendar.adapter');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const { normalizePhone } = require('./lead.service');
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -368,6 +369,18 @@ async function logSyncEvent(tenantId, googleEventId, patch) {
   );
 }
 
+function hasValidImportPhone(contact) {
+  const raw = contact?.phone;
+  if (!raw || String(raw).startsWith('gcal-')) return false;
+  const digits = normalizePhone(raw).replace(/\D/g, '');
+  return digits.length >= 10;
+}
+
+/** Auto-create Contacts when calendar event includes client first name + phone (e.g. Square). */
+function canAutoCreateGoogleCalendarContact(contact) {
+  return !!(contact?.firstName?.trim() && hasValidImportPhone(contact));
+}
+
 async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
   if (isPastGoogleEvent(googleEvent)) {
     await logSyncEvent(tenantId, googleEvent.id, {
@@ -405,10 +418,14 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
     tenantId,
     normalized.contact,
   );
-  if (!existingContactId) {
+
+  if (!existingContactId && !canAutoCreateGoogleCalendarContact(normalized.contact)) {
+    const skipReason = normalized.contact.firstName && !hasValidImportPhone(normalized.contact)
+      ? 'missing_phone'
+      : 'contact_not_in_list';
     await logSyncEvent(tenantId, googleEvent.id, {
       syncAction: 'skipped',
-      skipReason: 'contact_not_in_list',
+      skipReason,
       rawPayload: {
         id: googleEvent.id,
         summary: googleEvent.summary,
@@ -418,7 +435,7 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
         phone: normalized.contact.phone,
       },
     });
-    return { skipped: true, reason: 'contact_not_in_list' };
+    return { skipped: true, reason: skipReason };
   }
 
   try {
@@ -427,7 +444,7 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
       contact: normalized.contact,
       appointment: normalized.appointment,
       contactSource: 'google_calendar',
-      existingContactId,
+      existingContactId: existingContactId || undefined,
     });
 
     await appointmentWorkflowService.dispatchWorkflows(tenantId, result);
@@ -715,7 +732,8 @@ const SKIP_REASON_LABELS = {
   past_event: 'Past event (already ended)',
   no_contact_identity: 'Could not identify client from calendar event',
   missing_contact_identity: 'Missing client name or email',
-  contact_not_in_list: 'Client not in Contacts list',
+  missing_phone: 'Missing valid phone (required to create contact)',
+  contact_not_in_list: 'Client not in Contacts and missing phone or name',
 };
 
 function mapSyncLogRow(row) {

@@ -1172,14 +1172,15 @@ function GoogleCalendarSection({ settings, onReload }) {
       )}
 
       <span className="field-hint" style={{ display: 'block', marginTop: 12 }}>
-        Imports current and upcoming appointments from the selected calendar for clients already in your Contacts list (matched by phone, email, or name). Past events and unmatched clients are skipped. Square Appointments and GlossGenius calendar feeds are supported. SMS automations require a phone on the contact.
+        Imports current and upcoming appointments from the selected calendar. Clients with a name and phone on the event are added to Contacts automatically; existing clients are matched by phone, email, or name. Events without a valid phone are skipped. Square Appointments and GlossGenius feeds are supported.
       </span>
     </div>
   );
 }
 
 const GCAL_SKIP_HINTS = {
-  contact_not_in_list: 'Add or import this client to Contacts (match phone, email, or exact name).',
+  contact_not_in_list: 'Need client name and phone on the calendar event to import automatically.',
+  missing_phone: 'Add a phone on the calendar event or import the client to Contacts first.',
   past_event: 'Only current and upcoming appointments are imported.',
   no_contact_identity: 'Often a staff block or personal event — not a client booking.',
   missing_contact_identity: 'Could not parse a client name or email from the calendar event.',
