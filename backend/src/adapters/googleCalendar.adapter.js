@@ -71,6 +71,64 @@ function parseNameFromSummary(summary) {
   return { firstName: null, lastName: null };
 }
 
+function stripHtml(text) {
+  return String(text || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+/** Square Appointments → Google Calendar puts client details in the description body. */
+function isSquareAppointmentsEvent(event) {
+  const description = event?.description || '';
+  if (/square\s*appointments/i.test(description)) return true;
+  if (/app\.squareup\.com\/appointments/i.test(description)) return true;
+  return false;
+}
+
+/**
+ * Parse Square's structured description block (Name / Phone / Email / service line).
+ */
+function parseSquareDescription(description) {
+  if (!description || !String(description).trim()) return null;
+
+  const text = stripHtml(description);
+  const nameRaw = text.match(/(?:^|\n)\s*Name:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
+  const phoneRaw = text.match(/(?:^|\n)\s*Phone:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
+  const emailRaw = text.match(/(?:^|\n)\s*Email:\s*(.+?)\s*(?:\n|$)/i)?.[1]?.trim() || null;
+
+  let serviceName = null;
+  const afterEmail = text.match(/(?:^|\n)\s*Email:\s*[^\n]+\n+([^\n]+)/i);
+  if (afterEmail) {
+    const candidate = afterEmail[1].trim();
+    if (
+      candidate
+      && !/^https?:\/\//i.test(candidate)
+      && !/^\*{2,}/.test(candidate)
+      && !/^please make changes/i.test(candidate)
+    ) {
+      serviceName = candidate;
+    }
+  }
+
+  const { firstName, lastName } = nameRaw ? splitFullName(nameRaw) : { firstName: null, lastName: null };
+  const email = emailRaw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)
+    ? emailRaw.toLowerCase()
+    : null;
+
+  return {
+    firstName,
+    lastName,
+    phone: phoneRaw || null,
+    email,
+    serviceName,
+  };
+}
+
 /**
  * GlossGenius puts services in the event description, not the title.
  */
@@ -93,6 +151,7 @@ function isFeedStyleBookingEvent(event) {
   const description = event.description || '';
   if (/glossgenius/i.test(summary) || /glossgenius/i.test(description)) return true;
   if (/portrait care/i.test(summary) || /portrait care/i.test(description)) return true;
+  if (isSquareAppointmentsEvent(event)) return true;
   const { firstName } = parseNameFromSummary(summary);
   return !!firstName;
 }
@@ -110,8 +169,15 @@ function slugifyContactName(firstName, lastName) {
 
 function resolveServiceName(event, hasGuestEmail) {
   const summary = event.summary || '';
-  if (!hasGuestEmail || /glossgenius/i.test(summary) || /glossgenius/i.test(event.description || '')) {
-    const fromDesc = parseServiceFromDescription(event.description);
+  const description = event.description || '';
+
+  if (isSquareAppointmentsEvent(event)) {
+    const square = parseSquareDescription(description);
+    if (square?.serviceName) return square.serviceName;
+  }
+
+  if (!hasGuestEmail || /glossgenius/i.test(summary) || /glossgenius/i.test(description)) {
+    const fromDesc = parseServiceFromDescription(description);
     if (fromDesc) return fromDesc;
   }
   return summary || 'Appointment';
@@ -151,7 +217,9 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
   if (!startRaw) return null;
 
   const guest = pickGuestAttendee(event, context.ownerEmail);
-  const guestEmail = guest?.email?.trim().toLowerCase() || null;
+  const square = isSquareAppointmentsEvent(event)
+    ? parseSquareDescription(event.description)
+    : null;
 
   let firstName = null;
   let lastName = null;
@@ -162,11 +230,22 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
     lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null;
   }
 
+  if (square?.firstName && !firstName) firstName = square.firstName;
+  if (square?.lastName && !lastName) lastName = square.lastName;
+
   const fromSummary = parseNameFromSummary(event.summary);
   if (!firstName) firstName = fromSummary.firstName;
   if (!lastName) lastName = fromSummary.lastName;
 
-  if (!guestEmail) {
+  if (isSquareAppointmentsEvent(event) && !firstName && event.summary?.trim()) {
+    const fromTitle = splitFullName(event.summary.trim());
+    if (fromTitle.firstName) firstName = fromTitle.firstName;
+    if (fromTitle.lastName) lastName = fromTitle.lastName;
+  }
+
+  const contactEmail = guest?.email?.trim().toLowerCase() || square?.email || null;
+
+  if (!contactEmail) {
     if (!firstName || !isFeedStyleBookingEvent(event)) {
       return null;
     }
@@ -176,11 +255,11 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
   const contact = {
     firstName,
     lastName,
-    phone: null,
-    email: guestEmail,
+    phone: square?.phone || null,
+    email: contactEmail,
   };
 
-  if (!guestEmail && firstName) {
+  if (!contactEmail && !contact.phone && firstName) {
     contact.nameOnly = true;
     contact.syntheticPhone = `gcal-${slugifyContactName(firstName, lastName)}`;
   }
@@ -193,7 +272,7 @@ const normalizeGoogleCalendarEvent = (event, context = {}) => {
       provider: 'google_calendar',
       scheduledAt: startRaw,
       timezone: event.start?.timeZone || event.timeZone || 'America/New_York',
-      serviceName: resolveServiceName(event, !!guestEmail),
+      serviceName: resolveServiceName(event, !!contactEmail),
       durationMinutes: parseDurationMinutes(event),
       rawPayload: event,
     },
@@ -205,6 +284,8 @@ module.exports = {
   pickGuestAttendee,
   parseNameFromSummary,
   parseServiceFromDescription,
+  parseSquareDescription,
+  isSquareAppointmentsEvent,
   splitFullName,
   isFeedStyleBookingEvent,
   isPastGoogleEvent,

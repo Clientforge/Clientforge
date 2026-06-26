@@ -5,6 +5,8 @@ const {
   normalizeGoogleCalendarEvent,
   parseNameFromSummary,
   parseServiceFromDescription,
+  parseSquareDescription,
+  isSquareAppointmentsEvent,
   isPastGoogleEvent,
 } = require('../src/adapters/googleCalendar.adapter');
 
@@ -141,6 +143,70 @@ check(
   false,
 );
 check('missing end is not past', isPastGoogleEvent({}, now), false);
+
+const squareDescription = `*** Please make changes to this appointment in the Square Appointments calendar. Any changes made here will be overwritten during the next sync.
+
+Name:
+NICOLE GRAY
+
+Phone:
+(404) 992-3472
+
+Email:
+ngray105@gmail.com
+
+Neuromuscular therapy medical massage - 1 hour - $119.99
+
+https://app.squareup.com/appointments/reservations/8cqi0jvhqzmk65/edit`;
+
+const squareParsed = parseSquareDescription(squareDescription);
+check('Square description first name', squareParsed?.firstName, 'NICOLE');
+check('Square description last name', squareParsed?.lastName, 'GRAY');
+check('Square description phone', squareParsed?.phone, '(404) 992-3472');
+check('Square description email', squareParsed?.email, 'ngray105@gmail.com');
+check(
+  'Square description service',
+  squareParsed?.serviceName,
+  'Neuromuscular therapy medical massage - 1 hour - $119.99',
+);
+
+const squareEvent = normalizeGoogleCalendarEvent(
+  {
+    id: 'sq1',
+    status: 'confirmed',
+    summary: 'NICOLE GRAY',
+    description: squareDescription,
+    start: { dateTime: '2026-06-26T16:00:00-04:00', timeZone: 'America/New_York' },
+    end: { dateTime: '2026-06-26T17:15:00-04:00', timeZone: 'America/New_York' },
+    organizer: { email: 'owner@spa.com', self: true },
+    attendees: [{ email: 'owner@spa.com', organizer: true }],
+  },
+  { ownerEmail: 'owner@spa.com' },
+);
+check('Square event detected', isSquareAppointmentsEvent({ description: squareDescription }), true);
+check('Square event first name', squareEvent?.contact?.firstName, 'NICOLE');
+check('Square event email', squareEvent?.contact?.email, 'ngray105@gmail.com');
+check('Square event phone', squareEvent?.contact?.phone, '(404) 992-3472');
+check('Square event no synthetic phone when email present', squareEvent?.contact?.syntheticPhone, undefined);
+check(
+  'Square event service',
+  squareEvent?.appointment?.serviceName,
+  'Neuromuscular therapy medical massage - 1 hour - $119.99',
+);
+
+const squareTitleOnly = normalizeGoogleCalendarEvent(
+  {
+    id: 'sq2',
+    status: 'confirmed',
+    summary: 'NICOLE GRAY',
+    description: squareDescription,
+    start: { dateTime: '2026-06-26T16:00:00-04:00', timeZone: 'America/New_York' },
+    end: { dateTime: '2026-06-26T17:15:00-04:00', timeZone: 'America/New_York' },
+    attendees: [],
+  },
+  { ownerEmail: 'owner@spa.com' },
+);
+check('Square title-only still parses', squareTitleOnly?.contact?.firstName, 'NICOLE');
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);

@@ -1119,7 +1119,7 @@ function GoogleCalendarSection({ settings, onReload }) {
 
       {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
       <span className="field-hint" style={{ display: 'block', marginTop: 12 }}>
-        Imports current and upcoming appointments from the selected calendar for clients already in your Contacts list (matched by email or name). Past events and unmatched clients are skipped. GlossGenius titles like &quot;Jane Doe (GlossGenius Appointment)&quot; are supported. SMS automations require a phone on the contact.
+        Imports current and upcoming appointments from the selected calendar for clients already in your Contacts list (matched by phone, email, or name). Past events and unmatched clients are skipped. Square Appointments and GlossGenius calendar feeds are supported. SMS automations require a phone on the contact.
       </span>
     </div>
   );
