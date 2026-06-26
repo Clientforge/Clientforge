@@ -66,6 +66,19 @@ router.post('/sync', async (req, res, next) => {
 });
 
 /**
+ * POST /api/v1/integrations/google-calendar/clear-and-resync
+ * Deletes all google_calendar appointments for the tenant, then runs a full sync.
+ */
+router.post('/clear-and-resync', async (req, res, next) => {
+  try {
+    const result = await googleCalendarService.clearAndResyncTenantCalendar(req.tenantId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * POST /api/v1/integrations/google-calendar/disconnect
  */
 router.post('/disconnect', async (req, res, next) => {

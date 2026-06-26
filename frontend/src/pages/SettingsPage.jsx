@@ -1041,6 +1041,28 @@ function GoogleCalendarSection({ settings, onReload }) {
     }
   };
 
+  const clearAndResync = async () => {
+    if (!confirm(
+      'Clear all Google Calendar appointments and sync again?\n\n'
+      + 'This removes every appointment imported from Google Calendar (and their scheduled messages), '
+      + 'then re-imports current and upcoming calendar events. Contacts are not deleted.',
+    )) return;
+    setBusy('clear');
+    setMsg('');
+    try {
+      const result = await api.post('/integrations/google-calendar/clear-and-resync');
+      setMsg(
+        `Cleared ${result.deletedCount ?? 0} appointment(s) — `
+        + `${result.processed ?? 0} processed, ${result.skipped ?? 0} skipped on resync`,
+      );
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const saveCalendar = async (e) => {
     e.preventDefault();
     setBusy('save');
@@ -1108,6 +1130,9 @@ function GoogleCalendarSection({ settings, onReload }) {
               </button>
               <button type="button" className="btn-sm" onClick={syncNow} disabled={!!busy}>
                 {busy === 'sync' ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button type="button" className="btn-sm btn-danger-sm" onClick={clearAndResync} disabled={!!busy}>
+                {busy === 'clear' ? 'Clearing…' : 'Clear & resync'}
               </button>
               <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
                 Disconnect

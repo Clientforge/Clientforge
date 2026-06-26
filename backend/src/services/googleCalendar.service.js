@@ -664,6 +664,47 @@ async function syncAllEnabledConnections() {
   return { tenants: result.rows.length, ok, failed };
 }
 
+async function clearGoogleCalendarAppointments(tenantId) {
+  const countResult = await db.query(
+    `SELECT COUNT(*)::int AS count FROM appointments WHERE tenant_id = $1 AND provider = 'google_calendar'`,
+    [tenantId],
+  );
+  const deletedCount = countResult.rows[0]?.count || 0;
+
+  await db.query(
+    `DELETE FROM appointments WHERE tenant_id = $1 AND provider = 'google_calendar'`,
+    [tenantId],
+  );
+
+  await db.query(
+    `DELETE FROM calendar_sync_events WHERE tenant_id = $1`,
+    [tenantId],
+  );
+
+  await db.query(
+    `UPDATE tenant_google_calendar_connections SET sync_token = NULL, updated_at = NOW() WHERE tenant_id = $1`,
+    [tenantId],
+  );
+
+  return { deletedCount };
+}
+
+async function clearAndResyncTenantCalendar(tenantId) {
+  const connection = await getConnection(tenantId);
+  if (!connection) {
+    throw Object.assign(new Error('Google Calendar not connected'), { statusCode: 404, isOperational: true });
+  }
+
+  const { deletedCount } = await clearGoogleCalendarAppointments(tenantId);
+  const sync = await syncTenantCalendar(tenantId, { fullResync: true });
+
+  return {
+    deletedCount,
+    processed: sync.processed ?? 0,
+    skipped: sync.skipped ?? 0,
+  };
+}
+
 async function getStatus(tenantId) {
   const connection = await getConnection(tenantId);
   return formatConnection(connection);
@@ -678,6 +719,8 @@ module.exports = {
   updateConnectionSettings,
   disconnect,
   syncTenantCalendar,
+  clearGoogleCalendarAppointments,
+  clearAndResyncTenantCalendar,
   syncAllEnabledConnections,
   registerWatch,
   renewExpiringWatches,
