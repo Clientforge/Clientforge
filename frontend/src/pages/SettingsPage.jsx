@@ -988,6 +988,21 @@ function GoogleCalendarSection({ settings, onReload }) {
   const [calendarId, setCalendarId] = useState(gcal.calendarId || 'primary');
   const [syncEnabled, setSyncEnabled] = useState(gcal.syncEnabled !== false);
   const [msg, setMsg] = useState('');
+  const [skippedLog, setSkippedLog] = useState([]);
+  const [skippedLoading, setSkippedLoading] = useState(false);
+
+  const loadSkippedLog = async () => {
+    if (!gcal.connected) return;
+    setSkippedLoading(true);
+    try {
+      const data = await api.get('/integrations/google-calendar/sync-log?limit=50');
+      setSkippedLog(data.events || []);
+    } catch {
+      setSkippedLog([]);
+    } finally {
+      setSkippedLoading(false);
+    }
+  };
 
   useEffect(() => {
     setCalendarId(gcal.calendarId || 'primary');
@@ -999,6 +1014,7 @@ function GoogleCalendarSection({ settings, onReload }) {
     api.get('/integrations/google-calendar/calendars')
       .then((data) => setCalendars(data.calendars || []))
       .catch(() => {});
+    loadSkippedLog();
   }, [gcal.connected]);
 
   const connect = async () => {
@@ -1034,6 +1050,7 @@ function GoogleCalendarSection({ settings, onReload }) {
       const result = await api.post('/integrations/google-calendar/sync', { full: true });
       setMsg(`Sync complete — ${result.processed ?? 0} processed, ${result.skipped ?? 0} skipped`);
       await onReload();
+      await loadSkippedLog();
     } catch (err) {
       setMsg(err.message);
     } finally {
@@ -1056,6 +1073,7 @@ function GoogleCalendarSection({ settings, onReload }) {
         + `${result.processed ?? 0} processed, ${result.skipped ?? 0} skipped on resync`,
       );
       await onReload();
+      await loadSkippedLog();
     } catch (err) {
       setMsg(err.message);
     } finally {
@@ -1143,9 +1161,80 @@ function GoogleCalendarSection({ settings, onReload }) {
       )}
 
       {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
+
+      {gcal.connected && (
+        <GoogleCalendarSkippedLog
+          events={skippedLog}
+          loading={skippedLoading}
+          onRefresh={loadSkippedLog}
+          busy={!!busy}
+        />
+      )}
+
       <span className="field-hint" style={{ display: 'block', marginTop: 12 }}>
         Imports current and upcoming appointments from the selected calendar for clients already in your Contacts list (matched by phone, email, or name). Past events and unmatched clients are skipped. Square Appointments and GlossGenius calendar feeds are supported. SMS automations require a phone on the contact.
       </span>
+    </div>
+  );
+}
+
+const GCAL_SKIP_HINTS = {
+  contact_not_in_list: 'Add or import this client to Contacts (match phone, email, or exact name).',
+  past_event: 'Only current and upcoming appointments are imported.',
+  no_contact_identity: 'Often a staff block or personal event — not a client booking.',
+  missing_contact_identity: 'Could not parse a client name or email from the calendar event.',
+};
+
+function formatSkippedClient(event) {
+  const name = [event.firstName, event.lastName].filter(Boolean).join(' ').trim();
+  if (name) return name;
+  if (event.summary) return event.summary;
+  return 'Unknown client';
+}
+
+function GoogleCalendarSkippedLog({ events, loading, onRefresh, busy }) {
+  return (
+    <div className="gcal-sync-log" style={{ marginTop: 20 }}>
+      <div className="gcal-sync-log-header">
+        <div>
+          <h4 style={{ margin: 0, fontSize: 15 }}>Skipped calendar events</h4>
+          <p className="field-hint" style={{ margin: '4px 0 0' }}>
+            Events from the latest sync that were not imported into ClientForge.
+          </p>
+        </div>
+        <button type="button" className="btn-sm" onClick={onRefresh} disabled={loading || busy}>
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
+      </div>
+
+      {loading && events.length === 0 ? (
+        <p className="field-hint" style={{ marginTop: 12 }}>Loading skipped events…</p>
+      ) : events.length === 0 ? (
+        <p className="field-hint" style={{ marginTop: 12 }}>No skipped events logged yet.</p>
+      ) : (
+        <div className="gcal-sync-log-list">
+          {events.map((event) => (
+            <div key={event.id} className="gcal-sync-log-item">
+              <div className="gcal-sync-log-item-top">
+                <strong>{formatSkippedClient(event)}</strong>
+                <span className="gcal-sync-log-reason">{event.skipReasonLabel || event.skipReason}</span>
+              </div>
+              {event.summary && event.summary !== formatSkippedClient(event) && (
+                <div className="field-hint">Calendar title: {event.summary}</div>
+              )}
+              <div className="field-hint gcal-sync-log-meta">
+                {event.phone && <span>Phone: {event.phone}</span>}
+                {event.email && <span>Email: {event.email}</span>}
+                {event.eventEnd && <span>Ended: {new Date(event.eventEnd).toLocaleString()}</span>}
+                {event.createdAt && <span>Logged: {new Date(event.createdAt).toLocaleString()}</span>}
+              </div>
+              {GCAL_SKIP_HINTS[event.skipReason] && (
+                <div className="field-hint">{GCAL_SKIP_HINTS[event.skipReason]}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

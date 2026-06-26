@@ -415,6 +415,7 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
         firstName: normalized.contact.firstName,
         lastName: normalized.contact.lastName,
         email: normalized.contact.email,
+        phone: normalized.contact.phone,
       },
     });
     return { skipped: true, reason: 'contact_not_in_list' };
@@ -710,6 +711,77 @@ async function getStatus(tenantId) {
   return formatConnection(connection);
 }
 
+const SKIP_REASON_LABELS = {
+  past_event: 'Past event (already ended)',
+  no_contact_identity: 'Could not identify client from calendar event',
+  missing_contact_identity: 'Missing client name or email',
+  contact_not_in_list: 'Client not in Contacts list',
+};
+
+function mapSyncLogRow(row) {
+  const payload = typeof row.raw_payload === 'string'
+    ? JSON.parse(row.raw_payload)
+    : (row.raw_payload || {});
+
+  return {
+    id: row.id,
+    googleEventId: row.google_event_id,
+    syncAction: row.sync_action,
+    skipReason: row.skip_reason,
+    skipReasonLabel: SKIP_REASON_LABELS[row.skip_reason] || row.skip_reason || null,
+    eventType: row.event_type,
+    errorMessage: row.error_message,
+    summary: payload.summary || null,
+    firstName: payload.firstName || null,
+    lastName: payload.lastName || null,
+    email: payload.email || null,
+    phone: payload.phone || null,
+    eventEnd: payload.end || null,
+    createdAt: row.created_at,
+  };
+}
+
+async function listSyncLog(tenantId, { limit = 50, action = 'skipped' } = {}) {
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+  const params = [tenantId];
+  const filters = ['tenant_id = $1'];
+
+  if (action && action !== 'all') {
+    params.push(action);
+    filters.push(`sync_action = $${params.length}`);
+  }
+
+  params.push(safeLimit);
+  const limitIdx = params.length;
+
+  const result = await db.query(
+    `WITH ranked AS (
+       SELECT
+         id,
+         google_event_id,
+         sync_action,
+         skip_reason,
+         event_type,
+         error_message,
+         raw_payload,
+         created_at,
+         ROW_NUMBER() OVER (PARTITION BY google_event_id ORDER BY created_at DESC) AS rn
+       FROM calendar_sync_events
+       WHERE ${filters.join(' AND ')}
+     )
+     SELECT id, google_event_id, sync_action, skip_reason, event_type, error_message, raw_payload, created_at
+     FROM ranked
+     WHERE rn = 1
+     ORDER BY created_at DESC
+     LIMIT $${limitIdx}`,
+    params,
+  );
+
+  return {
+    events: result.rows.map(mapSyncLogRow),
+  };
+}
+
 module.exports = {
   isConfigured,
   buildConnectUrl,
@@ -721,6 +793,7 @@ module.exports = {
   syncTenantCalendar,
   clearGoogleCalendarAppointments,
   clearAndResyncTenantCalendar,
+  listSyncLog,
   syncAllEnabledConnections,
   registerWatch,
   renewExpiringWatches,

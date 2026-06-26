@@ -66,6 +66,19 @@ router.post('/sync', async (req, res, next) => {
 });
 
 /**
+ * GET /api/v1/integrations/google-calendar/sync-log?limit=50&action=skipped
+ */
+router.get('/sync-log', async (req, res, next) => {
+  try {
+    const { limit, action } = req.query;
+    const result = await googleCalendarService.listSyncLog(req.tenantId, { limit, action });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * POST /api/v1/integrations/google-calendar/clear-and-resync
  * Deletes all google_calendar appointments for the tenant, then runs a full sync.
  */
