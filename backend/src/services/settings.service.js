@@ -4,6 +4,7 @@ const { DEFAULT_SCHEDULE, DEFAULT_OUTREACH_WINDOW } = require('./followup.servic
 const tenantPhoneService = require('./tenant-phone.service');
 const smsProviderService = require('./sms-provider.service');
 const googleCalendarService = require('./googleCalendar.service');
+const squareService = require('./square.service');
 const instagramService = require('./instagram.service');
 
 const getSettings = async (tenantId) => {
@@ -33,6 +34,13 @@ const getSettings = async (tenantId) => {
   let googleCalendar = { connected: false, configured: googleCalendarService.isConfigured() };
   try {
     googleCalendar = (await googleCalendarService.getStatus(tenantId)) || googleCalendar;
+  } catch {
+    // ignore
+  }
+
+  let square = { connected: false, configured: squareService.isConfigured() };
+  try {
+    square = (await squareService.getStatus(tenantId)) || square;
   } catch {
     // ignore
   }
@@ -77,6 +85,7 @@ const getSettings = async (tenantId) => {
       telnyxVoiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/telnyx`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
       googleCalendar,
+      square,
       instagram,
       metaWebhookUrl: instagramService.webhookUrl(),
     },

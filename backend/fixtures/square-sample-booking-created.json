@@ -1,0 +1,24 @@
+{
+  "merchant_id": "ETCE8W0W8QDYP",
+  "type": "booking.created",
+  "event_id": "275e23ee-2c99-5093-963c-5097073fae2e",
+  "created_at": "2021-11-30T01:58:19Z",
+  "data": {
+    "type": "booking",
+    "id": "x0cw6tzpjbuic5:0",
+    "object": {
+      "booking": {
+        "id": "x0cw6tzpjbuic5",
+        "customer_id": "K48SGF7H116G59WZJRMYJNJKA8",
+        "start_at": "2021-12-15T17:00:00Z",
+        "status": "ACCEPTED",
+        "appointment_segments": [
+          {
+            "duration_minutes": 30,
+            "service_variation_id": "GUN7HNQBH7ZRARYZN52E7O4B"
+          }
+        ]
+      }
+    }
+  }
+}

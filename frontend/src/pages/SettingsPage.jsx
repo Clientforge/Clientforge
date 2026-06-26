@@ -48,6 +48,17 @@ export default function SettingsPage() {
       setError(`Google Calendar: ${decodeURIComponent(reason)}`);
       window.history.replaceState({}, '', window.location.pathname);
     }
+    const square = params.get('square');
+    if (square === 'connected') {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (square === 'error') {
+      const reason = params.get('reason') || 'Connection failed';
+      setError(`Square Appointments: ${decodeURIComponent(reason)}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const save = async (payload) => {
@@ -749,6 +760,10 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <hr className="settings-divider" />
 
+      <SquareSection settings={settings} onReload={onReload} copyToClipboard={copyToClipboard} copying={copying} />
+
+      <hr className="settings-divider" />
+
       <GoogleCalendarSection settings={settings} onReload={onReload} />
 
       <hr className="settings-divider" />
@@ -827,6 +842,141 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
     "email": "jane@example.com",
     "source": "website_form"
   }'`}</pre>
+    </div>
+  );
+}
+
+function SquareSection({ settings, onReload, copyToClipboard, copying }) {
+  const sq = settings.integration?.square || {};
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const [webhooksEnabled, setWebhooksEnabled] = useState(sq.webhooksEnabled !== false);
+
+  useEffect(() => {
+    setWebhooksEnabled(sq.webhooksEnabled !== false);
+  }, [sq.webhooksEnabled]);
+
+  const connect = async () => {
+    setBusy('connect');
+    setMsg('');
+    try {
+      const { url } = await api.post('/integrations/square/connect');
+      window.location.href = url;
+    } catch (err) {
+      setMsg(err.message);
+      setBusy('');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Square Appointments? New Square bookings will no longer sync.')) return;
+    setBusy('disconnect');
+    setMsg('');
+    try {
+      await api.post('/integrations/square/disconnect');
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const saveSettings = async (e) => {
+    e.preventDefault();
+    setBusy('save');
+    setMsg('');
+    try {
+      await api.put('/integrations/square', { webhooksEnabled });
+      await onReload();
+      setMsg('Square settings saved');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  if (!sq.configured) {
+    return (
+      <div className="integration-block">
+        <h3>Square Appointments</h3>
+        <p className="settings-desc muted">
+          Square is not configured on the server yet. Set <code>SQUARE_APPLICATION_ID</code> and{' '}
+          <code>SQUARE_APPLICATION_SECRET</code> in the backend environment.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="integration-block">
+      <h3>Square Appointments</h3>
+      <p className="settings-desc">
+        Connect Square Appointments to automatically create contacts, track bookings, and trigger
+        reminders, confirmations, and service-specific rebooking.
+      </p>
+
+      {sq.webhookUrl && (
+        <div className="integration-block" style={{ marginTop: 12 }}>
+          <label>Square Webhook URL (register once in Square Developer)</label>
+          <div className="key-row">
+            <code className="key-value" style={{ fontSize: 12 }}>{sq.webhookUrl}</code>
+            <button type="button" className="btn-sm" onClick={() => copyToClipboard(sq.webhookUrl, 'square-webhook')}>
+              {copying === 'square-webhook' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <span className="field-hint">
+            Square Developer → Webhooks → Add endpoint. Events: <strong>booking.created</strong>,{' '}
+            <strong>booking.updated</strong>. Set <code>SQUARE_WEBHOOK_SIGNATURE_KEY</code> on the server.
+          </span>
+        </div>
+      )}
+
+      {!sq.connected ? (
+        <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={connect} disabled={busy === 'connect'}>
+          {busy === 'connect' ? 'Redirecting…' : 'Connect Square Appointments'}
+        </button>
+      ) : (
+        <>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>Connected Square account</label>
+            <p style={{ margin: 0, fontSize: 14 }}>
+              {sq.businessName || 'Square seller'}
+              {sq.merchantId ? ` · Merchant ${sq.merchantId}` : ''}
+            </p>
+            {sq.lastWebhookAt && (
+              <span className="field-hint">Last webhook: {new Date(sq.lastWebhookAt).toLocaleString()}</span>
+            )}
+            {sq.lastWebhookError && (
+              <span className="field-hint" style={{ color: 'var(--danger, #c0392b)' }}>
+                Last error: {sq.lastWebhookError}
+              </span>
+            )}
+          </div>
+
+          <form onSubmit={saveSettings} style={{ marginTop: 16 }}>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={webhooksEnabled}
+                onChange={(e) => setWebhooksEnabled(e.target.checked)}
+              />
+              Process Square booking webhooks for this tenant
+            </label>
+            <div className="modal-actions" style={{ marginTop: 12 }}>
+              <button type="submit" className="btn-primary" disabled={busy === 'save'}>
+                {busy === 'save' ? 'Saving…' : 'Save'}
+              </button>
+              <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={busy === 'disconnect'}>
+                {busy === 'disconnect' ? '…' : 'Disconnect'}
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {msg && <p className="field-hint" style={{ marginTop: 8 }}>{msg}</p>}
     </div>
   );
 }

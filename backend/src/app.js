@@ -36,7 +36,11 @@ app.use(cors({
 app.use(express.json({
   limit: '1mb',
   verify: (req, _res, buf) => {
-    if (req.originalUrl?.startsWith('/api/v1/webhook/calendly') || req.originalUrl?.startsWith('/api/v1/webhook/meta')) {
+    if (
+      req.originalUrl?.startsWith('/api/v1/webhook/calendly')
+      || req.originalUrl?.startsWith('/api/v1/webhook/meta')
+      || req.originalUrl?.startsWith('/api/v1/webhook/square')
+    ) {
       req.rawBody = buf.toString('utf8');
     }
   },
@@ -70,11 +74,13 @@ app.use('/api/v1/auth',    require('./routes/auth.routes'));
 app.use('/api/v1/webhook', require('./routes/webhook.routes'));
 app.use('/api/v1/webhook/calendly', require('./routes/calendly.webhook'));
 app.use('/api/v1/webhook/optimantra', require('./routes/optimantra.webhook'));
+app.use('/api/v1/webhook/square', require('./routes/square.webhook'));
 app.use('/api/v1/webhook/google-calendar', require('./routes/googleCalendar.webhook'));
 app.use('/api/v1/webhook/meta', require('./routes/meta.webhook'));
 app.use('/api/v1/voice',   require('./routes/voice.routes'));
 
 const googleCalendarService = require('./services/googleCalendar.service');
+const squareService = require('./services/square.service');
 const instagramService = require('./services/instagram.service');
 app.get('/api/v1/integrations/google-calendar/callback', async (req, res) => {
   const { code, state, error } = req.query;
@@ -89,6 +95,25 @@ app.get('/api/v1/integrations/google-calendar/callback', async (req, res) => {
     console.error('[GCAL] OAuth callback failed:', err.message);
     return res.redirect(
       googleCalendarService.appSettingsUrl(`tab=integration&gcal=error&reason=${encodeURIComponent(err.message)}`),
+    );
+  }
+});
+
+app.get('/api/v1/integrations/square/callback', async (req, res) => {
+  const { code, state, error, error_description: errorDescription } = req.query;
+  if (error) {
+    return res.redirect(squareService.appSettingsUrl(
+      `tab=integration&square=error&reason=${encodeURIComponent(errorDescription || error)}`,
+    ));
+  }
+  try {
+    if (!code || !state) throw new Error('Missing OAuth code or state');
+    await squareService.handleOAuthCallback(code, state);
+    return res.redirect(squareService.appSettingsUrl('tab=integration&square=connected'));
+  } catch (err) {
+    console.error('[SQUARE] OAuth callback failed:', err.message);
+    return res.redirect(
+      squareService.appSettingsUrl(`tab=integration&square=error&reason=${encodeURIComponent(err.message)}`),
     );
   }
 });
@@ -119,6 +144,7 @@ app.use('/api/v1/sms',       require('./routes/sms.routes'));
 app.use('/api/v1/dashboard', authenticate, tenantScope, require('./routes/dashboard.routes'));
 app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settings.routes'));
 app.use('/api/v1/integrations/google-calendar', authenticate, tenantScope, require('./routes/googleCalendar.routes'));
+app.use('/api/v1/integrations/square', authenticate, tenantScope, require('./routes/square.routes'));
 app.use('/api/v1/integrations/instagram', authenticate, tenantScope, require('./routes/instagram.routes'));
 app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));
 app.use('/api/v1/conversations', authenticate, tenantScope, require('./routes/conversations.routes'));

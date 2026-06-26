@@ -263,6 +263,45 @@ Before going live, capture a sample payload with [webhook.site](https://webhook.
 node scripts/testOptimantraAdapter.js
 ```
 
+## Square Appointments Integration
+
+Connect Square Appointments via OAuth (per tenant) and a platform-level webhook (once in Square Developer).
+
+### Server environment
+
+```bash
+SQUARE_APPLICATION_ID=
+SQUARE_APPLICATION_SECRET=
+SQUARE_REDIRECT_URI=https://app.clientforge-ai.com/api/v1/integrations/square/callback
+SQUARE_WEBHOOK_SIGNATURE_KEY=
+SQUARE_ENVIRONMENT=production   # or sandbox
+BASE_URL=https://app.clientforge-ai.com
+```
+
+### Square Developer setup (platform admin, once)
+
+1. [Square Developer Dashboard](https://developer.squareup.com/apps) → your application.
+2. **OAuth** → set Redirect URL to `SQUARE_REDIRECT_URI`.
+3. **Webhooks** → Add endpoint:
+   - URL: `https://yourdomain.com/api/v1/webhook/square`
+   - Events: `booking.created`, `booking.updated`
+4. Copy the endpoint **Signature Key** → `SQUARE_WEBHOOK_SIGNATURE_KEY` on Render.
+
+### Per-tenant setup
+
+1. **Settings → Integration → Square Appointments** → **Connect Square Appointments**.
+2. Authorize the seller account (appointments + customers + catalog scopes).
+3. Ensure **Automations → Services** lists match Square service names for rebooking intervals.
+4. Book a test appointment in Square → verify **Automations → Appointments**.
+
+Square webhooks include `customer_id` and `service_variation_id`; ClientForge resolves phone/email and service names via Square API using the tenant OAuth token.
+
+### Testing
+
+```bash
+node scripts/testSquareAdapter.js
+```
+
 ## Missed Call Text-Back
 
 When a call to the business's number is not answered, configure **conditional call forwarding** on the carrier to forward the call to the tenant's platform number (Twilio or Telnyx). The app detects the forwarded call and automatically texts the caller back.
