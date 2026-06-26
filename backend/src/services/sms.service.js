@@ -5,6 +5,7 @@ const { normalizePhone } = require('./lead.service');
 const tenantPhoneService = require('./tenant-phone.service');
 const smsProviderService = require('./sms-provider.service');
 const trackedLinkService = require('./trackedLink.service');
+const { resolveSmsDestination } = require('./automation-test-mode.service');
 
 /**
  * New sender texts a configured keyword → contact, inbound log, welcome SMS (new contacts only).
@@ -166,25 +167,50 @@ const sendSms = async ({
     tenantSmsProvider,
     fromNumber,
   });
+
+  let destinationTo = to;
+  if (tenantId && messageType !== 'manual') {
+    const routed = await resolveSmsDestination(tenantId, {
+      contactId,
+      leadId,
+      to,
+      body: finalBody,
+    });
+    if (routed.skipped) {
+      const blocked = await db.query(
+        `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
+         VALUES ($1, $2, $3, 'outbound', $4, $5, $6, NULL, 'blocked', $7)
+         RETURNING *`,
+        [tenantId, leadId ?? null, contactId ?? null, finalBody, fromNumber, to, messageType],
+      );
+      return blocked.rows[0];
+    }
+    destinationTo = routed.to;
+    finalBody = routed.body;
+    if (routed.testMode) {
+      console.log(`[TEST-MODE] SMS rerouted from ${routed.intendedTo} → ${destinationTo}`);
+    }
+  }
+
   let messageId = null;
   let deliveryStatus = 'sent';
 
   if (config.sms.mode === 'live') {
     try {
       const result = provider === 'telnyx'
-        ? await sendViaTelnyx(fromNumber, to, finalBody)
-        : await sendViaTwilio(fromNumber, to, finalBody);
+        ? await sendViaTelnyx(fromNumber, destinationTo, finalBody)
+        : await sendViaTwilio(fromNumber, destinationTo, finalBody);
       messageId = result.messageId;
       deliveryStatus = result.deliveryStatus;
     } catch (err) {
-      console.error(`[SMS][LIVE][${provider}] Failed to send to ${to}: ${err.message}`);
+      console.error(`[SMS][LIVE][${provider}] Failed to send to ${destinationTo}: ${err.message}`);
       deliveryStatus = 'failed';
     }
   } else {
     // Mock mode
     messageId = `MOCK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     console.log(`\n[SMS][MOCK] ─────────────────────────────────`);
-    console.log(`  To:   ${to}`);
+    console.log(`  To:   ${destinationTo}`);
     console.log(`  From: ${fromNumber}`);
     console.log(`  Provider: ${provider}`);
     console.log(`  Body: ${finalBody}`);
@@ -196,7 +222,7 @@ const sendSms = async ({
     `INSERT INTO messages (tenant_id, lead_id, contact_id, direction, body, from_number, to_number, twilio_sid, delivery_status, message_type)
      VALUES ($1, $2, $3, 'outbound', $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [tenantId, leadId ?? null, contactId ?? null, finalBody, fromNumber, to, messageId, deliveryStatus, messageType],
+    [tenantId, leadId ?? null, contactId ?? null, finalBody, fromNumber, destinationTo, messageId, deliveryStatus, messageType],
   );
 
   return result.rows[0];

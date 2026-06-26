@@ -69,6 +69,9 @@ export default function SettingsPage() {
       if (payload.business?.uiMode !== undefined) {
         updateTenant({ uiMode: payload.business.uiMode });
       }
+      if (payload.automation?.testMode !== undefined) {
+        updateTenant({ automationTestMode: !!payload.automation.testMode });
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) { setError(err.message); }
@@ -95,10 +98,134 @@ export default function SettingsPage() {
         ))}
       </div>
       {error && <div className="error-msg">{error}</div>}
-      {tab === 'business' && <BusinessTab settings={settings} onSave={save} saving={saving} />}
+      {tab === 'business' && (
+        <>
+          <AutomationTestModePanel settings={settings} onSave={save} onReload={loadSettings} saving={saving} updateTenant={updateTenant} />
+          <BusinessTab settings={settings} onSave={save} saving={saving} />
+        </>
+      )}
       {tab === 'followup' && <FollowupTab settings={settings} onSave={save} saving={saving} />}
       {tab === 'email' && <EmailTab settings={settings} onSave={save} saving={saving} />}
       {tab === 'integration' && <IntegrationTab settings={settings} onSave={save} onReload={loadSettings} saving={saving} />}
+    </div>
+  );
+}
+
+/* ==================== AUTOMATION TEST MODE ==================== */
+function AutomationTestModePanel({ settings, onSave, onReload, saving, updateTenant }) {
+  const automation = settings.automation || {};
+  const [testPhone, setTestPhone] = useState(automation.testPhone || '');
+  const [testEmail, setTestEmail] = useState(automation.testEmail || '');
+  const [goingLive, setGoingLive] = useState(false);
+
+  useEffect(() => {
+    setTestPhone(automation.testPhone || '');
+    setTestEmail(automation.testEmail || '');
+  }, [automation.testPhone, automation.testEmail]);
+
+  const testMode = !!automation.testMode;
+
+  const saveTestConfig = (e) => {
+    e.preventDefault();
+    onSave({
+      automation: {
+        testMode: true,
+        testPhone,
+        testEmail,
+      },
+    });
+  };
+
+  const handleGoLive = async () => {
+    const msg = 'Go live? Pending appointment automations will be cancelled. New automations will go to real clients.';
+    if (!window.confirm(msg)) return;
+    setGoingLive(true);
+    try {
+      const result = await api.post('/settings/automation-go-live');
+      updateTenant({ automationTestMode: false });
+      await onReload();
+      alert(
+        result.cancelledPendingJobs > 0
+          ? `You are live. Cancelled ${result.cancelledPendingJobs} pending automation job(s).`
+          : 'You are live. Automations will now go to real clients.',
+      );
+    } catch (err) {
+      alert(err.message || 'Failed to go live');
+    } finally {
+      setGoingLive(false);
+    }
+  };
+
+  return (
+    <div className={`settings-card automation-test-mode-card${testMode ? ' test-mode-active' : ''}`}>
+      <div className="automation-test-mode-header">
+        <div>
+          <h3>Automation Test Mode</h3>
+          <p className="settings-desc">
+            While test mode is on, SMS and email automations (appointments, campaigns) are routed to your test phone and email — not your clients.
+            Manual messages from Conversations are not rerouted.
+          </p>
+        </div>
+        <span className={`test-mode-status-badge ${testMode ? 'on' : 'live'}`}>
+          {testMode ? 'Test Mode ON' : 'Live'}
+        </span>
+      </div>
+
+      {testMode ? (
+        <form onSubmit={saveTestConfig}>
+          <div className="field-row">
+            <div className="field">
+              <label>Test phone number</label>
+              <input
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="+15551234567"
+                required
+              />
+              <span className="field-hint">All automation SMS go here with a [TEST → Client Name] prefix.</span>
+            </div>
+            <div className="field">
+              <label>Test email (optional)</label>
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+              <span className="field-hint">Required only if you use email automations. Without it, email automations are blocked in test mode.</span>
+            </div>
+          </div>
+          <div className="automation-test-mode-actions">
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving…' : 'Save test settings'}
+            </button>
+            <button
+              type="button"
+              className="btn-primary btn-go-live"
+              onClick={handleGoLive}
+              disabled={goingLive || !testPhone.trim()}
+            >
+              {goingLive ? 'Going live…' : 'Go Live'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div>
+          {automation.liveAt && (
+            <p className="field-hint" style={{ marginBottom: 12 }}>
+              Went live {new Date(automation.liveAt).toLocaleString()}.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={() => onSave({ automation: { testMode: true, testPhone, testEmail } })}
+            disabled={saving}
+          >
+            Re-enable test mode
+          </button>
+        </div>
+      )}
     </div>
   );
 }

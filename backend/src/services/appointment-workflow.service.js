@@ -281,6 +281,7 @@ const sendAppointmentEmail = async (tenantId, contactId, to, tenant, subject, bo
     }
     await emailService.sendEmail({
       tenantId,
+      contactId,
       to,
       fromName: tenant.email_from_name || tenant.name,
       fromAddress: tenant.email_from_address || undefined,

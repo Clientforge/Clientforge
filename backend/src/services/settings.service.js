@@ -6,6 +6,7 @@ const smsProviderService = require('./sms-provider.service');
 const googleCalendarService = require('./googleCalendar.service');
 const squareService = require('./square.service');
 const instagramService = require('./instagram.service');
+const { normalizePhone } = require('./lead.service');
 
 const getSettings = async (tenantId) => {
   const result = await db.query(
@@ -14,7 +15,8 @@ const getSettings = async (tenantId) => {
             email_from_name, email_from_address, calendly_webhook_signing_key,
             optimantra_webhook_secret,
             ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
-            sms_keyword_welcome_message, ui_mode, created_at
+            sms_keyword_welcome_message, ui_mode, automation_test_mode, automation_test_phone,
+            automation_test_email, automation_live_at, created_at
      FROM tenants WHERE id = $1`,
     [tenantId],
   );
@@ -93,6 +95,12 @@ const getSettings = async (tenantId) => {
       fromName: t.email_from_name || '',
       fromAddress: t.email_from_address || '',
     },
+    automation: {
+      testMode: !!t.automation_test_mode,
+      testPhone: t.automation_test_phone || '',
+      testEmail: t.automation_test_email || '',
+      liveAt: t.automation_live_at,
+    },
     followup: {
       schedule: config.schedule || DEFAULT_SCHEDULE,
       outreachWindow: config.outreach_window || DEFAULT_OUTREACH_WINDOW,
@@ -166,6 +174,23 @@ const updateSettings = async (tenantId, updates) => {
   if (updates.email) {
     if (updates.email.fromName !== undefined) { sets.push(`email_from_name = $${idx++}`); params.push(updates.email.fromName); }
     if (updates.email.fromAddress !== undefined) { sets.push(`email_from_address = $${idx++}`); params.push(updates.email.fromAddress); }
+  }
+
+  if (updates.automation) {
+    if (updates.automation.testMode !== undefined) {
+      sets.push(`automation_test_mode = $${idx++}`);
+      params.push(!!updates.automation.testMode);
+    }
+    if (updates.automation.testPhone !== undefined) {
+      const phone = (updates.automation.testPhone || '').trim();
+      sets.push(`automation_test_phone = $${idx++}`);
+      params.push(phone ? normalizePhone(phone) : null);
+    }
+    if (updates.automation.testEmail !== undefined) {
+      const email = (updates.automation.testEmail || '').trim().toLowerCase();
+      sets.push(`automation_test_email = $${idx++}`);
+      params.push(email || null);
+    }
   }
 
   if (followup) {

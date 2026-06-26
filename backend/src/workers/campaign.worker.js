@@ -61,6 +61,7 @@ const processPendingCampaignMessages = async () => {
 
         const emailResult = await emailService.sendEmail({
           tenantId: msg.tenant_id,
+          contactId: msg.contact_id,
           to: msg.email,
           fromName: msg.email_from_name,
           fromAddress: msg.email_from_address,

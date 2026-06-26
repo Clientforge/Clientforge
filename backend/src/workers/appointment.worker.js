@@ -92,6 +92,7 @@ const processDueAppointmentJobs = async () => {
         }
         await emailService.sendEmail({
           tenantId: job.tenant_id,
+          contactId: job.contact_id,
           to: job.email,
           fromName: job.email_from_name || job.tenant_name,
           fromAddress: job.email_from_address || undefined,

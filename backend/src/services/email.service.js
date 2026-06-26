@@ -1,4 +1,5 @@
 const config = require('../config');
+const { resolveEmailDestination } = require('./automation-test-mode.service');
 
 // Extract email from "Name <email@domain.com>" or return as-is if it's already just an email
 const getEmailFromDefault = (defaultFrom) => {
@@ -6,12 +7,30 @@ const getEmailFromDefault = (defaultFrom) => {
   return match ? match[1] : defaultFrom;
 };
 
-const sendEmail = async ({ tenantId, to, fromName, fromAddress, subject, body }) => {
+const sendEmail = async ({ tenantId, to, contactId, fromName, fromAddress, subject, body }) => {
   const defaultEmail = getEmailFromDefault(config.email.defaultFrom);
   const safeName = (fromName || '').replace(/[<>[\]]/g, '').trim();
   const from = safeName
     ? `${safeName} <${fromAddress || defaultEmail}>`
     : config.email.defaultFrom;
+
+  let destinationTo = to;
+  let destinationSubject = subject;
+  let destinationBody = body;
+
+  if (tenantId) {
+    const routed = await resolveEmailDestination(tenantId, { contactId, to, subject, body });
+    if (routed.skipped) {
+      console.warn(`[TEST-MODE] Email blocked for tenant ${tenantId} — ${routed.reason}`);
+      return { id: null, status: 'skipped', reason: routed.reason };
+    }
+    destinationTo = routed.to;
+    destinationSubject = routed.subject;
+    destinationBody = routed.body;
+    if (routed.testMode) {
+      console.log(`[TEST-MODE] Email rerouted from ${routed.intendedTo} → ${destinationTo}`);
+    }
+  }
 
   if (config.email.mode === 'live') {
     try {
@@ -20,22 +39,22 @@ const sendEmail = async ({ tenantId, to, fromName, fromAddress, subject, body })
 
       const { data, error } = await resend.emails.send({
         from,
-        to: [to],
-        subject,
-        html: formatEmailHtml(body, subject),
+        to: [destinationTo],
+        subject: destinationSubject,
+        html: formatEmailHtml(destinationBody, destinationSubject),
       });
 
       // Resend SDK does NOT throw - it returns { data, error }
       if (error) {
-        console.error(`[EMAIL][LIVE] Failed to send to ${to}:`, error.message || JSON.stringify(error));
+        console.error(`[EMAIL][LIVE] Failed to send to ${destinationTo}:`, error.message || JSON.stringify(error));
         return { id: null, status: 'failed', error: error.message };
       }
 
       const resendId = data?.id;
-      console.log(`[EMAIL][LIVE] Sent to ${to}, id: ${resendId ?? 'undefined'}`);
+      console.log(`[EMAIL][LIVE] Sent to ${destinationTo}, id: ${resendId ?? 'undefined'}`);
       return { id: resendId, status: 'sent' };
     } catch (err) {
-      console.error(`[EMAIL][LIVE] Failed to send to ${to}: ${err.message}`);
+      console.error(`[EMAIL][LIVE] Failed to send to ${destinationTo}: ${err.message}`);
       return { id: null, status: 'failed', error: err.message };
     }
   }
@@ -43,10 +62,10 @@ const sendEmail = async ({ tenantId, to, fromName, fromAddress, subject, body })
   // Mock mode
   const mockId = `MOCK_EMAIL_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   console.log(`\n[EMAIL][MOCK] ─────────────────────────────────`);
-  console.log(`  To:      ${to}`);
+  console.log(`  To:      ${destinationTo}`);
   console.log(`  From:    ${from}`);
-  console.log(`  Subject: ${subject}`);
-  console.log(`  Body:    ${body.substring(0, 120)}...`);
+  console.log(`  Subject: ${destinationSubject}`);
+  console.log(`  Body:    ${destinationBody.substring(0, 120)}...`);
   console.log(`[EMAIL][MOCK] ─────────────────────────────────\n`);
 
   return { id: mockId, status: 'sent' };

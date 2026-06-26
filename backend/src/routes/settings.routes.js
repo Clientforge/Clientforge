@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const settingsService = require('../services/settings.service');
 const aiService = require('../services/ai.service');
+const automationTestModeService = require('../services/automation-test-mode.service');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -39,6 +40,14 @@ router.post('/refine-followups', async (req, res, next) => {
     }
     const schedule = await aiService.refineFollowUpMessages(req.tenantId, currentSchedule || [], instruction);
     res.json({ schedule });
+  } catch (err) { next(err); }
+});
+
+router.post('/automation-go-live', async (req, res, next) => {
+  try {
+    const result = await automationTestModeService.goLive(req.tenantId);
+    const settings = await settingsService.getSettings(req.tenantId);
+    res.json({ ...result, settings });
   } catch (err) { next(err); }
 });
 

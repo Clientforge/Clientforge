@@ -55,9 +55,9 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
 
     // 2. Create tenant
     const tenantResult = await client.query(
-      `INSERT INTO tenants (name, industry)
-       VALUES ($1, $2)
-       RETURNING id, name, industry, timezone, plan, created_at`,
+      `INSERT INTO tenants (name, industry, automation_test_mode)
+       VALUES ($1, $2, true)
+       RETURNING id, name, industry, timezone, plan, automation_test_mode, created_at`,
       [businessName, industry || null],
     );
     const tenant = tenantResult.rows[0];
@@ -101,6 +101,7 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
       industry: tenant.industry,
       plan: tenant.plan,
       uiMode: tenant.ui_mode || 'simple',
+      automationTestMode: !!tenant.automation_test_mode,
     },
       ...tokens,
     };
@@ -118,7 +119,8 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
 const login = async ({ email, password }) => {
   const result = await db.query(
     `SELECT u.id, u.tenant_id, u.email, u.password_hash, u.first_name, u.last_name, u.role, u.active,
-            t.name as tenant_name, t.plan as tenant_plan, t.active as tenant_active, t.ui_mode as tenant_ui_mode
+            t.name as tenant_name, t.plan as tenant_plan, t.active as tenant_active, t.ui_mode as tenant_ui_mode,
+            t.automation_test_mode as tenant_automation_test_mode
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.email = $1`,
@@ -174,6 +176,7 @@ const login = async ({ email, password }) => {
       name: user.tenant_name,
       plan: user.tenant_plan,
       uiMode: user.tenant_ui_mode || 'simple',
+      automationTestMode: !!user.tenant_automation_test_mode,
     },
     ...tokens,
   };
@@ -219,7 +222,8 @@ const getProfile = async (userId) => {
   const result = await db.query(
     `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.created_at,
             t.id as tenant_id, t.name as tenant_name, t.industry, t.plan,
-            t.phone_number, t.booking_link, t.timezone, t.ui_mode
+            t.phone_number, t.booking_link, t.timezone, t.ui_mode,
+            t.automation_test_mode, t.automation_test_phone, t.automation_test_email, t.automation_live_at
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.id = $1`,
@@ -253,6 +257,10 @@ const getProfile = async (userId) => {
       bookingLink: row.booking_link,
       timezone: row.timezone,
       uiMode: row.ui_mode || 'simple',
+      automationTestMode: !!row.automation_test_mode,
+      automationTestPhone: row.automation_test_phone || '',
+      automationTestEmail: row.automation_test_email || '',
+      automationLiveAt: row.automation_live_at,
     },
   };
 };

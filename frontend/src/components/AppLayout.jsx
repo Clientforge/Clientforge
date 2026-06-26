@@ -183,6 +183,15 @@ export default function AppLayout() {
       </aside>
 
       <main className="main-content">
+        {tenant?.automationTestMode && (
+          <div className="test-mode-banner" role="status">
+            <span className="test-mode-banner-icon" aria-hidden>⚠</span>
+            <span>
+              <strong>Test Mode</strong> — appointment and campaign automations are sent to your test number/email, not real clients.
+            </span>
+            <NavLink to="/settings" className="test-mode-banner-link">Configure in Settings</NavLink>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>
