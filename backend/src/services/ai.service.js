@@ -255,6 +255,27 @@ ${jsonFormat}`;
 /**
  * Generate a short SMS reply to an inbound message (requires OPENAI_API_KEY).
  */
+const BOOKING_INTENT_RE = /\b(book(?:ing)?|schedule|appointment|available|availability|link|reserve|reserv(?:e|ation)|slot|when\s+can\s+i|how\s+(?:do|can)\s+i\s+(?:book|schedule)|sign\s*up|set\s+up\s+an?\s+appointment)\b/i;
+
+const GREETING_ONLY_RE = /^(hi|hello|hey|good\s+(?:morning|afternoon|evening)|howdy|yo|sup|what'?s\s+up)[!.?\s]*$/i;
+
+const bookingLinkAlreadyInThread = (recentMessages, bookingLink) => {
+  if (!bookingLink || !recentMessages?.length) return false;
+  const needle = bookingLink.trim().toLowerCase();
+  try {
+    const host = new URL(needle.startsWith('http') ? needle : `https://${needle}`).host.toLowerCase();
+    return recentMessages.some(
+      (m) => m.direction === 'outbound'
+        && m.body
+        && (m.body.toLowerCase().includes(needle) || m.body.toLowerCase().includes(host)),
+    );
+  } catch {
+    return recentMessages.some(
+      (m) => m.direction === 'outbound' && m.body && m.body.toLowerCase().includes(needle),
+    );
+  }
+};
+
 const generateInboundSmsReply = async (tenantId, {
   firstName,
   inboundBody,
@@ -271,29 +292,50 @@ const generateInboundSmsReply = async (tenantId, {
   }
 
   const t = result.rows[0];
-  const hasBookingLink = !!(t.booking_link && String(t.booking_link).trim());
+  const bookingLink = (t.booking_link || '').trim();
+  const hasBookingLink = !!bookingLink;
+  const linkAlreadySent = bookingLinkAlreadyInThread(recentMessages, bookingLink);
+  const wantsBooking = BOOKING_INTENT_RE.test(inboundBody || '');
+  const isGreetingOnly = GREETING_ONLY_RE.test((inboundBody || '').trim());
+
   const threadLines = (recentMessages || [])
     .map((m) => `${m.direction === 'inbound' ? 'Them' : 'Us'}: ${(m.body || '').slice(0, 500)}`)
     .join('\n');
 
-  const bookingLinkRule = hasBookingLink
-    ? `- A booking link IS configured. If they ask about booking, scheduling, availability, or a link, share it: ${t.booking_link.trim()}
-- NEVER say there is no booking link or that online booking is unavailable.`
-    : `- No booking link is configured. Do not invent a URL; offer to help them book another way if needed.`;
+  let bookingLinkRule;
+  if (!hasBookingLink) {
+    bookingLinkRule = `- No booking link is configured. Do not invent a URL; offer to help them book another way only if they ask about scheduling.`;
+  } else if (linkAlreadySent) {
+    bookingLinkRule = `- A booking link was already sent in this conversation. Do NOT paste the URL again unless they explicitly ask for the link again or say they cannot find it.
+- NEVER say there is no booking link or that online booking is unavailable.
+- Booking link (reference only — do not repeat unless asked): ${bookingLink}`;
+  } else if (wantsBooking) {
+    bookingLinkRule = `- They are asking about booking/scheduling. Share the booking link: ${bookingLink}
+- NEVER say there is no booking link or that online booking is unavailable.`;
+  } else if (isGreetingOnly) {
+    bookingLinkRule = `- This is a greeting only. Reply warmly and offer to help — do NOT include the booking link yet.
+- Booking link (hold until they ask about booking): ${bookingLink}`;
+  } else {
+    bookingLinkRule = `- Answer their question directly using the business profile. Do NOT include the booking link in this reply.
+- Only mention booking if a brief soft close fits naturally (e.g. "Happy to help if you want to book later") — without pasting the URL.
+- If they later ask about booking, scheduling, availability, or a link, share: ${bookingLink}
+- NEVER say there is no booking link or that online booking is unavailable.`;
+  }
 
   const prompt = `You are replying via SMS on behalf of a local business. Write ONE reply to the customer's latest message.
 
-AUTHORITATIVE BUSINESS PROFILE (this is the single source of truth — always prefer it over anything in the thread):
+Your job is to be helpful and build trust — like a good front desk person. Answer what they asked. Do not push booking unless they bring it up or clearly want to schedule.
+
+AUTHORITATIVE BUSINESS PROFILE (single source of truth for facts):
 - Name: ${t.name}
 - Industry: ${t.industry || 'services'}
 - Description: ${t.description || 'A customer-focused business'}
 - Audience: ${t.target_audience || 'local customers'}
 - Tone: ${t.tone || 'friendly'}
-- Booking link: ${hasBookingLink ? t.booking_link.trim() : '(not set)'}
 
 FIRST NAME (if known): ${firstName || 'there'}
 
-RECENT SMS THREAD (oldest first) — tone and continuity only. Messages before the profile was last updated are omitted; anything still shown may be outdated — never copy stale claims from "Us:" lines.
+RECENT SMS THREAD (oldest first) — continuity and tone only. Do not copy sales CTAs or repeated links from prior "Us:" messages.
 
 ${threadLines || '(no prior messages since profile update)'}
 
@@ -301,11 +343,13 @@ THEIR LATEST MESSAGE:
 ${inboundBody}
 
 RULES:
-- Reply in ${t.tone || 'friendly'} tone; be helpful and concise.
+- Reply in ${t.tone || 'friendly'} tone; be helpful, natural, and concise.
+- Answer ONLY what they asked — do not add unrelated info or extra CTAs.
 - Maximum 300 characters (aim for one SMS segment when possible).
 - No markdown, no bullet lists, no emojis unless essential.
 - Facts about the business must match the AUTHORITATIVE BUSINESS PROFILE only.
 ${bookingLinkRule}
+- Do not ask them to list name, phone, email, and service details unless they want to book by message and no online link applies.
 - Do not claim discounts or legal facts unless implied in the description above.
 - If they opted out or said STOP, apologize briefly and do not market (still comply — but normally we block those before calling you).
 
