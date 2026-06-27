@@ -271,25 +271,31 @@ const generateInboundSmsReply = async (tenantId, {
   }
 
   const t = result.rows[0];
+  const hasBookingLink = !!(t.booking_link && String(t.booking_link).trim());
   const threadLines = (recentMessages || [])
     .map((m) => `${m.direction === 'inbound' ? 'Them' : 'Us'}: ${(m.body || '').slice(0, 500)}`)
     .join('\n');
 
+  const bookingLinkRule = hasBookingLink
+    ? `- A booking link IS configured. If they ask about booking, scheduling, availability, or a link, share it: ${t.booking_link.trim()}
+- NEVER say there is no booking link or that online booking is unavailable.`
+    : `- No booking link is configured. Do not invent a URL; offer to help them book another way if needed.`;
+
   const prompt = `You are replying via SMS on behalf of a local business. Write ONE reply to the customer's latest message.
 
-AUTHORITATIVE BUSINESS PROFILE (use ONLY this for what the business offers, services, positioning, and current details — it was just updated in their dashboard):
+AUTHORITATIVE BUSINESS PROFILE (this is the single source of truth — always prefer it over anything in the thread):
 - Name: ${t.name}
 - Industry: ${t.industry || 'services'}
 - Description: ${t.description || 'A customer-focused business'}
 - Audience: ${t.target_audience || 'local customers'}
 - Tone: ${t.tone || 'friendly'}
-- Booking link (share only if naturally relevant): ${t.booking_link || '(not set)'}
+- Booking link: ${hasBookingLink ? t.booking_link.trim() : '(not set)'}
 
 FIRST NAME (if known): ${firstName || 'there'}
 
-RECENT SMS THREAD (oldest first) — for conversation flow and what was already said to this person only. Older outbound messages may contain OUTDATED business wording; do NOT repeat or blend stale offers, services, or claims from the thread. If thread and the profile above conflict, always follow the profile.
+RECENT SMS THREAD (oldest first) — tone and continuity only. Messages before the profile was last updated are omitted; anything still shown may be outdated — never copy stale claims from "Us:" lines.
 
-${threadLines || '(no prior messages)'}
+${threadLines || '(no prior messages since profile update)'}
 
 THEIR LATEST MESSAGE:
 ${inboundBody}
@@ -299,6 +305,7 @@ RULES:
 - Maximum 300 characters (aim for one SMS segment when possible).
 - No markdown, no bullet lists, no emojis unless essential.
 - Facts about the business must match the AUTHORITATIVE BUSINESS PROFILE only.
+${bookingLinkRule}
 - Do not claim discounts or legal facts unless implied in the description above.
 - If they opted out or said STOP, apologize briefly and do not market (still comply — but normally we block those before calling you).
 

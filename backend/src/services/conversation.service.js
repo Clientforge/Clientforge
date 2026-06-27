@@ -434,19 +434,32 @@ const getEffectiveAiAutoReply = async (tenantId, participantType, participantId)
 
 /**
  * Recent thread lines for AI context (newest last).
+ * Excludes messages from before the tenant last updated their AI knowledge profile
+ * so stale bot replies do not override current booking link / business details.
  */
 const getRecentThreadMessagesForAi = async (tenantId, participantType, participantId, limit = 12) => {
-  const q =
-    participantType === 'lead'
-      ? `SELECT direction, body FROM messages
-         WHERE tenant_id = $1 AND lead_id = $2
-         ORDER BY created_at DESC
-         LIMIT $3`
-      : `SELECT direction, body FROM messages
-         WHERE tenant_id = $1 AND contact_id = $2
-         ORDER BY created_at DESC
-         LIMIT $3`;
-  const result = await db.query(q, [tenantId, participantId, limit]);
+  const tenantRow = await db.query(
+    'SELECT ai_knowledge_updated_at FROM tenants WHERE id = $1',
+    [tenantId],
+  );
+  const knowledgeSince = tenantRow.rows[0]?.ai_knowledge_updated_at;
+
+  const participantCol = participantType === 'lead' ? 'lead_id' : 'contact_id';
+  const params = [tenantId, participantId];
+  let timeFilter = '';
+  if (knowledgeSince) {
+    params.push(knowledgeSince);
+    timeFilter = ` AND created_at >= $${params.length}`;
+  }
+  params.push(limit);
+
+  const result = await db.query(
+    `SELECT direction, body FROM messages
+     WHERE tenant_id = $1 AND ${participantCol} = $2${timeFilter}
+     ORDER BY created_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
   return result.rows.reverse();
 };
 

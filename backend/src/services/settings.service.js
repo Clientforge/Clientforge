@@ -8,6 +8,25 @@ const squareService = require('./square.service');
 const instagramService = require('./instagram.service');
 const { normalizePhone } = require('./lead.service');
 
+const AI_KNOWLEDGE_FIELD_MAP = [
+  ['name', 'name'],
+  ['industry', 'industry'],
+  ['description', 'description'],
+  ['targetAudience', 'target_audience'],
+  ['tone', 'tone'],
+  ['bookingLink', 'booking_link'],
+];
+
+const knowledgeProfileChanged = (business, currentRow) => {
+  if (!business || !currentRow) return false;
+  return AI_KNOWLEDGE_FIELD_MAP.some(([apiKey, col]) => {
+    if (business[apiKey] === undefined) return false;
+    const newVal = String(business[apiKey] ?? '').trim();
+    const oldVal = String(currentRow[col] ?? '').trim();
+    return newVal !== oldVal;
+  });
+};
+
 const getSettings = async (tenantId) => {
   const result = await db.query(
     `SELECT id, name, industry, timezone, phone_number, sms_provider, booking_link,
@@ -213,6 +232,17 @@ const updateSettings = async (tenantId, updates) => {
 
   if (sets.length === 0) {
     return getSettings(tenantId);
+  }
+
+  if (business && AI_KNOWLEDGE_FIELD_MAP.some(([apiKey]) => business[apiKey] !== undefined)) {
+    const currentRow = await db.query(
+      `SELECT name, industry, description, target_audience, tone, booking_link
+       FROM tenants WHERE id = $1`,
+      [tenantId],
+    );
+    if (knowledgeProfileChanged(business, currentRow.rows[0])) {
+      sets.push('ai_knowledge_updated_at = NOW()');
+    }
   }
 
   sets.push(`updated_at = NOW()`);
