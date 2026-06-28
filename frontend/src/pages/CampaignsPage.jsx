@@ -120,10 +120,10 @@ export default function CampaignsPage() {
 }
 
 function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
-  const [launching, setLaunching] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
   const [audiencePreview, setAudiencePreview] = useState(null);
+  const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const s = STATUS_STYLES[campaign.status] || STATUS_STYLES.draft;
 
   const unique = campaign.linkUniqueClicks ?? 0;
@@ -136,19 +136,8 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
     setExpanded(!expanded);
   };
 
-  const handleLaunch = async () => {
-    const waveCount = (campaign.schedule || []).length || 1;
-    const ch = CHANNEL_LABELS[campaign.channel] || 'SMS';
-    const tagNote = campaign.audienceFilter?.tag
-      ? ` Tag: "${campaign.audienceFilter.tag}".`
-      : '';
-    const msg = `Launch "${campaign.name}"? ${waveCount} wave(s) via ${ch} to all matching contacts.${tagNote} Use Preview to see the list.`;
-    if (!window.confirm(msg)) return;
-    setLaunching(true);
-    try { await api.post(`/campaigns/${campaign.id}/launch`); onRefresh(); }
-    catch (err) { alert(err.message); }
-    finally { setLaunching(false); }
-  };
+  const canLaunch = ['draft', 'sending', 'completed'].includes(campaign.status);
+  const launchLabel = campaign.status === 'draft' ? 'Launch' : 'Send next batch';
 
   const waveCount = (campaign.schedule || []).length;
   const ch = campaign.channel || 'sms';
@@ -192,7 +181,7 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
         </td>
         <td className="muted">{formatDate(campaign.createdAt)}</td>
         <td onClick={(e) => e.stopPropagation()}>
-          {campaign.status === 'draft' && (
+          {canLaunch && (
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
                 type="button"
@@ -204,10 +193,9 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
               <button
                 type="button"
                 className="btn btn-sm btn-primary"
-                onClick={handleLaunch}
-                disabled={launching}
+                onClick={() => setLaunchModalOpen(true)}
               >
-                {launching ? 'Launching...' : 'Launch'}
+                {launchLabel}
               </button>
             </div>
           )}
@@ -222,6 +210,16 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
           title={`Recipients · ${audiencePreview.name}`}
           campaignId={audiencePreview.id}
           channel={campaign.channel}
+        />
+      )}
+      {launchModalOpen && (
+        <LaunchCampaignModal
+          campaign={campaign}
+          onClose={() => setLaunchModalOpen(false)}
+          onSuccess={() => {
+            setLaunchModalOpen(false);
+            onRefresh();
+          }}
         />
       )}
     </>
@@ -386,6 +384,180 @@ const CHANNEL_RECIPIENT_HINT = {
   both: 'Requires both phone and email. Unsubscribed contacts are excluded.',
 };
 
+function batchSummaryLine(data) {
+  if (!data) return null;
+  const parts = [`${data.total} eligible contact${data.total === 1 ? '' : 's'}`];
+  if (data.alreadyLaunched > 0) {
+    parts.push(`${data.alreadyLaunched} already queued`);
+    parts.push(`${data.remaining} remaining`);
+  }
+  if (data.batchMode && data.batchMode !== 'all' && data.batchContactCount != null) {
+    if (data.batchStart && data.batchEnd) {
+      parts.push(`this batch: ${data.batchContactCount} (positions ${data.batchStart}–${data.batchEnd})`);
+    } else {
+      parts.push(`this batch: ${data.batchContactCount}`);
+    }
+  }
+  return parts.join(' · ');
+}
+
+function LaunchCampaignModal({ campaign, onClose, onSuccess }) {
+  const [batchMode, setBatchMode] = useState('first');
+  const [batchSize, setBatchSize] = useState(100);
+  const [rangeStart, setRangeStart] = useState(1);
+  const [rangeEnd, setRangeEnd] = useState(100);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [launching, setLaunching] = useState(false);
+  const [error, setError] = useState('');
+  const [rangeInitialized, setRangeInitialized] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const params = new URLSearchParams();
+        params.set('batchMode', batchMode);
+        if (batchMode === 'first') params.set('batchSize', String(batchSize));
+        if (batchMode === 'range') {
+          params.set('rangeStart', String(rangeStart));
+          params.set('rangeEnd', String(rangeEnd));
+        }
+        const data = await api.get(`/campaigns/${campaign.id}/preview-audience?${params}`);
+        if (!cancelled) {
+          setPreview(data);
+          if (!rangeInitialized) {
+            if (data.alreadyLaunched > 0) {
+              const nextStart = data.alreadyLaunched + 1;
+              setBatchMode('range');
+              setRangeStart(nextStart);
+              setRangeEnd(Math.min(nextStart + batchSize - 1, data.total));
+            }
+            setRangeInitialized(true);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load audience');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [campaign.id, batchMode, batchSize, rangeStart, rangeEnd, rangeInitialized]);
+
+  const handleLaunch = async () => {
+    setLaunching(true);
+    setError('');
+    try {
+      const body = { batchMode };
+      if (batchMode === 'first') body.batchSize = batchSize;
+      if (batchMode === 'range') {
+        body.rangeStart = rangeStart;
+        body.rangeEnd = rangeEnd;
+      }
+      await api.post(`/campaigns/${campaign.id}/launch`, body);
+      onSuccess();
+    } catch (err) {
+      setError(err.message || 'Launch failed');
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  const batchCount = preview?.launchableCount ?? preview?.batchContactCount ?? 0;
+  const canLaunch = !loading && batchCount > 0;
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{campaign.status === 'draft' ? 'Launch campaign' : 'Send next batch'}</h2>
+          <button type="button" className="modal-close" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <p className="modal-desc" style={{ marginTop: 0 }}>
+            <strong>{campaign.name}</strong>
+            {' · '}
+            {(campaign.schedule || []).length} wave{(campaign.schedule || []).length === 1 ? '' : 's'}
+            {' · '}
+            {CHANNEL_LABELS[campaign.channel || 'sms']}
+          </p>
+          {error && <div className="form-error">{error}</div>}
+          {loading && <div className="page-loader">Loading audience…</div>}
+          {!loading && preview && (
+            <>
+              <p className="audience-preview-total">{batchSummaryLine(preview)}</p>
+              <div className="form-group">
+                <label>Send to</label>
+                <div className="batch-mode-options">
+                  <label className="batch-mode-option">
+                    <input type="radio" name="batchMode" value="first" checked={batchMode === 'first'} onChange={() => setBatchMode('first')} />
+                    <span>First</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={preview.total || 9999}
+                      value={batchSize}
+                      onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      disabled={batchMode !== 'first'}
+                      className="batch-size-input"
+                    />
+                    <span>contacts</span>
+                  </label>
+                  <label className="batch-mode-option">
+                    <input type="radio" name="batchMode" value="range" checked={batchMode === 'range'} onChange={() => setBatchMode('range')} />
+                    <span>Range</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={preview.total || 9999}
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      disabled={batchMode !== 'range'}
+                      className="batch-size-input"
+                    />
+                    <span>–</span>
+                    <input
+                      type="number"
+                      min={rangeStart}
+                      max={preview.total || 9999}
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(Math.max(rangeStart, parseInt(e.target.value, 10) || rangeStart))}
+                      disabled={batchMode !== 'range'}
+                      className="batch-size-input"
+                    />
+                  </label>
+                  <label className="batch-mode-option">
+                    <input type="radio" name="batchMode" value="all" checked={batchMode === 'all'} onChange={() => setBatchMode('all')} />
+                    <span>All matching contacts ({preview.total})</span>
+                  </label>
+                </div>
+                <p className="hint" style={{ marginTop: '0.5rem' }}>
+                  Contacts are ordered by last name, then first name. Smaller batches reduce spam-filter risk.
+                  {preview.alreadyLaunched > 0 && ' Contacts already queued for this campaign are skipped automatically.'}
+                </p>
+              </div>
+              {batchCount === 0 && (
+                <p className="form-error" style={{ marginTop: 0 }}>
+                  No contacts in this batch — try a different range or check that recipients remain.
+                </p>
+              )}
+            </>
+          )}
+          <div className="modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="button" className="btn btn-primary" onClick={handleLaunch} disabled={!canLaunch || launching}>
+              {launching ? 'Launching…' : `Send to ${batchCount || 0} contact${batchCount === 1 ? '' : 's'}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Fetches the same audience as campaign launch: optional tag, channel address requirements.
  * Pass either campaignId (saved draft) or audienceFilter + channel (composer).
@@ -436,8 +608,12 @@ function AudiencePreviewModal({ onClose, title, campaignId, audienceFilter, chan
           {data && (
             <>
               <p className="audience-preview-total">
-                <strong>{data.total}</strong> contact{data.total === 1 ? '' : 's'}
-                {data.truncated ? ` (showing first ${data.contacts.length})` : ''} match.
+                {batchSummaryLine(data) || (
+                  <>
+                    <strong>{data.total}</strong> contact{data.total === 1 ? '' : 's'}
+                    {data.truncated ? ` (showing first ${data.contacts.length})` : ''} match.
+                  </>
+                )}
               </p>
               {data.total === 0 && <p className="muted">No one matches. Adjust the tag or add contacts with the required address fields.</p>}
               {data.contacts && data.contacts.length > 0 && (
@@ -924,7 +1100,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
 
               <div className="review-note">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#6366f1" strokeWidth="2"/><path d="M12 16v-4M12 8h.01" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/></svg>
-                <span>If a contact replies, remaining waves are skipped. Unsubscribed contacts are never messaged.</span>
+                <span>If a contact replies, remaining waves are skipped. Unsubscribed contacts are never messaged. When you launch, you can send in batches (e.g. 100 at a time) for better deliverability.</span>
               </div>
 
               <div className="save-as-template-row">

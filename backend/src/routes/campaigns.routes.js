@@ -49,11 +49,23 @@ router.post('/from-template/:templateId', async (req, res, next) => {
 /** Resolve who would receive a campaign: same rules as launch (tag, channel, opt-in fields). */
 router.post('/preview-audience', async (req, res, next) => {
   try {
-    const { audienceFilter, channel, limit } = req.body || {};
+    const {
+      audienceFilter,
+      channel,
+      limit,
+      batchMode,
+      batchSize,
+      rangeStart,
+      rangeEnd,
+    } = req.body || {};
     const data = await campaignService.previewAudience(req.tenantId, {
       audienceFilter,
       channel,
       limit,
+      batchMode,
+      batchSize,
+      rangeStart,
+      rangeEnd,
     });
     res.json(data);
   } catch (err) { next(err); }
@@ -107,7 +119,22 @@ router.put('/:id', async (req, res, next) => {
 
 router.post('/:id/launch', async (req, res, next) => {
   try {
-    const result = await campaignService.launchCampaign(req.tenantId, req.params.id);
+    const {
+      batchMode,
+      batchSize,
+      rangeStart,
+      rangeEnd,
+      limit,
+      offset,
+    } = req.body || {};
+    const result = await campaignService.launchCampaign(req.tenantId, req.params.id, {
+      batchMode,
+      batchSize,
+      rangeStart,
+      rangeEnd,
+      limit,
+      offset,
+    });
     res.json({ message: 'Campaign launched', ...result });
   } catch (err) { next(err); }
 });

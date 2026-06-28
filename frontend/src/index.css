@@ -902,6 +902,9 @@ a:hover { text-decoration: underline; }
 .audience-preview-total { font-size: 0.9rem; margin: 0 0 0.75rem; }
 .audience-preview-table .audience-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.8rem; }
 .audience-preview-table-wrap { max-height: 50vh; overflow: auto; }
+.batch-mode-options { display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.35rem; }
+.batch-mode-option { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-size: 0.9rem; cursor: pointer; }
+.batch-size-input { width: 4.5rem; padding: 0.35rem 0.5rem; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 0.875rem; }
 .link-clicks-table-wrap { max-height: 360px; overflow: auto; border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
 .link-clicks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .link-clicks-table th,

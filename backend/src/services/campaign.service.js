@@ -2,6 +2,38 @@ const db = require('../db/connection');
 
 const PREVIEW_MAX = 2000;
 
+const AUDIENCE_ORDER_BY = `LOWER(COALESCE(last_name, '')), LOWER(COALESCE(first_name, ''))`;
+
+/**
+ * Normalize batch launch/preview options.
+ * @returns {{ mode: string, limit: number|null, offset: number, rangeStart?: number, rangeEnd?: number }}
+ */
+const parseBatchOptions = (options = {}) => {
+  if (options.limit != null || options.offset != null) {
+    const limit = options.limit != null ? Math.max(1, parseInt(options.limit, 10) || 1) : null;
+    const offset = Math.max(0, parseInt(options.offset, 10) || 0);
+    return { mode: limit == null ? 'all' : 'first', limit, offset };
+  }
+
+  const mode = options.batchMode || 'all';
+  if (mode === 'first') {
+    const limit = Math.max(1, parseInt(options.batchSize, 10) || 100);
+    return { mode: 'first', limit, offset: 0 };
+  }
+  if (mode === 'range') {
+    const rangeStart = Math.max(1, parseInt(options.rangeStart, 10) || 1);
+    const rangeEnd = Math.max(rangeStart, parseInt(options.rangeEnd, 10) || rangeStart);
+    return {
+      mode: 'range',
+      limit: rangeEnd - rangeStart + 1,
+      offset: rangeStart - 1,
+      rangeStart,
+      rangeEnd,
+    };
+  }
+  return { mode: 'all', limit: null, offset: 0 };
+};
+
 /**
  * SQL WHERE + params for campaign audience (shared by launch, preview, counts).
  * @param {string} channel 'sms' | 'email' | 'both'
@@ -33,35 +65,122 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
   return { whereSql: conditions.join(' AND '), params };
 };
 
+const countLaunchedContacts = async (campaignId) => {
+  const result = await db.query(
+    `SELECT COUNT(DISTINCT contact_id)::int AS n FROM campaign_messages WHERE campaign_id = $1`,
+    [campaignId],
+  );
+  return result.rows[0]?.n ?? 0;
+};
+
+const mapContactRow = (r) => ({
+  id: r.id,
+  firstName: r.first_name,
+  lastName: r.last_name,
+  phone: r.phone,
+  email: r.email,
+});
+
 /**
- * @returns {Promise<{ total: number, limit: number, truncated: boolean, contacts: object[] }>}
+ * @returns {Promise<{ total: number, limit: number, truncated: boolean, contacts: object[], alreadyLaunched?: number, remaining?: number, batchStart?: number, batchEnd?: number, batchSize?: number }>}
  */
-const previewAudience = async (tenantId, { audienceFilter, channel, limit = 500 } = {}) => {
-  const max = Math.min(Math.max(1, parseInt(limit, 10) || 500), PREVIEW_MAX);
+const previewAudience = async (tenantId, options = {}) => {
+  const {
+    audienceFilter,
+    channel,
+    limit: previewLimit = 500,
+    campaignId,
+    batchMode,
+    batchSize,
+    rangeStart,
+    rangeEnd,
+    offset: rawOffset,
+    limit: rawLimit,
+  } = options;
+
+  const batch = parseBatchOptions({
+    batchMode,
+    batchSize,
+    rangeStart,
+    rangeEnd,
+    offset: rawOffset,
+    limit: rawLimit,
+  });
+
   const { whereSql, params } = buildAudienceWhere(tenantId, audienceFilter, channel);
   const countRes = await db.query(
     `SELECT COUNT(*)::int AS n FROM contacts WHERE ${whereSql}`,
     params,
   );
   const total = countRes.rows[0].n;
-  const dataRes = await db.query(
-    `SELECT id, first_name, last_name, phone, email
+
+  let alreadyLaunched = 0;
+  if (campaignId) {
+    alreadyLaunched = await countLaunchedContacts(campaignId);
+  }
+
+  const listLimit = batch.mode === 'all' ? null : batch.limit;
+  const listOffset = batch.mode === 'all' ? 0 : batch.offset;
+
+  let batchStart = null;
+  let batchEnd = null;
+  if (batch.mode !== 'all' && total > 0) {
+    batchStart = Math.min(listOffset + 1, total);
+    batchEnd = Math.min(listOffset + (listLimit || 0), total);
+    if (batchStart > total) {
+      batchStart = null;
+      batchEnd = null;
+    }
+  }
+
+  const previewMax = Math.min(Math.max(1, parseInt(previewLimit, 10) || 500), PREVIEW_MAX);
+  const queryLimit = batch.mode === 'all' ? previewMax : Math.min(listLimit || previewMax, previewMax);
+  const queryOffset = batch.mode === 'all' ? 0 : listOffset;
+
+  const listParams = [...params];
+  let listSql = `SELECT id, first_name, last_name, phone, email
      FROM contacts WHERE ${whereSql}
-     ORDER BY LOWER(COALESCE(last_name, '')), LOWER(COALESCE(first_name, ''))
-     LIMIT $${params.length + 1}`,
-    [...params, max],
-  );
+     ORDER BY ${AUDIENCE_ORDER_BY}`;
+  if (queryLimit != null) {
+    listParams.push(queryLimit);
+    listSql += ` LIMIT $${listParams.length}`;
+  }
+  if (queryOffset > 0) {
+    listParams.push(queryOffset);
+    listSql += ` OFFSET $${listParams.length}`;
+  }
+
+  const dataRes = await db.query(listSql, listParams);
+  const batchTotal = batch.mode === 'all' ? total : Math.max(0, Math.min(listLimit || 0, total - listOffset));
+
+  let launchableCount = batch.mode === 'all' ? total : batchTotal;
+  if (campaignId) {
+    if (batch.mode === 'all') {
+      launchableCount = Math.max(0, total - alreadyLaunched);
+    } else {
+      const launchable = await fetchAudienceForLaunch(tenantId, {
+        audienceFilter,
+        channel,
+        batch,
+        campaignId,
+      });
+      launchableCount = launchable.length;
+    }
+  }
+
   return {
     total,
-    limit: max,
-    truncated: total > max,
-    contacts: dataRes.rows.map((r) => ({
-      id: r.id,
-      firstName: r.first_name,
-      lastName: r.last_name,
-      phone: r.phone,
-      email: r.email,
-    })),
+    alreadyLaunched,
+    remaining: Math.max(0, total - alreadyLaunched),
+    batchMode: batch.mode,
+    batchSize: batch.mode === 'all' ? total : listLimit,
+    batchStart,
+    batchEnd,
+    batchContactCount: batch.mode === 'all' ? total : batchTotal,
+    launchableCount,
+    limit: queryLimit,
+    truncated: batch.mode === 'all' ? total > previewMax : batchTotal > dataRes.rows.length,
+    contacts: dataRes.rows.map(mapContactRow),
   };
 };
 
@@ -70,8 +189,45 @@ const previewAudienceForCampaign = async (tenantId, campaignId, query = {}) => {
   return previewAudience(tenantId, {
     audienceFilter: campaign.audienceFilter,
     channel: campaign.channel || 'sms',
+    campaignId,
     limit: query.limit,
+    batchMode: query.batchMode,
+    batchSize: query.batchSize,
+    rangeStart: query.rangeStart,
+    rangeEnd: query.rangeEnd,
   });
+};
+
+const fetchAudienceForLaunch = async (tenantId, { audienceFilter, channel, batch, campaignId }) => {
+  const { whereSql, params } = buildAudienceWhere(tenantId, audienceFilter, channel);
+  const listParams = [...params];
+  let idx = listParams.length + 1;
+
+  let listSql = `SELECT id, phone, email, first_name
+     FROM contacts WHERE ${whereSql}
+     ORDER BY ${AUDIENCE_ORDER_BY}`;
+
+  if (batch.mode !== 'all' && batch.limit != null) {
+    listParams.push(batch.limit);
+    listSql += ` LIMIT $${idx++}`;
+    if (batch.offset > 0) {
+      listParams.push(batch.offset);
+      listSql += ` OFFSET $${idx++}`;
+    }
+  }
+
+  const result = await db.query(listSql, listParams);
+
+  if (!campaignId) {
+    return result.rows;
+  }
+
+  const launched = await db.query(
+    `SELECT DISTINCT contact_id FROM campaign_messages WHERE campaign_id = $1`,
+    [campaignId],
+  );
+  const launchedIds = new Set(launched.rows.map((r) => r.contact_id));
+  return result.rows.filter((row) => !launchedIds.has(row.id));
 };
 
 const createCampaign = async (tenantId, data) => {
@@ -214,11 +370,12 @@ const listCampaigns = async (tenantId, { page = 1, limit = 20 }) => {
   };
 };
 
-const launchCampaign = async (tenantId, campaignId) => {
+const launchCampaign = async (tenantId, campaignId, launchOptions = {}) => {
   const campaign = await getCampaign(tenantId, campaignId);
 
-  if (campaign.status !== 'draft') {
-    throw Object.assign(new Error('Only draft campaigns can be launched'), {
+  const launchableStatuses = ['draft', 'sending', 'completed'];
+  if (!launchableStatuses.includes(campaign.status)) {
+    throw Object.assign(new Error('This campaign cannot be launched in its current state'), {
       statusCode: 400, isOperational: true,
     });
   }
@@ -231,16 +388,17 @@ const launchCampaign = async (tenantId, campaignId) => {
   }
 
   const channel = campaign.channel || 'sms';
+  const batch = parseBatchOptions(launchOptions);
 
-  const { whereSql, params } = buildAudienceWhere(tenantId, campaign.audienceFilter, channel);
+  const contactRows = await fetchAudienceForLaunch(tenantId, {
+    audienceFilter: campaign.audienceFilter,
+    channel,
+    batch,
+    campaignId,
+  });
 
-  const contacts = await db.query(
-    `SELECT id, phone, email, first_name FROM contacts WHERE ${whereSql}`,
-    params,
-  );
-
-  if (contacts.rows.length === 0) {
-    throw Object.assign(new Error('No eligible contacts found for this campaign'), {
+  if (contactRows.length === 0) {
+    throw Object.assign(new Error('No eligible contacts found for this batch (audience may be empty or already launched)'), {
       statusCode: 400, isOperational: true,
     });
   }
@@ -256,7 +414,7 @@ const launchCampaign = async (tenantId, campaignId) => {
 
   const allRows = [];
 
-  for (const contact of contacts.rows) {
+  for (const contact of contactRows) {
     for (const wave of schedule) {
       const scheduledAt = new Date(now.getTime() + (wave.delay_days || 0) * 24 * 60 * 60 * 1000);
       const emailSubject = wave.email_subject || campaign.name;
@@ -314,17 +472,30 @@ const launchCampaign = async (tenantId, campaignId) => {
     );
   }
 
+  const isFirstLaunch = campaign.status === 'draft';
   await db.query(
-    `UPDATE campaigns SET status = 'sending', total_recipients = $1, launched_at = NOW(), updated_at = NOW()
+    `UPDATE campaigns SET
+       status = 'sending',
+       total_recipients = total_recipients + $1,
+       launched_at = COALESCE(launched_at, NOW()),
+       completed_at = NULL,
+       updated_at = NOW()
      WHERE id = $2 AND tenant_id = $3`,
-    [contacts.rows.length, campaignId, tenantId],
+    [contactRows.length, campaignId, tenantId],
   );
 
+  const alreadyLaunched = await countLaunchedContacts(campaignId);
+
   return {
-    recipientCount: contacts.rows.length,
+    recipientCount: contactRows.length,
+    batchMode: batch.mode,
+    batchStart: batch.mode === 'all' ? 1 : batch.offset + 1,
+    batchEnd: batch.mode === 'all' ? alreadyLaunched : batch.offset + contactRows.length,
+    totalLaunched: alreadyLaunched,
     totalWaves: schedule.length,
     totalMessages: allRows.length,
     channel,
+    isFirstLaunch,
   };
 };
 
@@ -502,6 +673,7 @@ module.exports = {
   getCampaignStats,
   getCampaignLinkClicks,
   buildAudienceWhere,
+  parseBatchOptions,
   previewAudience,
   previewAudienceForCampaign,
   cloneCampaign,
