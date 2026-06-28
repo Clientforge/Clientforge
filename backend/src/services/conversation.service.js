@@ -2,37 +2,223 @@ const db = require('../db/connection');
 const { getTenantTimezone, scheduledTodayInTimezone } = require('../utils/tenantTimezone');
 const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
-const tenantPhoneService = require('./tenant-phone.service');
-const { normalizePhone } = require('./lead.service');
 const instagramService = require('./instagram.service');
 
-const sortAndPaginateConversations = (conversations, options = {}) => {
-  const { page = 1, limit = 25 } = options;
+const phoneDigits = (expr) => `regexp_replace(COALESCE(${expr}, ''), '[^0-9]', '', 'g')`;
 
-  conversations.sort((a, b) => {
-    if (a.needsReply !== b.needsReply) return a.needsReply ? -1 : 1;
-    const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
-    const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
-    return bTime - aTime;
-  });
+const CONVERSATION_BASE_CTE = `
+  WITH msg_phones AS (
+    SELECT
+      m.id,
+      m.body,
+      m.direction,
+      m.message_type,
+      m.created_at,
+      ${phoneDigits("CASE WHEN m.direction = 'inbound' THEN m.from_number ELSE m.to_number END")} AS phone_digits
+    FROM messages m
+    WHERE m.tenant_id = $1
+      AND (
+        (m.direction = 'inbound' AND m.from_number IS NOT NULL)
+        OR (m.direction = 'outbound' AND m.to_number IS NOT NULL)
+      )
+  ),
+  last_per_phone AS (
+    SELECT DISTINCT ON (phone_digits)
+      id AS last_msg_id,
+      body AS last_msg_body,
+      direction AS last_msg_direction,
+      message_type AS last_msg_type,
+      created_at AS last_activity_at,
+      phone_digits,
+      (direction = 'inbound') AS needs_reply
+    FROM msg_phones
+    WHERE phone_digits <> ''
+    ORDER BY phone_digits, created_at DESC
+  ),
+  sms_rows AS (
+    SELECT
+      'sms'::text AS channel,
+      CASE WHEN l.id IS NOT NULL THEN 'lead' ELSE 'contact' END AS participant_type,
+      COALESCE(l.id, c.id) AS participant_id,
+      COALESCE(l.first_name, c.first_name) AS first_name,
+      COALESCE(l.last_name, c.last_name) AS last_name,
+      COALESCE(l.phone, c.phone) AS phone,
+      COALESCE(l.email, c.email) AS email,
+      l.status AS status,
+      NULL::text AS instagram_username,
+      NULL::text AS instagram_user_id,
+      NULL::text AS display_name,
+      lpp.last_msg_id,
+      lpp.last_msg_body,
+      lpp.last_msg_direction,
+      lpp.last_msg_type,
+      lpp.last_activity_at,
+      lpp.needs_reply,
+      lpp.phone_digits
+    FROM last_per_phone lpp
+    LEFT JOIN leads l
+      ON l.tenant_id = $1 AND ${phoneDigits('l.phone')} = lpp.phone_digits
+    LEFT JOIN contacts c
+      ON c.tenant_id = $1 AND ${phoneDigits('c.phone')} = lpp.phone_digits AND l.id IS NULL
+    WHERE COALESCE(l.id, c.id) IS NOT NULL
+  ),
+  ig_rows AS (
+    SELECT
+      'instagram'::text AS channel,
+      'instagram'::text AS participant_type,
+      ic.id AS participant_id,
+      ic.display_name AS first_name,
+      NULL::text AS last_name,
+      NULL::text AS phone,
+      NULL::text AS email,
+      NULL::text AS status,
+      ic.instagram_username,
+      ic.instagram_user_id::text AS instagram_user_id,
+      ic.display_name,
+      lm.id AS last_msg_id,
+      lm.body AS last_msg_body,
+      lm.direction AS last_msg_direction,
+      lm.message_type AS last_msg_type,
+      COALESCE(lm.created_at, ic.last_message_at) AS last_activity_at,
+      (lm.direction = 'inbound') AS needs_reply,
+      NULL::text AS phone_digits
+    FROM instagram_conversations ic
+    INNER JOIN LATERAL (
+      SELECT id, body, direction, message_type, created_at
+      FROM instagram_messages
+      WHERE conversation_id = ic.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) lm ON true
+    WHERE ic.tenant_id = $1
+  ),
+  combined AS (
+    SELECT * FROM sms_rows
+    UNION ALL
+    SELECT * FROM ig_rows
+  )
+`;
 
-  const needsReplyCount = conversations.filter((c) => c.needsReply).length;
+const buildConversationFilters = (options = {}) => {
+  const filters = [];
+  const params = [];
+  let paramIdx = 2;
 
-  if (options.needsReply === 'true' || options.needsReply === true) {
-    const filtered = conversations.filter((c) => c.needsReply);
-    const total = filtered.length;
-    const offset = (page - 1) * limit;
-    return {
-      conversations: filtered.slice(offset, offset + limit),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-      needsReplyCount,
-    };
+  if (options.search) {
+    const searchLower = options.search.toLowerCase();
+    const searchDigits = options.search.replace(/\D/g, '');
+    params.push(`%${searchLower}%`);
+    params.push(searchDigits ? `%${searchDigits}%` : null);
+    filters.push(`
+      AND (
+        lower(trim(coalesce(sc.first_name, '') || ' ' || coalesce(sc.last_name, ''))) LIKE $${paramIdx}
+        OR lower(coalesce(sc.email, '')) LIKE $${paramIdx}
+        OR ($${paramIdx + 1}::text IS NOT NULL AND sc.phone_digits LIKE $${paramIdx + 1})
+        OR lower(coalesce(sc.instagram_username, '')) LIKE $${paramIdx}
+        OR lower(coalesce(sc.display_name, '')) LIKE $${paramIdx}
+      )`);
+    paramIdx += 2;
   }
 
-  const total = conversations.length;
-  const offset = (page - 1) * limit;
+  if (options.needsReply === 'true' || options.needsReply === true) {
+    filters.push(' AND sc.needs_reply = true ');
+  }
+
+  return { filters: filters.join('\n'), params, nextParamIdx: paramIdx };
+};
+
+const mapRowToConversation = (row) => {
+  const displayName = row.channel === 'instagram'
+    ? row.display_name
+      || (row.instagram_username ? `@${row.instagram_username}` : null)
+      || `Instagram ${String(row.instagram_user_id).slice(-6)}`
+    : [row.first_name, row.last_name].filter(Boolean).join(' ') || row.phone;
+
+  const participant = {
+    id: row.participant_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    phone: row.phone,
+    email: row.email,
+    status: row.status,
+    displayName,
+  };
+
+  if (row.channel === 'instagram') {
+    participant.instagramUsername = row.instagram_username;
+    participant.instagramUserId = row.instagram_user_id;
+  }
+
   return {
-    conversations: conversations.slice(offset, offset + limit),
+    channel: row.channel,
+    participantType: row.participant_type,
+    participantId: row.participant_id,
+    participant,
+    lastMessage: row.last_msg_id
+      ? {
+        id: row.last_msg_id,
+        body: row.last_msg_body,
+        direction: row.last_msg_direction,
+        messageType: row.last_msg_type,
+        createdAt: row.last_activity_at,
+      }
+      : null,
+    lastActivityAt: row.last_activity_at,
+    needsReply: row.needs_reply,
+  };
+};
+
+const queryConversationCounts = async (tenantId, options = {}) => {
+  const { filters, params } = buildConversationFilters(options);
+  const result = await db.query(
+    `${CONVERSATION_BASE_CTE}
+     SELECT
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE sc.needs_reply)::int AS needs_reply_count
+     FROM combined sc
+     WHERE 1 = 1
+     ${filters}`,
+    [tenantId, ...params],
+  );
+  return {
+    total: result.rows[0]?.total ?? 0,
+    needsReplyCount: result.rows[0]?.needs_reply_count ?? 0,
+  };
+};
+
+/**
+ * List conversations for a tenant (SMS + Instagram).
+ */
+const listConversations = async (tenantId, options = {}) => {
+  const { page = 1, limit = 25 } = options;
+  const { filters, params, nextParamIdx } = buildConversationFilters(options);
+  const listParams = [tenantId, ...params];
+  const limitParam = nextParamIdx;
+  const offsetParam = nextParamIdx + 1;
+  listParams.push(limit, (page - 1) * limit);
+
+  const [listResult, counts] = await Promise.all([
+    db.query(
+      `${CONVERSATION_BASE_CTE},
+       filtered AS (
+         SELECT sc.*
+         FROM combined sc
+         WHERE 1 = 1
+         ${filters}
+       )
+       SELECT *
+       FROM filtered
+       ORDER BY needs_reply DESC, last_activity_at DESC NULLS LAST
+       LIMIT $${limitParam} OFFSET $${offsetParam}`,
+      listParams,
+    ),
+    queryConversationCounts(tenantId, options),
+  ]);
+
+  const { total, needsReplyCount } = counts;
+
+  return {
+    conversations: listResult.rows.map(mapRowToConversation),
     pagination: {
       page,
       limit,
@@ -43,180 +229,10 @@ const sortAndPaginateConversations = (conversations, options = {}) => {
   };
 };
 
-const getParticipantPhones = async (tenantId) => {
-  const result = await db.query(
-    `SELECT DISTINCT (CASE WHEN direction = 'inbound' THEN from_number ELSE to_number END) AS phone
-     FROM messages
-     WHERE tenant_id = $1
-       AND ((direction = 'inbound' AND from_number IS NOT NULL)
-            OR (direction = 'outbound' AND to_number IS NOT NULL))`,
-    [tenantId],
-  );
-  const phones = result.rows.map((r) => r.phone).filter(Boolean);
-  return [...new Set(phones.map((p) => normalizePhone(p)))];
-};
-
-/**
- * Resolve participant (lead or contact) by phone. Prefer lead if both exist.
- */
-const resolveParticipant = async (tenantId, phone) => {
-  const normalized = normalizePhone(phone);
-  const leadResult = await db.query(
-    'SELECT id, first_name, last_name, phone, email, status FROM leads WHERE tenant_id = $1 AND phone = $2',
-    [tenantId, normalized],
-  );
-  if (leadResult.rows.length > 0) {
-    return {
-      participantType: 'lead',
-      id: leadResult.rows[0].id,
-      firstName: leadResult.rows[0].first_name,
-      lastName: leadResult.rows[0].last_name,
-      phone: leadResult.rows[0].phone,
-      email: leadResult.rows[0].email,
-      status: leadResult.rows[0].status,
-    };
-  }
-  const contactResult = await db.query(
-    'SELECT id, first_name, last_name, phone, email FROM contacts WHERE tenant_id = $1 AND phone = $2',
-    [tenantId, normalized],
-  );
-  if (contactResult.rows.length > 0) {
-    return {
-      participantType: 'contact',
-      id: contactResult.rows[0].id,
-      firstName: contactResult.rows[0].first_name,
-      lastName: contactResult.rows[0].last_name,
-      phone: contactResult.rows[0].phone,
-      email: contactResult.rows[0].email,
-      status: null,
-    };
-  }
-  return null;
-};
-
-/**
- * Get last message for a participant phone.
- */
-const getLastMessageForPhone = async (tenantId, phone) => {
-  const digits = normalizePhone(phone).replace(/\D/g, '');
-  const result = await db.query(
-    `SELECT id, body, direction, message_type, created_at
-     FROM messages m
-     WHERE m.tenant_id = $1
-       AND (
-         (m.direction = 'inbound' AND regexp_replace(COALESCE(m.from_number,''), '[^0-9]', '', 'g') = $2)
-         OR (m.direction = 'outbound' AND regexp_replace(COALESCE(m.to_number,''), '[^0-9]', '', 'g') = $2)
-       )
-     ORDER BY m.created_at DESC
-     LIMIT 1`,
-    [tenantId, digits],
-  );
-  return result.rows[0] || null;
-};
-
-/**
- * List conversations for a tenant (SMS + Instagram).
- */
-const listConversations = async (tenantId, options = {}) => {
-  const { search } = options;
-  const phones = await getParticipantPhones(tenantId);
-
-  const conversations = [];
-  for (const phone of phones) {
-    const participant = await resolveParticipant(tenantId, phone);
-    if (!participant) continue;
-
-    const lastMsg = await getLastMessageForPhone(tenantId, phone);
-    if (!lastMsg) continue;
-
-    const displayName = [participant.firstName, participant.lastName].filter(Boolean).join(' ') || phone;
-
-    if (search) {
-      const searchLower = search.toLowerCase();
-      const matchesSearch =
-        displayName.toLowerCase().includes(searchLower) ||
-        phone.includes(search.replace(/\D/g, '')) ||
-        (participant.email || '').toLowerCase().includes(searchLower);
-      if (!matchesSearch) continue;
-    }
-
-    conversations.push({
-      channel: 'sms',
-      participantType: participant.participantType,
-      participantId: participant.id,
-      participant: {
-        id: participant.id,
-        firstName: participant.firstName,
-        lastName: participant.lastName,
-        phone: participant.phone,
-        email: participant.email,
-        status: participant.status,
-        displayName,
-      },
-      lastMessage: {
-        id: lastMsg.id,
-        body: lastMsg.body,
-        direction: lastMsg.direction,
-        messageType: lastMsg.message_type,
-        createdAt: lastMsg.created_at,
-      },
-      lastActivityAt: lastMsg.created_at || null,
-      needsReply: lastMsg.direction === 'inbound',
-    });
-  }
-
-  const igRows = await instagramService.listConversationRows(tenantId);
-  for (const row of igRows) {
-    const lastMsg = row.last_message;
-    if (!lastMsg) continue;
-
-    const displayName = row.display_name
-      || (row.instagram_username ? `@${row.instagram_username}` : null)
-      || `Instagram ${String(row.instagram_user_id).slice(-6)}`;
-
-    if (search) {
-      const searchLower = search.toLowerCase();
-      const matchesSearch =
-        displayName.toLowerCase().includes(searchLower) ||
-        (row.instagram_username || '').toLowerCase().includes(searchLower) ||
-        row.instagram_user_id.includes(search.replace(/\D/g, ''));
-      if (!matchesSearch) continue;
-    }
-
-    conversations.push({
-      channel: 'instagram',
-      participantType: 'instagram',
-      participantId: row.id,
-      participant: {
-        id: row.id,
-        firstName: row.display_name || row.instagram_username || null,
-        lastName: null,
-        phone: null,
-        email: null,
-        status: null,
-        displayName,
-        instagramUsername: row.instagram_username,
-        instagramUserId: row.instagram_user_id,
-      },
-      lastMessage: {
-        id: lastMsg.id,
-        body: lastMsg.body,
-        direction: lastMsg.direction,
-        messageType: lastMsg.message_type,
-        createdAt: lastMsg.created_at,
-      },
-      lastActivityAt: lastMsg.created_at || row.last_message_at || null,
-      needsReply: lastMsg.direction === 'inbound',
-    });
-  }
-
-  return sortAndPaginateConversations(conversations, options);
-};
-
 const getInboxSummary = async (tenantId) => {
-  const listed = await listConversations(tenantId, { page: 1, limit: 10000 });
-  const needsReplyCount = listed.needsReplyCount ?? 0;
-  const totalConversations = listed.pagination?.total ?? 0;
+  const counts = await queryConversationCounts(tenantId);
+  const needsReplyCount = counts.needsReplyCount;
+  const totalConversations = counts.total;
 
   const timezone = await getTenantTimezone(tenantId);
   const todayClause = scheduledTodayInTimezone('a.scheduled_at', 2);

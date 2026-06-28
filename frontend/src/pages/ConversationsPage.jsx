@@ -27,6 +27,7 @@ export default function ConversationsPage() {
   const [thread, setThread] = useState(null);
   const [composeBody, setComposeBody] = useState('');
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState(null);
   const [threadLoading, setThreadLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
@@ -47,6 +48,7 @@ export default function ConversationsPage() {
 
   const loadConversations = async (page = 1) => {
     setLoading(true);
+    setListError(null);
     try {
       const params = new URLSearchParams({ page, limit: 25 });
       if (search) params.set('search', search);
@@ -59,6 +61,9 @@ export default function ConversationsPage() {
       }
     } catch (err) {
       console.error(err);
+      setListError(err.message || 'Failed to load conversations');
+      setConversations([]);
+      setPagination({});
     } finally {
       setLoading(false);
     }
@@ -190,9 +195,11 @@ export default function ConversationsPage() {
           <div className="inbox-hero-main">
             <h1>Inbox</h1>
             <p className="inbox-hero-sub">
-              {needsReplyCount > 0
-                ? `${needsReplyCount} conversation${needsReplyCount === 1 ? '' : 's'} waiting for a reply`
-                : 'All caught up — no messages waiting'}
+              {summary === null
+                ? 'Loading inbox…'
+                : needsReplyCount > 0
+                  ? `${needsReplyCount} conversation${needsReplyCount === 1 ? '' : 's'} waiting for a reply`
+                  : 'All caught up — no messages waiting'}
             </p>
           </div>
           <div className="inbox-hero-stats">
@@ -251,6 +258,8 @@ export default function ConversationsPage() {
           <div className="inbox-list">
             {loading ? (
               <div className="inbox-empty">Loading...</div>
+            ) : listError ? (
+              <div className="inbox-empty">{listError}</div>
             ) : conversations.length === 0 ? (
               <div className="inbox-empty">
                 {needsReplyFilter ? 'No conversations waiting for a reply' : 'No conversations yet'}
