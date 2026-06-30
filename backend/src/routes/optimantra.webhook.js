@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const db = require('../db/connection');
 const { normalizeOptimantraPayload } = require('../adapters/optimantra.adapter');
+const { normalizeOptimantraSuperbillPayload } = require('../adapters/optimantra-superbill.adapter');
 const appointmentService = require('../services/appointment.service');
 const appointmentWorkflowService = require('../services/appointment-workflow.service');
+const optimantraCheckoutService = require('../services/optimantra-checkout.service');
 
 function verifyWebhookSecret(req, secret) {
   if (!secret) return true;
@@ -11,23 +13,25 @@ function verifyWebhookSecret(req, secret) {
   return header === secret;
 }
 
-async function handleOptimantraWebhook(req, res, next) {
+async function loadTenant(tenantId) {
+  const tenantResult = await db.query(
+    'SELECT id, active, optimantra_webhook_secret FROM tenants WHERE id = $1',
+    [tenantId],
+  );
+  return tenantResult.rows[0] || null;
+}
+
+async function handleOptimantraBookingWebhook(req, res, next) {
   try {
     const { tenantId } = req.params;
+    const tenant = await loadTenant(tenantId);
 
-    const tenantResult = await db.query(
-      'SELECT id, active, optimantra_webhook_secret FROM tenants WHERE id = $1',
-      [tenantId],
-    );
-    if (tenantResult.rows.length === 0) {
+    if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
-
-    const tenant = tenantResult.rows[0];
     if (!tenant.active) {
       return res.status(403).json({ error: 'Tenant account is deactivated' });
     }
-
     if (!verifyWebhookSecret(req, tenant.optimantra_webhook_secret)) {
       console.warn('[WEBHOOK][OPTIMANTRA] Invalid secret for tenant', tenantId);
       return res.status(401).json({ error: 'Invalid webhook secret' });
@@ -35,7 +39,7 @@ async function handleOptimantraWebhook(req, res, next) {
 
     const body = req.body || {};
     console.log(
-      '[WEBHOOK][OPTIMANTRA] Received for tenant',
+      '[WEBHOOK][OPTIMANTRA] Booking received for tenant',
       tenantId,
       'keys:',
       Object.keys(body).join(', ') || '(empty)',
@@ -43,11 +47,11 @@ async function handleOptimantraWebhook(req, res, next) {
 
     const normalized = normalizeOptimantraPayload(body);
     if (!normalized) {
-      console.warn('[WEBHOOK][OPTIMANTRA] Unrecognized payload shape — skipping');
+      console.warn('[WEBHOOK][OPTIMANTRA] Unrecognized booking payload — skipping');
       return res.status(200).json({ received: true, skipped: 'Unrecognized payload' });
     }
 
-    const { eventType, contact, appointment } = normalized;
+    const { contact, appointment } = normalized;
 
     if (!contact.phone && !contact.email) {
       console.warn('[WEBHOOK][OPTIMANTRA] No phone or email in payload — skipping');
@@ -55,7 +59,7 @@ async function handleOptimantraWebhook(req, res, next) {
     }
 
     const result = await appointmentService.processBookingEvent(tenant.id, {
-      eventType,
+      eventType: normalized.eventType,
       contact,
       appointment,
       contactSource: 'optimantra',
@@ -74,13 +78,70 @@ async function handleOptimantraWebhook(req, res, next) {
   }
 }
 
+async function handleOptimantraSuperbillWebhook(req, res, next) {
+  try {
+    const { tenantId } = req.params;
+    const tenant = await loadTenant(tenantId);
+
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+    if (!tenant.active) {
+      return res.status(403).json({ error: 'Tenant account is deactivated' });
+    }
+    if (!verifyWebhookSecret(req, tenant.optimantra_webhook_secret)) {
+      console.warn('[WEBHOOK][OPTIMANTRA-SUPERBILL] Invalid secret for tenant', tenantId);
+      return res.status(401).json({ error: 'Invalid webhook secret' });
+    }
+
+    const body = req.body || {};
+    console.log(
+      '[WEBHOOK][OPTIMANTRA-SUPERBILL] Checkout received for tenant',
+      tenantId,
+      'keys:',
+      Object.keys(body).join(', ') || '(empty)',
+    );
+
+    const normalized = normalizeOptimantraSuperbillPayload(body);
+    if (!normalized) {
+      console.warn('[WEBHOOK][OPTIMANTRA-SUPERBILL] Unrecognized payload — skipping');
+      return res.status(200).json({ received: true, skipped: 'Unrecognized payload' });
+    }
+
+    if (!normalized.contact.phone && !normalized.contact.email) {
+      console.warn('[WEBHOOK][OPTIMANTRA-SUPERBILL] No phone or email — skipping');
+      return res.status(200).json({ received: true, skipped: 'No contact info' });
+    }
+
+    const result = await optimantraCheckoutService.processSuperbillCheckout(tenant.id, normalized);
+
+    return res.status(200).json({
+      success: true,
+      duplicate: !!result.duplicate,
+      checkoutId: result.checkoutId,
+      appointmentId: result.appointmentId,
+      contactId: result.contactId,
+      servicesRecorded: result.servicesRecorded,
+      jobsScheduled: result.jobsScheduled ?? 0,
+      skipped: result.skipped || null,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 /**
  * POST|PUT /api/v1/webhook/optimantra/:tenantId
- *
- * OptiMantra outbound webhook (Marketing → CRM Integration → Out-Bound Webhooks).
- * OptiMantra typically sends PUT requests.
+ * OptiMantra appointment booked webhook.
  */
-router.post('/:tenantId', handleOptimantraWebhook);
-router.put('/:tenantId', handleOptimantraWebhook);
+router.post('/:tenantId', handleOptimantraBookingWebhook);
+router.put('/:tenantId', handleOptimantraBookingWebhook);
+
+/**
+ * POST|PUT /api/v1/webhook/optimantra/:tenantId/superbill
+ * OptiMantra Superbill Checkout — post-visit automations (OptiMantra tenants only).
+ */
+router.post('/:tenantId/superbill', handleOptimantraSuperbillWebhook);
+router.put('/:tenantId/superbill', handleOptimantraSuperbillWebhook);
 
 module.exports = router;

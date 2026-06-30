@@ -7,6 +7,25 @@ const automationService = require('./appointment-automation.service');
 const tenantService = require('./tenant-service.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
 
+const PRE_VISIT_CATEGORIES = ['confirmations', 'reminders'];
+const POST_VISIT_CATEGORIES = ['post_appointment', 'review_requests'];
+
+const isOptimantraCheckoutMode = (tenant, appointment) => (
+  !!tenant?.optimantra_checkout_automations
+  && appointment?.provider === 'optimantra'
+);
+
+const categoriesForBookingDispatch = (tenant, appointment) => {
+  if (isOptimantraCheckoutMode(tenant, appointment)) {
+    return PRE_VISIT_CATEGORIES;
+  }
+  return automationService.CATEGORY_KEYS.filter((key) => key !== 'rebooking');
+};
+
+const shouldScheduleRebookingOnBooking = (tenant, appointment) => (
+  !isOptimantraCheckoutMode(tenant, appointment)
+);
+
 /**
  * Dispatch workflows based on booking event type.
  * Called after appointment.service.processBookingEvent.
@@ -15,12 +34,15 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
       `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
-              appointment_automation_config
+              appointment_automation_config, optimantra_checkout_automations
        FROM tenants WHERE id = $1`,
       [tenantId],
     ),
     db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
-    db.query('SELECT scheduled_at, service_name, timezone FROM appointments WHERE id = $1', [appointmentId]),
+    db.query(
+      'SELECT scheduled_at, service_name, timezone, provider FROM appointments WHERE id = $1',
+      [appointmentId],
+    ),
   ]);
 
   const tenant = tenantRow.rows[0];
@@ -39,6 +61,7 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
   const config = automationService.normalizeConfig(tenant.appointment_automation_config);
   const templateContext = { tenant, contact, appointment };
   const vars = automationService.buildTemplateVars(templateContext);
+  const bookingCategories = categoriesForBookingDispatch(tenant, appointment);
 
   if (eventType === 'booking.cancelled') {
     await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
@@ -49,16 +72,126 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
   if (eventType === 'booking.rescheduled') {
     await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
     await sendEventMessage(tenantId, contactId, contact, tenant, config.event_messages.reschedule, vars, 'reschedule');
-    await scheduleAutomationSteps(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
-    await scheduleRebooking(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
+    await scheduleAutomationSteps(
+      tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars,
+      { categories: bookingCategories },
+    );
+    if (shouldScheduleRebookingOnBooking(tenant, appointment)) {
+      await scheduleRebooking(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
+    }
     return;
   }
 
   if (eventType === 'booking.created') {
     await rebookingCampaign.cancelRebookingJobsForContact(tenantId, contactId);
-    await scheduleAutomationSteps(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
-    await scheduleRebooking(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
+    await scheduleAutomationSteps(
+      tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars,
+      { categories: bookingCategories },
+    );
+    if (shouldScheduleRebookingOnBooking(tenant, appointment)) {
+      await scheduleRebooking(tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars);
+    }
   }
+};
+
+/**
+ * Post-visit workflows after OptiMantra superbill checkout.
+ */
+const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, checkedOutAt, primaryServiceName }) => {
+  const [tenantRow, contactRow, appointmentRow] = await Promise.all([
+    db.query(
+      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+              appointment_automation_config, optimantra_checkout_automations
+       FROM tenants WHERE id = $1`,
+      [tenantId],
+    ),
+    db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
+    db.query(
+      'SELECT scheduled_at, service_name, timezone, provider FROM appointments WHERE id = $1',
+      [appointmentId],
+    ),
+  ]);
+
+  const tenant = tenantRow.rows[0];
+  const contact = contactRow.rows[0];
+  const appointment = appointmentRow.rows[0];
+
+  if (!tenant || !contact || !appointment) {
+    console.warn('[APPT-WORKFLOW] Checkout dispatch missing context — skipping');
+    return { jobsScheduled: 0 };
+  }
+
+  if (!tenant.optimantra_checkout_automations) {
+    console.log('[APPT-WORKFLOW] Checkout workflows skipped — optimantra_checkout_automations off');
+    return { jobsScheduled: 0, skipped: 'checkout_mode_disabled' };
+  }
+
+  if (contact.unsubscribed) {
+    return { jobsScheduled: 0, skipped: 'unsubscribed' };
+  }
+
+  await db.query(
+    `UPDATE appointment_workflow_jobs
+     SET status = 'cancelled', cancelled_at = NOW()
+     WHERE appointment_id = $1
+       AND tenant_id = $2
+       AND status = 'pending'
+       AND job_type = ANY($3::text[])`,
+    [
+      appointmentId,
+      tenantId,
+      ['post_visit', 'review_request', 'rebooking', 'rebooking_initial', 'rebooking_followup_1', 'rebooking_followup_2'],
+    ],
+  );
+
+  const appointmentForTemplates = {
+    ...appointment,
+    service_name: primaryServiceName || appointment.service_name,
+  };
+
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  const vars = automationService.buildTemplateVars({
+    tenant,
+    contact,
+    appointment: appointmentForTemplates,
+  });
+
+  const referenceTime = checkedOutAt || new Date().toISOString();
+
+  const automationJobs = await scheduleAutomationSteps(
+    tenantId,
+    appointmentId,
+    contactId,
+    contact,
+    tenant,
+    appointmentForTemplates,
+    config,
+    vars,
+    {
+      skipImmediate: true,
+      referenceTime,
+      categories: POST_VISIT_CATEGORIES,
+    },
+  );
+
+  const rebookingJobs = await scheduleRebooking(
+    tenantId,
+    appointmentId,
+    contactId,
+    contact,
+    tenant,
+    appointmentForTemplates,
+    config,
+    vars,
+    { referenceTime },
+  );
+
+  const jobsScheduled = automationJobs + rebookingJobs;
+  console.log(
+    `[APPT-WORKFLOW] Checkout scheduled ${jobsScheduled} job(s) for appointment ${appointmentId}`,
+  );
+
+  return { jobsScheduled };
 };
 
 const scheduleAutomationSteps = async (
@@ -70,10 +203,17 @@ const scheduleAutomationSteps = async (
   appointment,
   config,
   vars,
+  { skipImmediate = false, referenceTime, categories } = {},
 ) => {
-  const appointmentTime = new Date(appointment.scheduled_at);
+  const appointmentTime = referenceTime
+    ? new Date(referenceTime)
+    : new Date(appointment.scheduled_at);
+  const categoryKeys = categories
+    || automationService.CATEGORY_KEYS.filter((key) => key !== 'rebooking');
 
-  for (const category of automationService.CATEGORY_KEYS) {
+  let scheduledCount = 0;
+
+  for (const category of categoryKeys) {
     if (category === 'rebooking') continue;
     const section = config[category];
     if (!section?.enabled) continue;
@@ -92,6 +232,7 @@ const scheduleAutomationSteps = async (
 
       for (const channel of channels) {
         if (step.offset_minutes === 0) {
+          if (skipImmediate) continue;
           await deliverMessage(tenantId, contactId, contact, tenant, {
             channel,
             body,
@@ -105,10 +246,13 @@ const scheduleAutomationSteps = async (
             messageBody: body,
             emailSubject: channel === 'email' ? emailSubject : null,
           });
+          scheduledCount += 1;
         }
       }
     }
   }
+
+  return scheduledCount;
 };
 
 const scheduleRebooking = async (
@@ -120,8 +264,11 @@ const scheduleRebooking = async (
   appointment,
   config,
   vars,
+  { referenceTime } = {},
 ) => {
-  const appointmentTime = new Date(appointment.scheduled_at);
+  const appointmentTime = referenceTime
+    ? new Date(referenceTime)
+    : new Date(appointment.scheduled_at);
   const matched = await tenantService.matchService(tenantId, appointment.service_name);
 
   if (matched) {
@@ -145,7 +292,7 @@ const scheduleRebooking = async (
     source = 'generic';
   }
 
-  if (!offsetDays) return;
+  if (!offsetDays) return 0;
 
   const serviceVars = {
     ...vars,
@@ -208,7 +355,7 @@ const scheduleRebooking = async (
         messageBody: body,
         emailSubject: ch === 'email' ? subject : null,
       });
-      scheduledCount++;
+      scheduledCount += 1;
     }
   }
 
@@ -219,6 +366,8 @@ const scheduleRebooking = async (
       + (matched ? ` (${matched.name})` : ''),
     );
   }
+
+  return scheduledCount;
 };
 
 const sendEventMessage = async (tenantId, contactId, contact, tenant, eventConfig, vars, messageType) => {
@@ -293,4 +442,10 @@ const sendAppointmentEmail = async (tenantId, contactId, to, tenant, subject, bo
   }
 };
 
-module.exports = { dispatchWorkflows };
+module.exports = {
+  dispatchWorkflows,
+  dispatchCheckoutWorkflows,
+  isOptimantraCheckoutMode,
+  PRE_VISIT_CATEGORIES,
+  POST_VISIT_CATEGORIES,
+};

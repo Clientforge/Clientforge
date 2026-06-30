@@ -33,6 +33,7 @@ const getSettings = async (tenantId) => {
             plan, api_key, followup_config, description, target_audience, tone,
             email_from_name, email_from_address, calendly_webhook_signing_key,
             optimantra_webhook_secret,
+            optimantra_checkout_automations,
             ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
             sms_keyword_welcome_message, ui_mode, automation_test_mode, automation_test_phone,
             automation_test_email, automation_live_at, created_at
@@ -102,6 +103,8 @@ const getSettings = async (tenantId) => {
       calendlyWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/calendly/${tenantId}`,
       optimantraWebhookSecret: t.optimantra_webhook_secret || '',
       optimantraWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/optimantra/${tenantId}`,
+      optimantraSuperbillWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/optimantra/${tenantId}/superbill`,
+      optimantraCheckoutAutomations: !!t.optimantra_checkout_automations,
       voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
       telnyxVoiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/telnyx`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
@@ -187,6 +190,10 @@ const updateSettings = async (tenantId, updates) => {
     if (updates.integration.optimantraWebhookSecret !== undefined) {
       sets.push(`optimantra_webhook_secret = $${idx++}`);
       params.push(updates.integration.optimantraWebhookSecret || null);
+    }
+    if (updates.integration.optimantraCheckoutAutomations !== undefined) {
+      sets.push(`optimantra_checkout_automations = $${idx++}`);
+      params.push(!!updates.integration.optimantraCheckoutAutomations);
     }
   }
 

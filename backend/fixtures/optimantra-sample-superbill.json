@@ -1,0 +1,20 @@
+{
+  "firstName": "Jane",
+  "lastName": "Patient",
+  "phone": "404-555-0199",
+  "email": "jane.patient@example.com",
+  "patientId": "OM-PAT-8821",
+  "appointmentId": "12345",
+  "superbillId": "SB-998877",
+  "checkoutDate": "Wed Jun 11 2025 11:30:00 GMT-0400 (Eastern Daylight Time)",
+  "services": [
+    {
+      "serviceName": "Neuromuscular Therapy Medical Massage",
+      "serviceType": "Procedure"
+    },
+    {
+      "serviceName": "Follow-up Evaluation",
+      "serviceType": "Office Visit"
+    }
+  ]
+}

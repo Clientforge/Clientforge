@@ -229,17 +229,32 @@ Set `BASE_URL` to your production URL (e.g. `https://api.clientforge.ai`) so the
 
 ## OptiMantra Integration
 
-Connect OptiMantra (EMR) to automatically create contacts, track appointments, and trigger reminders, confirmations, and post-visit follow-ups when patients book inside OptiMantra.
+Connect OptiMantra (EMR) to automatically create contacts, track appointments, and trigger appointment automations.
 
-### Setup
+### Setup — Booking webhook (pre-visit)
 
-1. In **Settings → Integration**, copy your **OptiMantra Webhook URL** (e.g. `https://yourdomain.com/api/v1/webhook/optimantra/{tenantId}`).
+1. In **Settings → Integration**, copy **Booking Webhook URL** (`/api/v1/webhook/optimantra/{tenantId}`).
 2. In OptiMantra: **Settings → Marketing → CRM Integration → Add New Out-Bound Webhook**.
-3. Paste the URL, set **Webhook type** to **PUT**, and choose trigger **When an Appointment is Booked**.
-4. Select **all available data fields** (phone, email, name, appointment date, service/treatment type, appointment ID).
-5. Optional: set a shared secret in ClientForge **OptiMantra Webhook Secret** and send it as header `x-optimantra-webhook-secret` on each request (if your middleware supports custom headers).
+3. Paste the URL, set **Webhook type** to **PUT**, trigger **When an Appointment is Booked**.
+4. Select **all available data fields** (phone, email, name, appointment date, service, appointment ID).
+5. Optional: set **OptiMantra Webhook Secret** and header `x-optimantra-webhook-secret`.
 
-### Confirmed webhook fields (live sample)
+### Setup — Superbill Checkout webhook (post-visit, OptiMantra only)
+
+1. Enable **Post-visit at checkout** in Settings → Integration → OptiMantra.
+2. Copy **Superbill Checkout Webhook URL** (`/api/v1/webhook/optimantra/{tenantId}/superbill`).
+3. Add a second Out-Bound Webhook in OptiMantra for **Superbill Checkout**.
+4. Include patient contact, appointment ID, checkout date, and service lines with **service type**
+   (Office Visit, Procedure, Lab Work, Other).
+
+When checkout mode is enabled for an OptiMantra tenant:
+
+- **Booking webhook** → confirmations + reminders only
+- **Superbill webhook** → post-visit, review, and rebooking (timed from checkout)
+
+Other tenants (Google Calendar, Calendly, Square, etc.) are unchanged.
+
+### Confirmed booking webhook fields (live sample)
 
 | OptiMantra field | ClientForge |
 |------------------|-------------|
@@ -251,16 +266,18 @@ Connect OptiMantra (EMR) to automatically create contacts, track appointments, a
 
 Enable **service/treatment** and **appointment ID** in OptiMantra when available — otherwise service defaults to `Appointment` and dedupe uses a generated hash.
 
-### Workflows
-
-Uses the same appointment automation pipeline as Calendly (reminders, confirmations, cancellation/reschedule handling, rebooking).
-
 ### Testing
 
-Before going live, capture a sample payload with [webhook.site](https://webhook.site) or book a test appointment after pointing OptiMantra at your URL. Update `backend/fixtures/optimantra-sample-booking.json` with the real JSON and run:
+Booking adapter:
 
 ```bash
 node scripts/testOptimantraAdapter.js
+```
+
+Superbill adapter (update `backend/fixtures/optimantra-sample-superbill.json` with a live payload when available):
+
+```bash
+node scripts/testOptimantraSuperbillAdapter.js
 ```
 
 ## Square Appointments Integration

@@ -742,13 +742,18 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
   }, [settings.integration?.calendlyWebhookSigningKey]);
 
   const [optimantraSecret, setOptimantraSecret] = useState(settings.integration?.optimantraWebhookSecret || '');
+  const [optimantraCheckoutAutomations, setOptimantraCheckoutAutomations] = useState(
+    !!settings.integration?.optimantraCheckoutAutomations,
+  );
   useEffect(() => {
     setOptimantraSecret(settings.integration?.optimantraWebhookSecret || '');
-  }, [settings.integration?.optimantraWebhookSecret]);
+    setOptimantraCheckoutAutomations(!!settings.integration?.optimantraCheckoutAutomations);
+  }, [settings.integration?.optimantraWebhookSecret, settings.integration?.optimantraCheckoutAutomations]);
 
   const apiKey = settings.integration?.apiKey;
   const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
   const optimantraWebhookUrl = settings.integration?.optimantraWebhookUrl || '';
+  const optimantraSuperbillWebhookUrl = settings.integration?.optimantraSuperbillWebhookUrl || '';
   const voiceWebhookUrl = settings.integration?.voiceWebhookUrl || '';
   const telnyxVoiceWebhookUrl = settings.integration?.telnyxVoiceWebhookUrl || '';
   const smsInboundWebhookUrl = settings.integration?.smsInboundWebhookUrl || '';
@@ -778,7 +783,12 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
   const saveOptimantra = (e) => {
     e.preventDefault();
-    onSave({ integration: { optimantraWebhookSecret: optimantraSecret || null } });
+    onSave({
+      integration: {
+        optimantraWebhookSecret: optimantraSecret || null,
+        optimantraCheckoutAutomations: optimantraCheckoutAutomations,
+      },
+    });
   };
 
   return (
@@ -847,9 +857,10 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <h3>OptiMantra Integration</h3>
       <p className="settings-desc">
-        Connect OptiMantra to automatically create contacts, track appointments, and send reminders,
-        confirmations, and post-visit follow-ups. Configure message content and timing in{' '}
-        <strong>Automations</strong>.
+        Connect OptiMantra for appointment booking and superbill checkout. With checkout mode enabled,
+        confirmations and reminders run when appointments are booked; post-visit messages (review,
+        rebooking, follow-ups) run when the superbill checkout webhook fires. Other integrations
+        (Google Calendar, Calendly, etc.) are unchanged.
       </p>
       <form onSubmit={saveOptimantra} className="integration-block">
         <div className="field">
@@ -864,9 +875,29 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
             Optional. When set, requests must include header <code>x-optimantra-webhook-secret</code> with this value.
           </span>
         </div>
+
+        <div className="automation-section-header" style={{ marginTop: 16 }}>
+          <div>
+            <strong>Post-visit at checkout</strong>
+            <p className="settings-desc" style={{ marginBottom: 0 }}>
+              When enabled, OptiMantra booking webhooks only schedule confirmations and reminders.
+              Post-visit automations run from the Superbill Checkout webhook below.
+            </p>
+          </div>
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={optimantraCheckoutAutomations}
+              onChange={(e) => setOptimantraCheckoutAutomations(e.target.checked)}
+            />
+            <span className="toggle-slider" />
+            Enabled
+          </label>
+        </div>
+
         {optimantraWebhookUrl && (
           <div className="integration-block" style={{ marginTop: 12 }}>
-            <label>OptiMantra Webhook URL</label>
+            <label>Booking Webhook URL</label>
             <div className="key-row">
               <code className="key-value" style={{ fontSize: 12 }}>{optimantraWebhookUrl}</code>
               <button type="button" className="btn-sm" onClick={() => copyToClipboard(optimantraWebhookUrl, 'optimantra')}>
@@ -874,9 +905,25 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
               </button>
             </div>
             <span className="field-hint">
-              In OptiMantra: Settings → Marketing → CRM Integration → Add New Out-Bound Webhook.
-              Paste this URL, set type to <strong>PUT</strong>, trigger <strong>When an Appointment is Booked</strong>,
-              and select all available data fields (phone, service, appointment date, etc.).
+              OptiMantra → Settings → Marketing → CRM Integration → Out-Bound Webhook.
+              Trigger: <strong>When an Appointment is Booked</strong>. Method: <strong>PUT</strong>.
+            </span>
+          </div>
+        )}
+
+        {optimantraSuperbillWebhookUrl && (
+          <div className="integration-block" style={{ marginTop: 12 }}>
+            <label>Superbill Checkout Webhook URL</label>
+            <div className="key-row">
+              <code className="key-value" style={{ fontSize: 12 }}>{optimantraSuperbillWebhookUrl}</code>
+              <button type="button" className="btn-sm" onClick={() => copyToClipboard(optimantraSuperbillWebhookUrl, 'optimantra-superbill')}>
+                {copying === 'optimantra-superbill' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <span className="field-hint">
+              Add a second Out-Bound Webhook for <strong>Superbill Checkout</strong>.
+              Include patient contact info, appointment ID, checkout date, and service lines with service type
+              (Office Visit, Procedure, Lab Work, Other).
             </span>
           </div>
         )}
