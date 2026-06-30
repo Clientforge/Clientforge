@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Thank you — leave Boniks African Cuisine a review on Google.">
+  <title>Thank you! — Boniks African Cuisine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf7f2;
+      --paper: #fffdf9;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --accent-dark: #92400e;
+      --gold: #d4a017;
+      --line: #e7e0d6;
+      --radius: 14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 48px;
+    }
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 36px 28px 40px;
+      box-shadow: 0 18px 40px rgba(28, 25, 23, 0.08);
+      text-align: center;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.75rem;
+      margin-bottom: 12px;
+    }
+    .stars-display {
+      color: var(--gold);
+      font-size: clamp(2.5rem, 10vw, 4rem);
+      letter-spacing: 0.15em;
+      margin: 16px 0 20px;
+      line-height: 1;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 28px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 32px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      background: #4285f4;
+      color: #fff;
+      transition: filter 0.15s ease, transform 0.15s ease;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .btn-secondary {
+      display: block;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .btn-secondary a { color: var(--accent-dark); font-weight: 600; }
+    .site-link {
+      display: block;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+    .site-link a { color: var(--accent-dark); font-weight: 600; }
+    #google-review-hint {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: #78350f;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+    }
+    #google-review-hint code {
+      font-size: 0.8rem;
+      word-break: break-all;
+      background: rgba(0, 0, 0, 0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>We’re so glad you enjoyed it!</h1>
+    <div class="stars-display" id="stars-display" aria-hidden="true"></div>
+    <p class="lead" id="rating-line"></p>
+    <p class="lead" style="margin-bottom:20px">Would you like to leave feedback for us on <strong>Google</strong>? It helps other guests find us.</p>
+
+    <a class="btn" id="google-btn" href="#" role="button">Leave a Google review</a>
+    <p id="google-review-hint" role="status" tabindex="-1">
+      Paste your Google “Write a review” link in
+      <code>landing/boniks-cuisine-review-thanks.html</code> as
+      <code>GOOGLE_REVIEW_URL</code> (from Google Business Profile → Ask for reviews).
+    </p>
+    <p class="btn-secondary"><a href="/boniks-review">← Back to rating</a></p>
+    <p class="site-link"><a href="https://bonikscuisine.com/" target="_blank" rel="noopener noreferrer">Visit bonikscuisine.com</a></p>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var stars = parseInt(params.get('stars'), 10);
+      if (Number.isNaN(stars) || stars < 4) stars = 4;
+      if (stars > 5) stars = 5;
+      document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+      document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
+
+      /* Paste Boniks' full "Write a review" URL from Google Business Profile. */
+      var GOOGLE_REVIEW_URL = '';
+
+      var btn = document.getElementById('google-btn');
+      var hint = document.getElementById('google-review-hint');
+
+      function googleReviewConfigured(url) {
+        return typeof url === 'string' && /^https?:\/\//i.test(url.trim());
+      }
+
+      if (googleReviewConfigured(GOOGLE_REVIEW_URL)) {
+        btn.href = GOOGLE_REVIEW_URL.trim();
+        btn.removeAttribute('role');
+      } else {
+        btn.href = '#';
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          hint.style.display = 'block';
+          hint.focus();
+        });
+      }
+    })();
+  </script>
+
+</body>
+</html>

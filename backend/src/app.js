@@ -186,6 +186,15 @@ app.get('/penthos-review/feedback', (req, res) => {
 app.get('/penthos-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'penthos-kitchen-review-thanks.html'));
 });
+app.get('/boniks-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'boniks-cuisine-review.html'));
+});
+app.get('/boniks-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'boniks-cuisine-review-feedback.html'));
+});
+app.get('/boniks-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'boniks-cuisine-review-thanks.html'));
+});
 app.get('/cherished-review', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-review.html'));
 });
@@ -273,6 +282,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/penthos-review' || req.path.startsWith('/penthos-review/')) {
+    return next();
+  }
+  if (req.path === '/boniks-review' || req.path.startsWith('/boniks-review/')) {
     return next();
   }
   if (req.path === '/cherished-review' || req.path.startsWith('/cherished-review/')) {
