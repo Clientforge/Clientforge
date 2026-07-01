@@ -181,6 +181,50 @@ a:hover { text-decoration: underline; }
 }
 .test-mode-status-badge.on { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
 .test-mode-status-badge.live { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+
+.integration-feature-header { align-items: center; }
+.integration-toggle-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 96px;
+}
+.integration-toggle-status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.integration-toggle-status.on {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.integration-toggle-status.off {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+.integration-toggle-switch { flex-direction: column; gap: 0; }
+.integration-toggle-switch .toggle-slider {
+  width: 48px;
+  height: 26px;
+}
+.integration-toggle-switch .toggle-slider::after {
+  width: 20px;
+  height: 20px;
+  top: 3px;
+  left: 3px;
+}
+.integration-toggle-switch input:checked + .toggle-slider::after {
+  transform: translateX(22px);
+}
+
 .automation-test-mode-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
 .btn-go-live { background: #16a34a; border-color: #16a34a; }
 .btn-go-live:hover { background: #15803d; }

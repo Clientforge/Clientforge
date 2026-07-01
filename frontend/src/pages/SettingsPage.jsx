@@ -876,7 +876,7 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
           </span>
         </div>
 
-        <div className="automation-section-header" style={{ marginTop: 16 }}>
+        <div className="automation-section-header integration-feature-header" style={{ marginTop: 16 }}>
           <div>
             <strong>Post-visit at checkout</strong>
             <p className="settings-desc" style={{ marginBottom: 0 }}>
@@ -884,15 +884,23 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
               Post-visit automations run from the Superbill Checkout webhook below.
             </p>
           </div>
-          <label className="toggle-label">
-            <input
-              type="checkbox"
-              checked={optimantraCheckoutAutomations}
-              onChange={(e) => setOptimantraCheckoutAutomations(e.target.checked)}
-            />
-            <span className="toggle-slider" />
-            Enabled
-          </label>
+          <div className="integration-toggle-control">
+            <span
+              className={`integration-toggle-status ${optimantraCheckoutAutomations ? 'on' : 'off'}`}
+              aria-live="polite"
+            >
+              {optimantraCheckoutAutomations ? 'Enabled' : 'Disabled'}
+            </span>
+            <label className="toggle-label integration-toggle-switch" title="Post-visit at checkout">
+              <input
+                type="checkbox"
+                checked={optimantraCheckoutAutomations}
+                onChange={(e) => setOptimantraCheckoutAutomations(e.target.checked)}
+                aria-label="Post-visit at checkout"
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
         </div>
 
         {optimantraWebhookUrl && (
