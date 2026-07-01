@@ -174,7 +174,7 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
     },
   );
 
-  const rebookingJobs = await scheduleRebooking(
+  const rebookingResult = await scheduleRebooking(
     tenantId,
     appointmentId,
     contactId,
@@ -186,12 +186,21 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
     { referenceTime },
   );
 
+  const rebookingJobs = rebookingResult.scheduledCount || 0;
   const jobsScheduled = automationJobs + rebookingJobs;
   console.log(
-    `[APPT-WORKFLOW] Checkout scheduled ${jobsScheduled} job(s) for appointment ${appointmentId}`,
+    `[APPT-WORKFLOW] Checkout scheduled ${jobsScheduled} job(s) for appointment ${appointmentId}`
+    + (rebookingResult.skipReason ? ` (rebooking skipped: ${rebookingResult.skipReason})` : ''),
   );
 
-  return { jobsScheduled };
+  return {
+    jobsScheduled,
+    postVisitJobs: automationJobs,
+    rebookingJobs,
+    rebookingSkipped: rebookingJobs === 0,
+    rebookingSkipReason: rebookingResult.skipReason || null,
+    rebookingOffsetDays: rebookingResult.offsetDays || null,
+  };
 };
 
 const scheduleAutomationSteps = async (
@@ -257,6 +266,12 @@ const scheduleAutomationSteps = async (
 
 const DEFAULT_REBOOKING_STEPS = () => automationService.buildDefaultConfig().rebooking.steps || [];
 
+function coercePositiveInt(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return null;
+  return Math.round(num);
+}
+
 function pickRebookingMessage(customMessage, step, fallbackStep) {
   const custom = typeof customMessage === 'string' ? customMessage.trim() : '';
   if (custom) return custom;
@@ -297,26 +312,25 @@ function planRebookingCampaign({ matched, config, referenceDate = new Date() }) 
   const initialStep = steps[0] || defaultSteps[0];
   const followup1Step = steps[1] || defaultSteps[1];
   const followup2Step = steps[2] || defaultSteps[2];
-  const followupIntervalDays = config?.rebooking?.followup_interval_days || 14;
+  const followupIntervalDays = coercePositiveInt(config?.rebooking?.followup_interval_days) || 14;
 
   let offsetDays = null;
   let source = null;
   let skipReason = null;
+  const serviceReturnDays = coercePositiveInt(matched?.returnIntervalDays);
 
-  if (matched?.rebookingEnabled !== false
-    && Number.isFinite(matched?.returnIntervalDays)
-    && matched.returnIntervalDays > 0) {
-    offsetDays = matched.returnIntervalDays;
+  if (matched?.rebookingEnabled !== false && serviceReturnDays) {
+    offsetDays = serviceReturnDays;
     source = 'service';
   } else if (config?.rebooking?.enabled && initialStep) {
     offsetDays = Math.max(1, Math.round((initialStep.offset_minutes || 43200) / (60 * 24)));
     source = 'generic';
-  } else if (matched?.returnIntervalDays > 0 && matched?.rebookingEnabled === false) {
-    skipReason = 'service auto-rebook is off';
+  } else if (serviceReturnDays && matched?.rebookingEnabled === false) {
+    skipReason = 'service auto-rebook is off — enable Auto-rebook on the service and Save services';
   } else if (!config?.rebooking?.enabled) {
     skipReason = 'rebooking workflow is disabled and no service auto-rebook interval applies';
   } else {
-    skipReason = 'no return interval configured';
+    skipReason = 'no return interval configured on the matched service';
   }
 
   if (!offsetDays) {
@@ -328,6 +342,13 @@ function planRebookingCampaign({ matched, config, referenceDate = new Date() }) 
     initialStep,
     defaultSteps[0],
   ) || 'Hi {firstName}! It\'s time for your {serviceName} at {businessName}. Book your next visit: {bookingLink}';
+
+  const followup1Message = pickRebookingMessage(null, followup1Step, defaultSteps[1])
+    || defaultSteps[1]?.message
+    || 'Hi {firstName}! Just checking in — ready to schedule your next {serviceName} at {businessName}? {bookingLink}';
+  const followup2Message = pickRebookingMessage(null, followup2Step, defaultSteps[2])
+    || defaultSteps[2]?.message
+    || 'Hi {firstName}, we\'d still love to see you for your {serviceName}. Book at {businessName}: {bookingLink}';
 
   const initialRunAt = new Date(referenceDate.getTime() + offsetDays * 24 * 60 * 60 * 1000);
   const followup1RunAt = new Date(initialRunAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000);
@@ -349,7 +370,7 @@ function planRebookingCampaign({ matched, config, referenceDate = new Date() }) 
     {
       jobType: 'rebooking_followup_1',
       step: followup1Step,
-      message: pickRebookingMessage(null, followup1Step, defaultSteps[1]),
+      message: followup1Message,
       emailSubject: pickRebookingEmailSubject(null, followup1Step, defaultSteps[1]),
       runAt: followup1RunAt,
       source,
@@ -357,7 +378,7 @@ function planRebookingCampaign({ matched, config, referenceDate = new Date() }) 
     {
       jobType: 'rebooking_followup_2',
       step: followup2Step,
-      message: pickRebookingMessage(null, followup2Step, defaultSteps[2]),
+      message: followup2Message,
       emailSubject: pickRebookingEmailSubject(null, followup2Step, defaultSteps[2]),
       runAt: followup2RunAt,
       source,
@@ -406,7 +427,7 @@ const scheduleRebooking = async (
       `[APPT-WORKFLOW] Rebooking skipped for appointment ${appointmentId}`
       + (plan.skipReason ? `: ${plan.skipReason}` : ''),
     );
-    return 0;
+    return { scheduledCount: 0, skipReason: plan.skipReason || 'rebooking not configured' };
   }
 
   const serviceVars = {
@@ -416,13 +437,18 @@ const scheduleRebooking = async (
 
   let scheduledCount = 0;
   const now = new Date();
+  let skippedFollowUps = 0;
 
   for (const item of plan.items) {
     if (!item.message?.trim() || !item.runAt || item.runAt <= now) continue;
 
     const isInitial = item.jobType === 'rebooking_initial';
-    if (!isInitial && item.step?.enabled === false) continue;
-    if (isInitial && item.step?.enabled === false && item.source !== 'service') continue;
+    const fromService = item.source === 'service';
+    if (!isInitial && item.step?.enabled === false && !fromService) {
+      skippedFollowUps += 1;
+      continue;
+    }
+    if (isInitial && item.step?.enabled === false && !fromService) continue;
 
     const body = automationService.renderTemplate(item.message, serviceVars);
     const subject = automationService.renderTemplate(item.emailSubject, serviceVars);
@@ -446,14 +472,19 @@ const scheduleRebooking = async (
       + ` starting ${plan.offsetDays}d after visit for appointment ${appointmentId}`
       + (matched ? ` (${matched.name})` : ''),
     );
-  } else {
-    console.log(
-      `[APPT-WORKFLOW] Rebooking skipped for appointment ${appointmentId}:`
-      + ' no future send times or all follow-up steps disabled',
-    );
+    return {
+      scheduledCount,
+      skipReason: null,
+      offsetDays: plan.offsetDays,
+      source: plan.source,
+    };
   }
 
-  return scheduledCount;
+  const skipReason = skippedFollowUps > 0
+    ? 'rebooking follow-up steps are disabled in Workflows → Rebooking'
+    : 'no future send times (checkout date may be too far in the past)';
+  console.log(`[APPT-WORKFLOW] Rebooking skipped for appointment ${appointmentId}: ${skipReason}`);
+  return { scheduledCount: 0, skipReason, offsetDays: plan.offsetDays, source: plan.source };
 };
 
 const sendEventMessage = async (tenantId, contactId, contact, tenant, eventConfig, vars, messageType) => {
@@ -536,4 +567,5 @@ module.exports = {
   POST_VISIT_CATEGORIES,
   planRebookingCampaign,
   pickRebookingMessage,
+  coercePositiveInt,
 };

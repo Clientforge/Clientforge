@@ -7,7 +7,9 @@ const mapServiceRow = (row) => ({
   id: row.id,
   name: row.name,
   aliases: Array.isArray(row.aliases) ? row.aliases : [],
-  returnIntervalDays: row.return_interval_days,
+  returnIntervalDays: row.return_interval_days == null || row.return_interval_days === ''
+    ? null
+    : Number(row.return_interval_days),
   rebookingEnabled: row.rebooking_enabled !== false,
   rebookMessage: row.rebook_message || '',
   rebookEmailSubject: row.rebook_email_subject || '',

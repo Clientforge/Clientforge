@@ -80,5 +80,18 @@ const genericOnly = planRebookingCampaign({
 failed += check('generic rebooking when workflow enabled', genericOnly.source, 'generic');
 failed += check('generic rebooking schedules items', genericOnly.items.length, 3);
 
+const stringInterval = planRebookingCampaign({
+  matched: {
+    name: 'Age-defying Drip',
+    rebookingEnabled: true,
+    returnIntervalDays: '28',
+    rebookMessage: '',
+  },
+  config: { ...defaults, rebooking: { ...defaults.rebooking, enabled: false } },
+  referenceDate,
+});
+failed += check('string return interval coerces to number', stringInterval.offsetDays, 28);
+failed += check('string return interval schedules jobs', stringInterval.items.length, 3);
+
 console.log(failed === 0 ? '\nAll rebooking schedule tests passed.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

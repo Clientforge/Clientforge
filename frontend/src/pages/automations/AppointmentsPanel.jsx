@@ -201,9 +201,20 @@ function AppointmentTimeline({ detail, onRefresh }) {
       const result = await api.post(
         `/automations/appointment-records/${appointment.id}/redeploy-checkout-workflows`,
       );
-      setActionMsg(result.jobsScheduled
-        ? `Scheduled ${result.jobsScheduled} message(s) from checkout.`
-        : 'No new messages scheduled — check Services auto-rebook and Rebooking workflow settings.');
+      const parts = [];
+      if (result.postVisitJobs) {
+        parts.push(`${result.postVisitJobs} post-visit`);
+      }
+      if (result.rebookingJobs) {
+        parts.push(`${result.rebookingJobs} rebooking`);
+      }
+      if (parts.length > 0) {
+        setActionMsg(`Scheduled ${parts.join(' + ')} message(s) from checkout.`);
+      } else if (result.rebookingSkipReason) {
+        setActionMsg(`Post-visit only — rebooking skipped: ${result.rebookingSkipReason}`);
+      } else {
+        setActionMsg('No new messages scheduled — check Services auto-rebook and Rebooking workflow settings.');
+      }
       await onRefresh?.();
     } catch (err) {
       setActionMsg(err.message || 'Could not schedule checkout automations.');
