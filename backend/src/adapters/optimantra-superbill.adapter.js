@@ -1,8 +1,10 @@
 /**
  * OptiMantra Superbill Checkout webhook → canonical checkout event.
  *
- * Field names are flexible until a live payload is captured — update keys after
- * webhook.site sample from OptiMantra Superbill Checkout trigger.
+ * Confirmed live payload (Sluice Drip Spa):
+ *   firstName, lastName, phone, email?, insurance?,
+ *   labWork[], officeVisit[], procedures[], otherServices[]
+ * Line items use `code` for service name; type is implied by the array key.
  */
 
 const {
@@ -48,7 +50,15 @@ const CHECKOUT_AT_KEYS = [
 
 const SERVICE_LIST_KEYS = [
   'services', 'lineItems', 'line_items', 'superbillLines', 'superbill_lines',
-  'items', 'procedures', 'treatments', 'serviceLines', 'service_lines',
+  'items', 'treatments', 'serviceLines', 'service_lines',
+];
+
+/** OptiMantra superbill buckets — service type is the key, not a line field. */
+const TYPE_BUCKETS = [
+  { key: 'procedures', serviceType: 'Procedure' },
+  { key: 'officeVisit', serviceType: 'Office Visit' },
+  { key: 'labWork', serviceType: 'Lab Work' },
+  { key: 'otherServices', serviceType: 'Other' },
 ];
 
 function titleCaseServiceType(raw) {
@@ -61,18 +71,18 @@ function titleCaseServiceType(raw) {
   return String(raw).trim();
 }
 
-function parseLineItem(raw) {
+function parseLineItem(raw, bucketServiceType = null) {
   if (!raw || typeof raw !== 'object') return null;
 
   const serviceName = pickFirst(raw, [
-    'serviceName', 'service_name', 'service', 'name', 'procedureName', 'procedure_name',
+    'code', 'serviceName', 'service_name', 'service', 'name', 'procedureName', 'procedure_name',
     'treatment', 'treatmentName', 'description', 'itemName', 'item_name',
   ]);
 
   const serviceType = titleCaseServiceType(pickFirst(raw, [
     'serviceType', 'service_type', 'type', 'visitType', 'visit_type', 'category',
     'procedureType', 'procedure_type',
-  ]));
+  ])) || bucketServiceType;
 
   if (!serviceName && !serviceType) return null;
 
@@ -82,11 +92,34 @@ function parseLineItem(raw) {
   };
 }
 
+function extractServicesFromTypeBuckets(payload) {
+  const services = [];
+  for (const { key, serviceType } of TYPE_BUCKETS) {
+    const list = payload[key];
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const parsed = parseLineItem(item, serviceType);
+      if (parsed) services.push(parsed);
+    }
+  }
+  return services;
+}
+
 function extractServices(payload) {
+  const fromBuckets = extractServicesFromTypeBuckets(payload);
+  if (fromBuckets.length > 0) return fromBuckets;
+
   for (const key of SERVICE_LIST_KEYS) {
     const list = payload[key];
     if (!Array.isArray(list)) continue;
-    const parsed = list.map(parseLineItem).filter(Boolean);
+    const parsed = list.map((item) => parseLineItem(item)).filter(Boolean);
+    if (parsed.length > 0) return parsed;
+  }
+
+  // Legacy: procedures as a flat service list (not the OptiMantra typed bucket).
+  const procedures = payload.procedures;
+  if (Array.isArray(procedures)) {
+    const parsed = procedures.map((item) => parseLineItem(item, 'Procedure')).filter(Boolean);
     if (parsed.length > 0) return parsed;
   }
 
@@ -181,4 +214,5 @@ module.exports = {
   titleCaseServiceType,
   parseLineItem,
   extractServices,
+  extractServicesFromTypeBuckets,
 };

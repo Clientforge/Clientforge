@@ -7,14 +7,24 @@
   "appointmentId": "12345",
   "superbillId": "SB-998877",
   "checkoutDate": "Wed Jun 11 2025 11:30:00 GMT-0400 (Eastern Daylight Time)",
-  "services": [
+  "procedures": [
     {
-      "serviceName": "Neuromuscular Therapy Medical Massage",
-      "serviceType": "Procedure"
-    },
-    {
-      "serviceName": "Follow-up Evaluation",
-      "serviceType": "Office Visit"
+      "code": "Neuromuscular Therapy Medical Massage",
+      "quantity": 1,
+      "charge": 120,
+      "discount": 0,
+      "netCharge": 120
     }
-  ]
+  ],
+  "officeVisit": [
+    {
+      "code": "Follow-up Evaluation",
+      "quantity": 1,
+      "charge": 75,
+      "discount": 0,
+      "netCharge": 75
+    }
+  ],
+  "labWork": [],
+  "otherServices": []
 }

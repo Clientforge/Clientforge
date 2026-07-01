@@ -36,6 +36,7 @@ if (!normalized) {
   failed += check('fixture appointmentExternalId', normalized.checkout.appointmentExternalId, 'optimantra:12345');
   failed += check('fixture services count', normalized.services.length, 2);
   failed += check('fixture service[0] type', normalized.services[0].serviceType, 'Procedure');
+  failed += check('fixture service[0] name from code', normalized.services[0].serviceName, 'Neuromuscular Therapy Medical Massage');
   failed += check('fixture service[1] type', normalized.services[1].serviceType, 'Office Visit');
 }
 
@@ -44,6 +45,60 @@ failed += check('primary service prefers Procedure', primary?.serviceName, 'Neur
 
 const noServices = extractServices({ firstName: 'X' });
 failed += check('extractServices empty', noServices.length, 0);
+
+// Sluice Drip Spa — minimal live superbill (Render log shape)
+const sluiceMinimal = {
+  insurance: 'Self Pay',
+  firstName: 'Bri',
+  lastName: 'Test',
+  phone: '6784896725',
+  officeVisit: [
+    { code: 'IV Hydration Therapy', quantity: 1, charge: 150, discount: 0, netCharge: 150 },
+  ],
+};
+const sluiceNormalized = normalizeOptimantraSuperbillPayload(sluiceMinimal);
+if (!sluiceNormalized) {
+  console.log('✗ Sluice minimal superbill returned null');
+  failed += 1;
+} else {
+  failed += check('Sluice phone', sluiceNormalized.contact.phone, '6784896725');
+  failed += check('Sluice services count', sluiceNormalized.services.length, 1);
+  failed += check('Sluice service name from code', sluiceNormalized.services[0].serviceName, 'IV Hydration Therapy');
+  failed += check('Sluice service type from bucket', sluiceNormalized.services[0].serviceType, 'Office Visit');
+}
+
+// Sluice Drip Spa — full superbill with labWork + officeVisit buckets
+const sluiceFull = {
+  firstName: 'Bri',
+  lastName: 'Test',
+  phone: '6784896725',
+  email: 'britest@example.com',
+  labWork: [{ code: '* Access Lab Panels', quantity: 1, charge: 55.55, discount: 0, netCharge: 55.55 }],
+  officeVisit: [{ code: '* Access Lab Panels', quantity: 1, charge: 0, discount: 0, netCharge: 0 }],
+  procedures: [],
+  otherServices: [],
+  total: 55.55,
+  subtotal: 55.55,
+};
+const sluiceFullNormalized = normalizeOptimantraSuperbillPayload(sluiceFull);
+if (!sluiceFullNormalized) {
+  console.log('✗ Sluice full superbill returned null');
+  failed += 1;
+} else {
+  failed += check('Sluice full services count', sluiceFullNormalized.services.length, 2);
+  failed += check('Sluice full office type (first bucket)', sluiceFullNormalized.services[0].serviceType, 'Office Visit');
+  failed += check('Sluice full lab type (second bucket)', sluiceFullNormalized.services[1].serviceType, 'Lab Work');
+  const sluicePrimary = pickPrimaryService(sluiceFullNormalized.services);
+  failed += check('Sluice full primary prefers Office Visit over Lab Work', sluicePrimary?.serviceType, 'Office Visit');
+}
+
+// Legacy services[] shape still supported
+const legacy = normalizeOptimantraSuperbillPayload({
+  firstName: 'Legacy',
+  phone: '4045550000',
+  services: [{ serviceName: 'Massage', serviceType: 'Procedure' }],
+});
+failed += check('legacy services[] shape parses', !!legacy && legacy.services[0].serviceName === 'Massage', true);
 
 console.log(failed === 0 ? '\nAll OptiMantra Superbill adapter tests passed.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);
