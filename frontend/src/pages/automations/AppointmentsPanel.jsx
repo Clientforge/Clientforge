@@ -193,6 +193,27 @@ function AppointmentTimeline({ detail, onRefresh }) {
     }
   };
 
+  const redeployCheckoutWorkflows = async () => {
+    if (!confirm('Schedule post-visit and rebooking messages from checkout time? Existing pending post-visit/rebooking jobs will be replaced.')) return;
+    setBusy('redeploy');
+    setActionMsg('');
+    try {
+      const result = await api.post(
+        `/automations/appointment-records/${appointment.id}/redeploy-checkout-workflows`,
+      );
+      setActionMsg(result.jobsScheduled
+        ? `Scheduled ${result.jobsScheduled} message(s) from checkout.`
+        : 'No new messages scheduled — check Services auto-rebook and Rebooking workflow settings.');
+      await onRefresh?.();
+    } catch (err) {
+      setActionMsg(err.message || 'Could not schedule checkout automations.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const showRedeployCheckout = appointment.status === 'completed' && appointment.provider === 'optimantra';
+
   return (
     <div className="appointment-timeline">
       <div className="timeline-header">
@@ -236,6 +257,16 @@ function AppointmentTimeline({ detail, onRefresh }) {
             disabled={!!busy}
           >
             {busy === 'all' ? 'Stopping…' : `Stop all scheduled (${pendingCount})`}
+          </button>
+        )}
+        {showRedeployCheckout && (
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={redeployCheckoutWorkflows}
+            disabled={!!busy}
+          >
+            {busy === 'redeploy' ? 'Scheduling…' : 'Schedule checkout automations'}
           </button>
         )}
       </div>

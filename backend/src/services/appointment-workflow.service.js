@@ -40,7 +40,7 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
     ),
     db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
     db.query(
-      'SELECT scheduled_at, service_name, timezone, provider FROM appointments WHERE id = $1',
+      'SELECT scheduled_at, service_name, timezone, provider, matched_service_id FROM appointments WHERE id = $1',
       [appointmentId],
     ),
   ]);
@@ -107,7 +107,7 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
     ),
     db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
     db.query(
-      'SELECT scheduled_at, service_name, timezone, provider FROM appointments WHERE id = $1',
+      'SELECT scheduled_at, service_name, timezone, provider, matched_service_id FROM appointments WHERE id = $1',
       [appointmentId],
     ),
   ]);
@@ -255,6 +255,126 @@ const scheduleAutomationSteps = async (
   return scheduledCount;
 };
 
+const DEFAULT_REBOOKING_STEPS = () => automationService.buildDefaultConfig().rebooking.steps || [];
+
+function pickRebookingMessage(customMessage, step, fallbackStep) {
+  const custom = typeof customMessage === 'string' ? customMessage.trim() : '';
+  if (custom) return custom;
+
+  const stepMsg = typeof step?.message === 'string' ? step.message.trim() : '';
+  if (stepMsg) return stepMsg;
+
+  const fallbackMsg = typeof fallbackStep?.message === 'string' ? fallbackStep.message.trim() : '';
+  if (fallbackMsg) return fallbackMsg;
+
+  return '';
+}
+
+function pickRebookingEmailSubject(customSubject, step, fallbackStep) {
+  const custom = typeof customSubject === 'string' ? customSubject.trim() : '';
+  if (custom) return custom;
+
+  const stepSubject = typeof step?.email_subject === 'string' ? step.email_subject.trim() : '';
+  if (stepSubject) return stepSubject;
+
+  const fallbackSubject = typeof fallbackStep?.email_subject === 'string'
+    ? fallbackStep.email_subject.trim()
+    : '';
+  if (fallbackSubject) return fallbackSubject;
+
+  return 'Time to rebook — {businessName}';
+}
+
+/**
+ * Pure rebooking plan — used by scheduleRebooking and tests.
+ * @returns {{ offsetDays: number|null, source: string|null, items: array, skipReason: string|null }}
+ */
+function planRebookingCampaign({ matched, config, referenceDate = new Date() }) {
+  const defaultSteps = DEFAULT_REBOOKING_STEPS();
+  const steps = Array.isArray(config?.rebooking?.steps) && config.rebooking.steps.length > 0
+    ? config.rebooking.steps
+    : defaultSteps;
+  const initialStep = steps[0] || defaultSteps[0];
+  const followup1Step = steps[1] || defaultSteps[1];
+  const followup2Step = steps[2] || defaultSteps[2];
+  const followupIntervalDays = config?.rebooking?.followup_interval_days || 14;
+
+  let offsetDays = null;
+  let source = null;
+  let skipReason = null;
+
+  if (matched?.rebookingEnabled !== false
+    && Number.isFinite(matched?.returnIntervalDays)
+    && matched.returnIntervalDays > 0) {
+    offsetDays = matched.returnIntervalDays;
+    source = 'service';
+  } else if (config?.rebooking?.enabled && initialStep) {
+    offsetDays = Math.max(1, Math.round((initialStep.offset_minutes || 43200) / (60 * 24)));
+    source = 'generic';
+  } else if (matched?.returnIntervalDays > 0 && matched?.rebookingEnabled === false) {
+    skipReason = 'service auto-rebook is off';
+  } else if (!config?.rebooking?.enabled) {
+    skipReason = 'rebooking workflow is disabled and no service auto-rebook interval applies';
+  } else {
+    skipReason = 'no return interval configured';
+  }
+
+  if (!offsetDays) {
+    return { offsetDays: null, source: null, items: [], skipReason };
+  }
+
+  const initialMessage = pickRebookingMessage(
+    matched?.rebookMessage,
+    initialStep,
+    defaultSteps[0],
+  ) || 'Hi {firstName}! It\'s time for your {serviceName} at {businessName}. Book your next visit: {bookingLink}';
+
+  const initialRunAt = new Date(referenceDate.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+  const followup1RunAt = new Date(initialRunAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000);
+  const followup2RunAt = new Date(followup1RunAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000);
+
+  const items = [
+    {
+      jobType: 'rebooking_initial',
+      step: initialStep,
+      message: initialMessage,
+      emailSubject: pickRebookingEmailSubject(
+        matched?.rebookEmailSubject,
+        initialStep,
+        defaultSteps[0],
+      ),
+      runAt: initialRunAt,
+      source,
+    },
+    {
+      jobType: 'rebooking_followup_1',
+      step: followup1Step,
+      message: pickRebookingMessage(null, followup1Step, defaultSteps[1]),
+      emailSubject: pickRebookingEmailSubject(null, followup1Step, defaultSteps[1]),
+      runAt: followup1RunAt,
+      source,
+    },
+    {
+      jobType: 'rebooking_followup_2',
+      step: followup2Step,
+      message: pickRebookingMessage(null, followup2Step, defaultSteps[2]),
+      emailSubject: pickRebookingEmailSubject(null, followup2Step, defaultSteps[2]),
+      runAt: followup2RunAt,
+      source,
+    },
+  ];
+
+  return { offsetDays, source, items, skipReason: null };
+}
+
+async function resolveMatchedServiceForRebooking(tenantId, appointment) {
+  if (appointment?.matched_service_id) {
+    const byId = await tenantService.getServiceById(tenantId, appointment.matched_service_id);
+    if (byId) return byId;
+  }
+  return tenantService.matchService(tenantId, appointment?.service_name);
+}
+
 const scheduleRebooking = async (
   tenantId,
   appointmentId,
@@ -269,83 +389,44 @@ const scheduleRebooking = async (
   const appointmentTime = referenceTime
     ? new Date(referenceTime)
     : new Date(appointment.scheduled_at);
-  const matched = await tenantService.matchService(tenantId, appointment.service_name);
+  const matched = await resolveMatchedServiceForRebooking(tenantId, appointment);
 
   if (matched) {
     await tenantService.setAppointmentMatchedService(appointmentId, matched.id);
   }
 
-  const steps = config.rebooking?.steps || [];
-  const initialStep = steps[0];
-  const followup1Step = steps[1];
-  const followup2Step = steps[2];
-  const followupIntervalDays = config.rebooking?.followup_interval_days || 14;
+  const plan = planRebookingCampaign({
+    matched,
+    config,
+    referenceDate: appointmentTime,
+  });
 
-  let offsetDays = null;
-  let source = 'generic';
-
-  if (matched?.rebookingEnabled && Number.isFinite(matched.returnIntervalDays) && matched.returnIntervalDays > 0) {
-    offsetDays = matched.returnIntervalDays;
-    source = 'service';
-  } else if (config.rebooking?.enabled && initialStep) {
-    offsetDays = Math.max(1, Math.round(initialStep.offset_minutes / (60 * 24)));
-    source = 'generic';
+  if (!plan.offsetDays) {
+    console.log(
+      `[APPT-WORKFLOW] Rebooking skipped for appointment ${appointmentId}`
+      + (plan.skipReason ? `: ${plan.skipReason}` : ''),
+    );
+    return 0;
   }
-
-  if (!offsetDays) return 0;
 
   const serviceVars = {
     ...vars,
     serviceName: matched?.name || appointment.service_name || vars.serviceName,
   };
 
-  const campaignSteps = [
-    {
-      jobType: 'rebooking_initial',
-      step: initialStep,
-      message: matched?.rebookMessage || initialStep?.message || null,
-      emailSubject: matched?.rebookEmailSubject || initialStep?.email_subject || null,
-      runAt: new Date(appointmentTime.getTime() + offsetDays * 24 * 60 * 60 * 1000),
-    },
-    {
-      jobType: 'rebooking_followup_1',
-      step: followup1Step,
-      message: followup1Step?.message || null,
-      emailSubject: followup1Step?.email_subject || null,
-      runAt: null,
-    },
-    {
-      jobType: 'rebooking_followup_2',
-      step: followup2Step,
-      message: followup2Step?.message || null,
-      emailSubject: followup2Step?.email_subject || null,
-      runAt: null,
-    },
-  ];
-
-  campaignSteps[1].runAt = new Date(
-    campaignSteps[0].runAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000,
-  );
-  campaignSteps[2].runAt = new Date(
-    campaignSteps[1].runAt.getTime() + followupIntervalDays * 24 * 60 * 60 * 1000,
-  );
-
   let scheduledCount = 0;
   const now = new Date();
 
-  for (const item of campaignSteps) {
-    if (!item.message || !item.runAt || item.runAt <= now) continue;
+  for (const item of plan.items) {
+    if (!item.message?.trim() || !item.runAt || item.runAt <= now) continue;
 
     const isInitial = item.jobType === 'rebooking_initial';
-    if (!isInitial && (!item.step || item.step.enabled === false)) continue;
-    if (isInitial && item.step?.enabled === false && source !== 'service') continue;
+    if (!isInitial && item.step?.enabled === false) continue;
+    if (isInitial && item.step?.enabled === false && item.source !== 'service') continue;
 
     const body = automationService.renderTemplate(item.message, serviceVars);
-    const subject = automationService.renderTemplate(
-      item.emailSubject || 'Time to rebook — {businessName}',
-      serviceVars,
-    );
-    const channel = item.step.channel || initialStep?.channel || 'sms';
+    const subject = automationService.renderTemplate(item.emailSubject, serviceVars);
+    const channel = item.step?.channel || plan.items[0]?.step?.channel || 'sms';
     const channels = automationService.channelsForStep(channel);
 
     for (const ch of channels) {
@@ -361,9 +442,14 @@ const scheduleRebooking = async (
 
   if (scheduledCount > 0) {
     console.log(
-      `[APPT-WORKFLOW] Scheduled ${source} rebooking campaign (${scheduledCount} job(s))`
-      + ` starting ${offsetDays}d after visit for appointment ${appointmentId}`
+      `[APPT-WORKFLOW] Scheduled ${plan.source} rebooking campaign (${scheduledCount} job(s))`
+      + ` starting ${plan.offsetDays}d after visit for appointment ${appointmentId}`
       + (matched ? ` (${matched.name})` : ''),
+    );
+  } else {
+    console.log(
+      `[APPT-WORKFLOW] Rebooking skipped for appointment ${appointmentId}:`
+      + ' no future send times or all follow-up steps disabled',
     );
   }
 
@@ -448,4 +534,6 @@ module.exports = {
   isOptimantraCheckoutMode,
   PRE_VISIT_CATEGORIES,
   POST_VISIT_CATEGORIES,
+  planRebookingCampaign,
+  pickRebookingMessage,
 };

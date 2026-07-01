@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const appointmentWorkflowService = require('./appointment-workflow.service');
 const { inboxEmail } = require('./bookingEmailIngest.service');
 const { normalizeBusinessName } = require('./bookingEmailParse.service');
 
@@ -379,11 +380,55 @@ const cancelAllPendingWorkflowJobs = async (tenantId, appointmentId) => {
   return { cancelledCount: result.rows.length };
 };
 
+const redeployCheckoutWorkflows = async (tenantId, appointmentId) => {
+  const result = await db.query(
+    `SELECT a.id, a.contact_id, a.provider, a.status, a.service_name,
+            a.completed_at, a.scheduled_at, t.optimantra_checkout_automations
+     FROM appointments a
+     JOIN tenants t ON t.id = a.tenant_id
+     WHERE a.id = $1 AND a.tenant_id = $2`,
+    [appointmentId, tenantId],
+  );
+
+  const appointment = result.rows[0];
+  if (!appointment) {
+    throw Object.assign(new Error('Appointment not found'), { statusCode: 404, isOperational: true });
+  }
+  if (appointment.provider !== 'optimantra') {
+    throw Object.assign(new Error('Checkout redeploy is only available for OptiMantra appointments'), {
+      statusCode: 400,
+      isOperational: true,
+    });
+  }
+  if (!appointment.optimantra_checkout_automations) {
+    throw Object.assign(new Error('Post-visit at checkout is not enabled for this account'), {
+      statusCode: 400,
+      isOperational: true,
+    });
+  }
+
+  const checkedOutAt = appointment.completed_at || appointment.scheduled_at;
+  const workflowResult = await appointmentWorkflowService.dispatchCheckoutWorkflows(tenantId, {
+    contactId: appointment.contact_id,
+    appointmentId: appointment.id,
+    checkedOutAt: checkedOutAt ? new Date(checkedOutAt).toISOString() : new Date().toISOString(),
+    primaryServiceName: appointment.service_name,
+  });
+
+  return {
+    success: true,
+    appointmentId: appointment.id,
+    checkedOutAt: checkedOutAt ? new Date(checkedOutAt).toISOString() : null,
+    ...workflowResult,
+  };
+};
+
 module.exports = {
   listAppointmentRecords,
   getAppointmentRecord,
   cancelWorkflowJob,
   cancelAllPendingWorkflowJobs,
+  redeployCheckoutWorkflows,
   listBookingEmails,
   getBookingEmail,
   getBookingEmailSetup,

@@ -32,6 +32,13 @@ router.post('/appointment-records/:id/cancel-workflows', async (req, res, next) 
   } catch (err) { next(err); }
 });
 
+router.post('/appointment-records/:id/redeploy-checkout-workflows', async (req, res, next) => {
+  try {
+    const result = await dashboardService.redeployCheckoutWorkflows(req.tenantId, req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.post('/appointment-records/:appointmentId/workflow-jobs/:jobId/cancel', async (req, res, next) => {
   try {
     const result = await dashboardService.cancelWorkflowJob(

@@ -135,6 +135,21 @@ const matchService = async (tenantId, rawServiceName) => {
   return mapServiceRow(best);
 };
 
+const getServiceById = async (tenantId, serviceId) => {
+  if (!serviceId) return null;
+
+  const result = await db.query(
+    `SELECT id, name, aliases, return_interval_days, rebooking_enabled,
+            rebook_message, rebook_email_subject, notes, sort_order
+     FROM tenant_services
+     WHERE tenant_id = $1 AND id = $2
+     LIMIT 1`,
+    [tenantId, serviceId],
+  );
+
+  return result.rows[0] ? mapServiceRow(result.rows[0]) : null;
+};
+
 const setAppointmentMatchedService = async (appointmentId, serviceId) => {
   await db.query(
     'UPDATE appointments SET matched_service_id = $2, updated_at = NOW() WHERE id = $1',
@@ -158,6 +173,7 @@ module.exports = {
   listServices,
   replaceServices,
   matchService,
+  getServiceById,
   setAppointmentMatchedService,
   findTenantIdByUserEmail,
   normalizeServiceName,
