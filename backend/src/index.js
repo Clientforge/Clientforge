@@ -8,6 +8,7 @@ const campaignWorker = require('./workers/campaign.worker');
 const appointmentWorker = require('./workers/appointment.worker');
 const bookingEmailWorker = require('./workers/bookingEmail.worker');
 const googleCalendarWorker = require('./workers/googleCalendar.worker');
+const birthdayWorker = require('./workers/birthday.worker');
 const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
 const startServer = async () => {
@@ -37,6 +38,7 @@ const startServer = async () => {
     appointmentWorker.startWorker();
     bookingEmailWorker.startWorker();
     googleCalendarWorker.startWorker();
+    birthdayWorker.startWorker();
   });
 };
 

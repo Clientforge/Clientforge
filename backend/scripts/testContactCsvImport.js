@@ -1,10 +1,11 @@
 /**
- * CSV column mapping tests — run: node scripts/testContactCsvImport.js
+ * Contact DOB parsing + CSV mapping tests — run: node scripts/testContactCsvImport.js
  */
 const fs = require('fs');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
 const { normalizePhone } = require('../src/services/lead.service');
+const { parseDateOfBirth } = require('../src/services/contact.service');
 
 function normalizeCsvKey(key) {
   return String(key || '')
@@ -23,9 +24,9 @@ function pickCsvField(row, ...aliases) {
   return '';
 }
 
-const sampleCsv = `Phone,first name,last name
-2187907954.0,Aisha,Oh
-,Skipped,Person`;
+const sampleCsv = `Phone,first name,last name,DOB
+2187907954.0,Aisha,Oh,1990-07-15
+,Skipped,Person,`;
 
 const records = parse(sampleCsv, { columns: true, skip_empty_lines: true, trim: true });
 const row = records[0];
@@ -46,6 +47,11 @@ check('excel phone with extra zeros', normalizePhone('4045551234.00'), '+1404555
 check('plain 10-digit phone', normalizePhone('4045551234'), '+14045551234');
 check('first name', pickCsvField(row, 'first_name', 'firstname', 'first name', 'first'), 'Aisha');
 check('last name', pickCsvField(row, 'last_name', 'lastname', 'last name', 'last'), 'Oh');
+check('dob column', pickCsvField(row, 'date_of_birth', 'dateofbirth', 'dob', 'birthday'), '1990-07-15');
+check('parse ISO dob', parseDateOfBirth('1990-07-15'), '1990-07-15');
+check('parse US dob', parseDateOfBirth('7/15/1990'), '1990-07-15');
+check('parse invalid dob', parseDateOfBirth('not-a-date'), null);
+check('parse empty dob', parseDateOfBirth(''), null);
 
 const userCsv = path.join(__dirname, '../../../Downloads/clients_phone_first_last.csv');
 if (fs.existsSync(userCsv)) {

@@ -202,6 +202,7 @@ export default function ContactsPage() {
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Email</th>
+                  <th>Birthday</th>
                   <th>Tags</th>
                   <th>Source</th>
                   <th>Added</th>
@@ -225,6 +226,7 @@ export default function ContactsPage() {
                     </td>
                     <td className="mono">{c.phone}</td>
                     <td>{c.email || '—'}</td>
+                    <td className="muted">{c.dateOfBirth ? formatDate(c.dateOfBirth) : '—'}</td>
                     <td>
                       <div className="tag-list">
                         {(c.tags || []).map((t, i) => (
@@ -322,12 +324,14 @@ function ImportModal({ onClose, onSuccess }) {
                 <span className="csv-col">first_name</span>
                 <span className="csv-col">last_name</span>
                 <span className="csv-col">email</span>
+                <span className="csv-col">date_of_birth</span>
                 <span className="csv-col">tags</span>
                 <span className="csv-col">notes</span>
               </div>
               <p className="hint">
                 Only <strong>phone</strong> is required. Duplicates are auto-merged.
                 Name columns accept <strong>first name</strong>, <strong>first_name</strong>, or <strong>First Name</strong> (same for last name).
+                DOB accepts <strong>date_of_birth</strong>, <strong>dob</strong>, or <strong>birthday</strong> (YYYY-MM-DD or MM/DD/YYYY).
               </p>
 
               <div className="upload-area" onClick={() => fileRef.current.click()}>
@@ -391,6 +395,7 @@ function EditContactModal({ contact, onClose, onSuccess }) {
     firstName: contact.firstName || '',
     lastName: contact.lastName || '',
     email: contact.email || '',
+    dateOfBirth: contact.dateOfBirth || '',
     tags: (contact.tags || []).join(', '),
     notes: contact.notes || '',
   });
@@ -418,6 +423,7 @@ function EditContactModal({ contact, onClose, onSuccess }) {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email || null,
+        dateOfBirth: form.dateOfBirth || null,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
         notes: form.notes || null,
       });
@@ -490,6 +496,14 @@ function EditContactModal({ contact, onClose, onSuccess }) {
             />
           </div>
           <div className="form-group">
+            <label>Date of birth</label>
+            <input
+              type="date"
+              value={form.dateOfBirth}
+              onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
             <label>Tags (comma-separated)</label>
             <input
               type="text"
@@ -536,7 +550,14 @@ function EditContactModal({ contact, onClose, onSuccess }) {
 }
 
 function AddContactModal({ onClose, onSuccess }) {
-  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', tags: '' });
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    dateOfBirth: '',
+    tags: '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -547,6 +568,7 @@ function AddContactModal({ onClose, onSuccess }) {
     try {
       await api.post('/contacts', {
         ...form,
+        dateOfBirth: form.dateOfBirth || null,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       });
       onSuccess();
@@ -583,6 +605,10 @@ function AddContactModal({ onClose, onSuccess }) {
           <div className="form-group">
             <label>Email</label>
             <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Date of birth</label>
+            <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} />
           </div>
           <div className="form-group">
             <label>Tags (comma-separated)</label>

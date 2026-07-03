@@ -21,6 +21,53 @@ function pickCsvField(row, ...aliases) {
   return '';
 }
 
+/**
+ * Parse a date-of-birth string into YYYY-MM-DD for Postgres DATE, or null if invalid.
+ * Supports YYYY-MM-DD, MM/DD/YYYY, M/D/YYYY, and Excel-style floats (e.g. 2187907954.0 stripped).
+ */
+const parseDateOfBirth = (raw) => {
+  if (raw == null || raw === '') return null;
+
+  let value = String(raw).trim();
+  if (!value) return null;
+
+  // Excel sometimes exports dates as numbers — not handled here; callers should use text columns.
+  if (/^\d+\.0+$/.test(value)) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+    if (isValidDateParts(y, m, d)) return formatDateParts(y, m, d);
+    return null;
+  }
+
+  const slashMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const month = Number(slashMatch[1]);
+    const day = Number(slashMatch[2]);
+    const year = Number(slashMatch[3]);
+    if (isValidDateParts(year, month, day)) return formatDateParts(year, month, day);
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return formatDateParts(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, parsed.getUTCDate());
+  }
+
+  return null;
+};
+
+const isValidDateParts = (year, month, day) => {
+  if (!Number.isInteger(year) || year < 1900 || year > 2100) return false;
+  if (!Number.isInteger(month) || month < 1 || month > 12) return false;
+  if (!Number.isInteger(day) || day < 1 || day > 31) return false;
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  return dt.getUTCFullYear() === year && dt.getUTCMonth() === month - 1 && dt.getUTCDate() === day;
+};
+
+const formatDateParts = (year, month, day) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
 const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   const content = csvBuffer.toString('utf-8');
   const records = parse(content, {
@@ -43,20 +90,33 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
       const firstName = pickCsvField(row, 'first_name', 'firstname', 'first name', 'first');
       const lastName = pickCsvField(row, 'last_name', 'lastname', 'last name', 'last');
       const email = pickCsvField(row, 'email', 'e-mail');
+      const dobRaw = pickCsvField(row, 'date_of_birth', 'dateofbirth', 'dob', 'birthday', 'birth date', 'birthdate');
+      const dateOfBirth = parseDateOfBirth(dobRaw);
       const tags = pickCsvField(row, 'tags', 'tag');
       const notes = pickCsvField(row, 'notes', 'note');
 
       const tagArray = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
       await db.query(
-        `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, tags, source, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, date_of_birth, tags, source, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (tenant_id, phone) DO UPDATE SET
            first_name = COALESCE(NULLIF(EXCLUDED.first_name, ''), contacts.first_name),
            last_name = COALESCE(NULLIF(EXCLUDED.last_name, ''), contacts.last_name),
            email = COALESCE(NULLIF(EXCLUDED.email, ''), contacts.email),
+           date_of_birth = COALESCE(EXCLUDED.date_of_birth, contacts.date_of_birth),
            updated_at = NOW()`,
-        [tenantId, firstName || null, lastName || null, normalizedPhone, email || null, JSON.stringify(tagArray), source, notes || null],
+        [
+          tenantId,
+          firstName || null,
+          lastName || null,
+          normalizedPhone,
+          email || null,
+          dateOfBirth,
+          JSON.stringify(tagArray),
+          source,
+          notes || null,
+        ],
       );
       imported++;
     } catch (err) {
@@ -109,12 +169,25 @@ const listContacts = async (tenantId, { page = 1, limit = 25, search, tag }) => 
 const createContact = async (tenantId, data) => {
   const phone = normalizePhone(data.phone);
   const tags = Array.isArray(data.tags) ? data.tags : [];
+  const dateOfBirth = data.dateOfBirth !== undefined
+    ? parseDateOfBirth(data.dateOfBirth)
+    : null;
 
   const result = await db.query(
-    `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, tags, source, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, date_of_birth, tags, source, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [tenantId, data.firstName || null, data.lastName || null, phone, data.email || null, JSON.stringify(tags), data.source || 'manual', data.notes || null],
+    [
+      tenantId,
+      data.firstName || null,
+      data.lastName || null,
+      phone,
+      data.email || null,
+      dateOfBirth,
+      JSON.stringify(tags),
+      data.source || 'manual',
+      data.notes || null,
+    ],
   );
 
   return formatContact(result.rows[0]);
@@ -132,7 +205,7 @@ const getContact = async (tenantId, contactId) => {
 };
 
 /**
- * @param {object} data - Partial: firstName, lastName, email, tags (array), notes. Phone is not changed.
+ * @param {object} data - Partial: firstName, lastName, email, dateOfBirth, tags (array), notes. Phone is not changed.
  */
 const updateContact = async (tenantId, contactId, data) => {
   if (!data || typeof data !== 'object') {
@@ -153,13 +226,20 @@ const updateContact = async (tenantId, contactId, data) => {
   const email = data.email !== undefined ? (data.email || null) : row.email;
   const notes = data.notes !== undefined ? (data.notes || null) : row.notes;
 
+  let dateOfBirth = row.date_of_birth;
+  if (data.dateOfBirth !== undefined) {
+    dateOfBirth = data.dateOfBirth === null || data.dateOfBirth === ''
+      ? null
+      : parseDateOfBirth(data.dateOfBirth);
+  }
+
   let tagsJson;
   if (data.tags !== undefined) {
     const arr = Array.isArray(data.tags) ? data.tags : [];
     tagsJson = JSON.stringify(arr);
   } else {
-    const existing = Array.isArray(row.tags) ? row.tags : [];
-    tagsJson = JSON.stringify(existing);
+    const existingTags = Array.isArray(row.tags) ? row.tags : [];
+    tagsJson = JSON.stringify(existingTags);
   }
 
   const result = await db.query(
@@ -167,12 +247,13 @@ const updateContact = async (tenantId, contactId, data) => {
        first_name = $1,
        last_name = $2,
        email = $3,
-       tags = $4::jsonb,
-       notes = $5,
+       date_of_birth = $4,
+       tags = $5::jsonb,
+       notes = $6,
        updated_at = NOW()
-     WHERE tenant_id = $6 AND id = $7
+     WHERE tenant_id = $7 AND id = $8
      RETURNING *`,
-    [firstName, lastName, email, tagsJson, notes, tenantId, contactId],
+    [firstName, lastName, email, dateOfBirth, tagsJson, notes, tenantId, contactId],
   );
 
   return formatContact(result.rows[0]);
@@ -241,6 +322,11 @@ const formatContact = (row) => ({
   lastName: row.last_name,
   phone: row.phone,
   email: row.email,
+  dateOfBirth: row.date_of_birth
+    ? (row.date_of_birth instanceof Date
+      ? row.date_of_birth.toISOString().slice(0, 10)
+      : String(row.date_of_birth).slice(0, 10))
+    : null,
   tags: row.tags || [],
   source: row.source,
   notes: row.notes,
@@ -262,6 +348,7 @@ const listContactTags = async (tenantId) => {
 };
 
 module.exports = {
+  parseDateOfBirth,
   importFromCSV,
   listContacts,
   createContact,

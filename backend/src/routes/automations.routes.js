@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const automationService = require('../services/appointment-automation.service');
+const birthdayCampaignService = require('../services/birthday-campaign.service');
 const dashboardService = require('../services/automation-dashboard.service');
 const tenantService = require('../services/tenant-service.service');
 const aiService = require('../services/ai.service');
@@ -120,6 +121,20 @@ router.get('/appointments', async (req, res, next) => {
 router.put('/appointments', async (req, res, next) => {
   try {
     const updated = await automationService.updateAutomations(req.tenantId, req.body);
+    res.json(updated);
+  } catch (err) { next(err); }
+});
+
+router.get('/birthday', async (req, res, next) => {
+  try {
+    const config = await birthdayCampaignService.getBirthdayCampaign(req.tenantId);
+    res.json(config);
+  } catch (err) { next(err); }
+});
+
+router.put('/birthday', async (req, res, next) => {
+  try {
+    const updated = await birthdayCampaignService.updateBirthdayCampaign(req.tenantId, req.body);
     res.json(updated);
   } catch (err) { next(err); }
 });
