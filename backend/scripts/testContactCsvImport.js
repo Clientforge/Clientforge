@@ -52,6 +52,7 @@ check('parse ISO dob', parseDateOfBirth('1990-07-15'), '1990-07-15');
 check('parse US dob', parseDateOfBirth('7/15/1990'), '1990-07-15');
 check('parse invalid dob', parseDateOfBirth('not-a-date'), null);
 check('parse empty dob', parseDateOfBirth(''), null);
+check('parse last visit ISO', parseDateOfBirth('2025-08-14'), '2025-08-14');
 
 const userCsv = path.join(__dirname, '../../../Downloads/clients_phone_first_last.csv');
 if (fs.existsSync(userCsv)) {

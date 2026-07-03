@@ -115,6 +115,7 @@ function buildContactRecords(rows) {
       dateOfBirth: dateOfBirth || '',
       tag,
       serviceName: service,
+      lastVisitAt: apptDate ? apptDate.toISOString().slice(0, 10) : '',
       notes: apptDate
         ? `Last visit: ${apptDate.toISOString().slice(0, 10)}${service ? ` | Service: ${service}` : ''}`
         : (service ? `Service: ${service}` : ''),
@@ -131,7 +132,7 @@ function buildContactRecords(rows) {
 }
 
 function writeCsv(outputPath, records) {
-  const header = 'phone,first_name,last_name,email,date_of_birth,tags,notes';
+  const header = 'phone,first_name,last_name,email,date_of_birth,last_visit,tags,notes';
   const lines = [header];
   for (const r of records) {
     const tags = r.tag ? `sluice-import,${r.tag}` : 'sluice-import';
@@ -141,6 +142,7 @@ function writeCsv(outputPath, records) {
       escapeCsv(r.lastName),
       escapeCsv(r.email),
       escapeCsv(r.dateOfBirth),
+      escapeCsv(r.lastVisitAt),
       escapeCsv(tags),
       escapeCsv(r.notes),
     ].join(','));

@@ -203,6 +203,7 @@ export default function ContactsPage() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Birthday</th>
+                  <th>Last visit</th>
                   <th>Tags</th>
                   <th>Source</th>
                   <th>Added</th>
@@ -227,6 +228,7 @@ export default function ContactsPage() {
                     <td className="mono">{c.phone}</td>
                     <td>{c.email || '—'}</td>
                     <td className="muted">{c.dateOfBirth ? formatDate(c.dateOfBirth) : '—'}</td>
+                    <td className="muted">{c.lastVisitAt ? formatDate(c.lastVisitAt) : '—'}</td>
                     <td>
                       <div className="tag-list">
                         {(c.tags || []).map((t, i) => (
@@ -325,6 +327,7 @@ function ImportModal({ onClose, onSuccess }) {
                 <span className="csv-col">last_name</span>
                 <span className="csv-col">email</span>
                 <span className="csv-col">date_of_birth</span>
+                <span className="csv-col">last_visit</span>
                 <span className="csv-col">tags</span>
                 <span className="csv-col">notes</span>
               </div>
@@ -332,6 +335,7 @@ function ImportModal({ onClose, onSuccess }) {
                 Only <strong>phone</strong> is required. Duplicates are auto-merged.
                 Name columns accept <strong>first name</strong>, <strong>first_name</strong>, or <strong>First Name</strong> (same for last name).
                 DOB accepts <strong>date_of_birth</strong>, <strong>dob</strong>, or <strong>birthday</strong> (YYYY-MM-DD or MM/DD/YYYY).
+                Last visit accepts <strong>last_visit</strong> or <strong>appointment_date</strong> (YYYY-MM-DD or MM/DD/YYYY).
               </p>
 
               <div className="upload-area" onClick={() => fileRef.current.click()}>

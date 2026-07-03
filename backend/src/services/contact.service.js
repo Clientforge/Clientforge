@@ -68,6 +68,14 @@ const isValidDateParts = (year, month, day) => {
 const formatDateParts = (year, month, day) =>
   `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
+/** Parse a calendar date into YYYY-MM-DD (shared by DOB and last-visit import). */
+const parseContactDate = parseDateOfBirth;
+
+const toLastVisitTimestamp = (dateStr) => {
+  if (!dateStr) return null;
+  return `${dateStr}T12:00:00.000Z`;
+};
+
 const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   const content = csvBuffer.toString('utf-8');
   const records = parse(content, {
@@ -92,19 +100,43 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
       const email = pickCsvField(row, 'email', 'e-mail');
       const dobRaw = pickCsvField(row, 'date_of_birth', 'dateofbirth', 'dob', 'birthday', 'birth date', 'birthdate');
       const dateOfBirth = parseDateOfBirth(dobRaw);
+      const lastVisitRaw = pickCsvField(
+        row,
+        'last_visit',
+        'lastvisit',
+        'last_visit_at',
+        'last visit',
+        'appointment_date',
+        'appointment date',
+        'last appointment',
+      );
+      const lastVisitDate = parseContactDate(lastVisitRaw);
+      const lastVisitAt = toLastVisitTimestamp(lastVisitDate);
       const tags = pickCsvField(row, 'tags', 'tag');
       const notes = pickCsvField(row, 'notes', 'note');
 
       const tagArray = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
       await db.query(
-        `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, date_of_birth, tags, source, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO contacts (tenant_id, first_name, last_name, phone, email, date_of_birth, last_visit_at, tags, source, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (tenant_id, phone) DO UPDATE SET
            first_name = COALESCE(NULLIF(EXCLUDED.first_name, ''), contacts.first_name),
            last_name = COALESCE(NULLIF(EXCLUDED.last_name, ''), contacts.last_name),
            email = COALESCE(NULLIF(EXCLUDED.email, ''), contacts.email),
            date_of_birth = COALESCE(EXCLUDED.date_of_birth, contacts.date_of_birth),
+           last_visit_at = CASE
+             WHEN EXCLUDED.last_visit_at IS NOT NULL THEN GREATEST(
+               COALESCE(contacts.last_visit_at, EXCLUDED.last_visit_at),
+               EXCLUDED.last_visit_at
+             )
+             ELSE contacts.last_visit_at
+           END,
+           tags = CASE
+             WHEN EXCLUDED.tags IS NOT NULL AND EXCLUDED.tags != '[]'::jsonb THEN EXCLUDED.tags
+             ELSE contacts.tags
+           END,
+           notes = COALESCE(NULLIF(EXCLUDED.notes, ''), contacts.notes),
            updated_at = NOW()`,
         [
           tenantId,
@@ -113,6 +145,7 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
           normalizedPhone,
           email || null,
           dateOfBirth,
+          lastVisitAt,
           JSON.stringify(tagArray),
           source,
           notes || null,
@@ -349,6 +382,7 @@ const listContactTags = async (tenantId) => {
 
 module.exports = {
   parseDateOfBirth,
+  parseContactDate,
   importFromCSV,
   listContacts,
   createContact,
