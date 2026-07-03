@@ -11,6 +11,9 @@ export default function ContactsPage() {
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [lastVisitFilter, setLastVisitFilter] = useState('');
+  const [tagOptions, setTagOptions] = useState([]);
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
@@ -22,6 +25,11 @@ export default function ContactsPage() {
     try {
       const params = new URLSearchParams({ page, limit: 25 });
       if (search) params.set('search', search);
+      if (tagFilter) params.set('tag', tagFilter);
+      if (lastVisitFilter) params.set('lastVisit', lastVisitFilter);
+      if (lastVisitFilter && lastVisitFilter !== 'none') {
+        params.set('sortBy', 'last_visit_at');
+      }
       const [data, statsData] = await Promise.all([
         api.get(`/contacts?${params}`),
         api.get('/contacts/stats'),
@@ -36,6 +44,17 @@ export default function ContactsPage() {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await api.get('/contacts/tags');
+        setTagOptions(d.tags || []);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
   useEffect(() => { loadContacts(); }, []);
 
   useEffect(() => {
@@ -44,8 +63,34 @@ export default function ContactsPage() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    loadContacts();
+    loadContacts(1);
   };
+
+  const handleFilterChange = (field, value) => {
+    if (field === 'tag') setTagFilter(value);
+    if (field === 'lastVisit') setLastVisitFilter(value);
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setTagFilter('');
+    setLastVisitFilter('');
+    setLoading(true);
+    const params = new URLSearchParams({ page: 1, limit: 25 });
+    Promise.all([
+      api.get(`/contacts?${params}`),
+      api.get('/contacts/stats'),
+    ])
+      .then(([data, statsData]) => {
+        setContacts(data.contacts);
+        setPagination(data.pagination);
+        setStats(statsData);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  const hasActiveFilters = search || tagFilter || lastVisitFilter;
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -138,7 +183,7 @@ export default function ContactsPage() {
       </div>
 
       <div className="card">
-        <form className="search-bar" onSubmit={handleSearch}>
+        <form className="search-bar contacts-filter-bar" onSubmit={handleSearch}>
           <input
             type="text"
             placeholder="Search by name, phone, or email..."
@@ -146,7 +191,40 @@ export default function ContactsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="search-input"
           />
-          <button type="submit" className="btn btn-secondary btn-sm">Search</button>
+          <select
+            className="filter-select"
+            value={tagFilter}
+            onChange={(e) => {
+              handleFilterChange('tag', e.target.value);
+            }}
+            aria-label="Filter by tag"
+          >
+            <option value="">All tags</option>
+            {tagOptions.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <select
+            className="filter-select"
+            value={lastVisitFilter}
+            onChange={(e) => {
+              handleFilterChange('lastVisit', e.target.value);
+            }}
+            aria-label="Filter by last visit"
+          >
+            <option value="">Any last visit</option>
+            <option value="30d">Visited last 30 days</option>
+            <option value="90d">Visited last 90 days</option>
+            <option value="365d">Visited last year</option>
+            <option value="older90d">Not visited in 90+ days</option>
+            <option value="none">No visit on file</option>
+          </select>
+          <button type="submit" className="btn btn-secondary btn-sm">Apply</button>
+          {hasActiveFilters && (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilters}>
+              Clear
+            </button>
+          )}
         </form>
 
         {selectedIds.size > 0 && (

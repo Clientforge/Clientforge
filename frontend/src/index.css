@@ -798,6 +798,18 @@ a:hover { text-decoration: underline; }
 .mini-stat-label { font-size: 12px; color: var(--text-3); font-weight: 500; }
 
 .search-bar { display: flex; gap: 8px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-light); }
+.contacts-filter-bar { flex-wrap: wrap; align-items: center; }
+.contacts-filter-bar .search-input { flex: 1 1 200px; min-width: 160px; }
+.filter-select {
+  flex: 0 1 auto;
+  min-width: 140px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
 .search-input { flex: 1; padding: 8px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; outline: none; background: var(--surface); }
 .search-input:focus { border-color: var(--primary); }
 

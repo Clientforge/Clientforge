@@ -7,12 +7,14 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 router.get('/', async (req, res, next) => {
   try {
-    const { page, limit, search, tag } = req.query;
+    const { page, limit, search, tag, lastVisit, sortBy } = req.query;
     const result = await contactService.listContacts(req.tenantId, {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 25,
       search,
       tag,
+      lastVisit,
+      sortBy,
     });
     res.json(result);
   } catch (err) { next(err); }

@@ -161,7 +161,14 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   return { imported, skipped, total: records.length, errors: errors.slice(0, 10) };
 };
 
-const listContacts = async (tenantId, { page = 1, limit = 25, search, tag }) => {
+const listContacts = async (tenantId, {
+  page = 1,
+  limit = 25,
+  search,
+  tag,
+  lastVisit,
+  sortBy,
+}) => {
   const offset = (page - 1) * limit;
   const params = [tenantId];
   const conditions = ['tenant_id = $1'];
@@ -179,12 +186,27 @@ const listContacts = async (tenantId, { page = 1, limit = 25, search, tag }) => 
     idx++;
   }
 
+  if (lastVisit === 'none') {
+    conditions.push('last_visit_at IS NULL');
+  } else if (lastVisit === '30d') {
+    conditions.push(`last_visit_at >= NOW() - INTERVAL '30 days'`);
+  } else if (lastVisit === '90d') {
+    conditions.push(`last_visit_at >= NOW() - INTERVAL '90 days'`);
+  } else if (lastVisit === '365d') {
+    conditions.push(`last_visit_at >= NOW() - INTERVAL '365 days'`);
+  } else if (lastVisit === 'older90d') {
+    conditions.push(`last_visit_at < NOW() - INTERVAL '90 days'`);
+  }
+
   const where = conditions.join(' AND ');
+  const orderBy = sortBy === 'last_visit_at' || lastVisit
+    ? 'last_visit_at DESC NULLS LAST, created_at DESC'
+    : 'created_at DESC';
 
   const [countRes, dataRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int FROM contacts WHERE ${where}`, params),
     db.query(
-      `SELECT * FROM contacts WHERE ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+      `SELECT * FROM contacts WHERE ${where} ORDER BY ${orderBy} LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, offset],
     ),
   ]);
