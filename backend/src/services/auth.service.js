@@ -102,6 +102,7 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
       plan: tenant.plan,
       uiMode: tenant.ui_mode || 'simple',
       automationTestMode: !!tenant.automation_test_mode,
+      serviceFollowupCampaignsEnabled: !!tenant.service_followup_campaigns_enabled,
     },
       ...tokens,
     };
@@ -120,7 +121,8 @@ const login = async ({ email, password }) => {
   const result = await db.query(
     `SELECT u.id, u.tenant_id, u.email, u.password_hash, u.first_name, u.last_name, u.role, u.active,
             t.name as tenant_name, t.plan as tenant_plan, t.active as tenant_active, t.ui_mode as tenant_ui_mode,
-            t.automation_test_mode as tenant_automation_test_mode
+            t.automation_test_mode as tenant_automation_test_mode,
+            t.service_followup_campaigns_enabled as tenant_service_followup_campaigns_enabled
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.email = $1`,
@@ -177,6 +179,7 @@ const login = async ({ email, password }) => {
       plan: user.tenant_plan,
       uiMode: user.tenant_ui_mode || 'simple',
       automationTestMode: !!user.tenant_automation_test_mode,
+      serviceFollowupCampaignsEnabled: !!user.tenant_service_followup_campaigns_enabled,
     },
     ...tokens,
   };
@@ -223,7 +226,8 @@ const getProfile = async (userId) => {
     `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.created_at,
             t.id as tenant_id, t.name as tenant_name, t.industry, t.plan,
             t.phone_number, t.booking_link, t.timezone, t.ui_mode,
-            t.automation_test_mode, t.automation_test_phone, t.automation_test_email, t.automation_live_at
+            t.automation_test_mode, t.automation_test_phone, t.automation_test_email, t.automation_live_at,
+            t.service_followup_campaigns_enabled
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.id = $1`,
@@ -261,6 +265,7 @@ const getProfile = async (userId) => {
       automationTestPhone: row.automation_test_phone || '',
       automationTestEmail: row.automation_test_email || '',
       automationLiveAt: row.automation_live_at,
+      serviceFollowupCampaignsEnabled: !!row.service_followup_campaigns_enabled,
     },
   };
 };

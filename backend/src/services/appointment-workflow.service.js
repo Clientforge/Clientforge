@@ -6,6 +6,10 @@ const compliance = require('./compliance.service');
 const automationService = require('./appointment-automation.service');
 const tenantService = require('./tenant-service.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
+const {
+  DEFAULT_FOLLOWUP_MESSAGE,
+  coercePositiveInt,
+} = require('./service-followup-campaign.service');
 
 const PRE_VISIT_CATEGORIES = ['confirmations', 'reminders'];
 const POST_VISIT_CATEGORIES = ['post_appointment', 'review_requests'];
@@ -34,7 +38,8 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
       `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
-              appointment_automation_config, optimantra_checkout_automations
+              appointment_automation_config, optimantra_checkout_automations,
+              service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,
       [tenantId],
     ),
@@ -101,7 +106,8 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
       `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
-              appointment_automation_config, optimantra_checkout_automations
+              appointment_automation_config, optimantra_checkout_automations,
+              service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,
       [tenantId],
     ),
@@ -136,12 +142,11 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
      WHERE appointment_id = $1
        AND tenant_id = $2
        AND status = 'pending'
-       AND job_type = ANY($3::text[])`,
-    [
-      appointmentId,
-      tenantId,
-      ['post_visit', 'review_request', 'rebooking', 'rebooking_initial', 'rebooking_followup_1', 'rebooking_followup_2'],
-    ],
+       AND (
+         job_type IN ('post_visit', 'review_request', 'rebooking', 'rebooking_initial')
+         OR job_type LIKE 'rebooking_followup_%'
+       )`,
+    [appointmentId, tenantId],
   );
 
   const appointmentForTemplates = {
@@ -266,12 +271,6 @@ const scheduleAutomationSteps = async (
 
 const DEFAULT_REBOOKING_STEPS = () => automationService.buildDefaultConfig().rebooking.steps || [];
 
-function coercePositiveInt(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num <= 0) return null;
-  return Math.round(num);
-}
-
 function pickRebookingMessage(customMessage, step, fallbackStep) {
   const custom = typeof customMessage === 'string' ? customMessage.trim() : '';
   if (custom) return custom;
@@ -301,10 +300,68 @@ function pickRebookingEmailSubject(customSubject, step, fallbackStep) {
 }
 
 /**
+ * Service-specific multi-step follow-up campaigns (e.g. Sluice Drip Spa).
+ * Each step fires N days after the visit/checkout reference date.
+ */
+function planFromServiceFollowUpCampaigns({ matched, referenceDate, serviceFollowupCampaignsEnabled }) {
+  if (!serviceFollowupCampaignsEnabled) return null;
+
+  const campaigns = Array.isArray(matched?.followUpCampaigns) ? matched.followUpCampaigns : [];
+  const enabledSteps = campaigns.filter((step) => step.enabled !== false && coercePositiveInt(step.intervalDays));
+  if (enabledSteps.length === 0) return null;
+
+  if (matched?.rebookingEnabled === false) {
+    return {
+      offsetDays: null,
+      source: 'service_campaign',
+      items: [],
+      skipReason: 'service auto-rebook is off — enable Auto-rebook on the service and Save services',
+    };
+  }
+
+  const sorted = [...enabledSteps].sort((a, b) => a.intervalDays - b.intervalDays);
+  const defaultSteps = DEFAULT_REBOOKING_STEPS();
+  const items = sorted.map((step, index) => {
+    const message = (typeof step.message === 'string' && step.message.trim())
+      ? step.message.trim()
+      : (defaultSteps[index]?.message || DEFAULT_FOLLOWUP_MESSAGE);
+
+    return {
+      jobType: index === 0 ? 'rebooking_initial' : `rebooking_followup_${index}`,
+      step: { enabled: true, channel: 'sms' },
+      message,
+      emailSubject: pickRebookingEmailSubject(null, defaultSteps[index], defaultSteps[index]),
+      runAt: new Date(referenceDate.getTime() + step.intervalDays * 24 * 60 * 60 * 1000),
+      source: 'service_campaign',
+      intervalDays: step.intervalDays,
+    };
+  });
+
+  return {
+    offsetDays: sorted[0].intervalDays,
+    source: 'service_campaign',
+    items,
+    skipReason: null,
+  };
+}
+
+/**
  * Pure rebooking plan — used by scheduleRebooking and tests.
  * @returns {{ offsetDays: number|null, source: string|null, items: array, skipReason: string|null }}
  */
-function planRebookingCampaign({ matched, config, referenceDate = new Date() }) {
+function planRebookingCampaign({
+  matched,
+  config,
+  referenceDate = new Date(),
+  serviceFollowupCampaignsEnabled = false,
+}) {
+  const serviceCampaignPlan = planFromServiceFollowUpCampaigns({
+    matched,
+    referenceDate,
+    serviceFollowupCampaignsEnabled,
+  });
+  if (serviceCampaignPlan) return serviceCampaignPlan;
+
   const defaultSteps = DEFAULT_REBOOKING_STEPS();
   const steps = Array.isArray(config?.rebooking?.steps) && config.rebooking.steps.length > 0
     ? config.rebooking.steps
@@ -420,6 +477,7 @@ const scheduleRebooking = async (
     matched,
     config,
     referenceDate: appointmentTime,
+    serviceFollowupCampaignsEnabled: !!tenant?.service_followup_campaigns_enabled,
   });
 
   if (!plan.offsetDays) {
@@ -443,12 +501,12 @@ const scheduleRebooking = async (
     if (!item.message?.trim() || !item.runAt || item.runAt <= now) continue;
 
     const isInitial = item.jobType === 'rebooking_initial';
-    const fromService = item.source === 'service';
-    if (!isInitial && item.step?.enabled === false && !fromService) {
+    const fromLegacyService = item.source === 'service';
+    if (item.step?.enabled === false && !fromLegacyService) {
       skippedFollowUps += 1;
       continue;
     }
-    if (isInitial && item.step?.enabled === false && !fromService) continue;
+    if (isInitial && item.step?.enabled === false && !fromLegacyService) continue;
 
     const body = automationService.renderTemplate(item.message, serviceVars);
     const subject = automationService.renderTemplate(item.emailSubject, serviceVars);

@@ -1,5 +1,9 @@
 const db = require('../db/connection');
 const { normalizeBusinessName } = require('./bookingEmailParse.service');
+const {
+  normalizeFollowUpCampaigns,
+  parseFollowUpCampaignsFromRow,
+} = require('./service-followup-campaign.service');
 
 const normalizeServiceName = (name) => normalizeBusinessName(name);
 
@@ -13,6 +17,7 @@ const mapServiceRow = (row) => ({
   rebookingEnabled: row.rebooking_enabled !== false,
   rebookMessage: row.rebook_message || '',
   rebookEmailSubject: row.rebook_email_subject || '',
+  followUpCampaigns: parseFollowUpCampaignsFromRow(row),
   notes: row.notes || '',
   sortOrder: row.sort_order ?? 0,
 });
@@ -20,7 +25,7 @@ const mapServiceRow = (row) => ({
 const listServices = async (tenantId) => {
   const result = await db.query(
     `SELECT id, name, aliases, return_interval_days, rebooking_enabled,
-            rebook_message, rebook_email_subject, notes, sort_order
+            rebook_message, rebook_email_subject, follow_up_campaigns, notes, sort_order
      FROM tenant_services
      WHERE tenant_id = $1
      ORDER BY sort_order ASC, name ASC`,
@@ -29,7 +34,21 @@ const listServices = async (tenantId) => {
   return { services: result.rows.map(mapServiceRow) };
 };
 
-const normalizeServiceInput = (raw) => ({
+const listServicesWithMeta = async (tenantId) => {
+  const campaignsEnabled = await isServiceFollowUpCampaignsEnabled(tenantId);
+  const { services } = await listServices(tenantId);
+  return { services, serviceFollowupCampaignsEnabled: campaignsEnabled };
+};
+
+const isServiceFollowUpCampaignsEnabled = async (tenantId) => {
+  const result = await db.query(
+    'SELECT service_followup_campaigns_enabled FROM tenants WHERE id = $1',
+    [tenantId],
+  );
+  return !!result.rows[0]?.service_followup_campaigns_enabled;
+};
+
+const normalizeServiceInput = (raw, { campaignsEnabled = false } = {}) => ({
   name: String(raw.name || '').trim(),
   aliases: Array.isArray(raw.aliases)
     ? raw.aliases.map((a) => String(a).trim()).filter(Boolean)
@@ -40,6 +59,9 @@ const normalizeServiceInput = (raw) => ({
   rebookingEnabled: raw.rebookingEnabled !== false,
   rebookMessage: typeof raw.rebookMessage === 'string' ? raw.rebookMessage : '',
   rebookEmailSubject: typeof raw.rebookEmailSubject === 'string' ? raw.rebookEmailSubject : '',
+  followUpCampaigns: campaignsEnabled
+    ? normalizeFollowUpCampaigns(raw.followUpCampaigns)
+    : [],
   notes: typeof raw.notes === 'string' ? raw.notes : '',
   sortOrder: Number(raw.sortOrder) || 0,
 });
@@ -49,8 +71,10 @@ const replaceServices = async (tenantId, services) => {
     throw Object.assign(new Error('services must be an array'), { statusCode: 400, isOperational: true });
   }
 
+  const campaignsEnabled = await isServiceFollowUpCampaignsEnabled(tenantId);
+
   const normalized = services
-    .map(normalizeServiceInput)
+    .map((s) => normalizeServiceInput(s, { campaignsEnabled }))
     .filter((s) => s.name);
 
   const names = new Set();
@@ -71,8 +95,8 @@ const replaceServices = async (tenantId, services) => {
     await db.query(
       `INSERT INTO tenant_services
         (tenant_id, name, aliases, return_interval_days, rebooking_enabled,
-         rebook_message, rebook_email_subject, notes, sort_order, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
+         rebook_message, rebook_email_subject, follow_up_campaigns, notes, sort_order, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
       [
         tenantId,
         s.name,
@@ -81,13 +105,14 @@ const replaceServices = async (tenantId, services) => {
         s.rebookingEnabled,
         s.rebookMessage || null,
         s.rebookEmailSubject || null,
+        JSON.stringify(s.followUpCampaigns),
         s.notes || null,
         s.sortOrder,
       ],
     );
   }
 
-  return listServices(tenantId);
+  return listServicesWithMeta(tenantId);
 };
 
 function scoreServiceMatch(rawName, serviceRow) {
@@ -116,7 +141,7 @@ const matchService = async (tenantId, rawServiceName) => {
 
   const result = await db.query(
     `SELECT id, name, aliases, return_interval_days, rebooking_enabled,
-            rebook_message, rebook_email_subject, notes, sort_order
+            rebook_message, rebook_email_subject, follow_up_campaigns, notes, sort_order
      FROM tenant_services
      WHERE tenant_id = $1`,
     [tenantId],
@@ -142,7 +167,7 @@ const getServiceById = async (tenantId, serviceId) => {
 
   const result = await db.query(
     `SELECT id, name, aliases, return_interval_days, rebooking_enabled,
-            rebook_message, rebook_email_subject, notes, sort_order
+            rebook_message, rebook_email_subject, follow_up_campaigns, notes, sort_order
      FROM tenant_services
      WHERE tenant_id = $1 AND id = $2
      LIMIT 1`,
@@ -173,6 +198,7 @@ const findTenantIdByUserEmail = async (email) => {
 
 module.exports = {
   listServices,
+  listServicesWithMeta,
   replaceServices,
   matchService,
   getServiceById,
@@ -180,4 +206,5 @@ module.exports = {
   findTenantIdByUserEmail,
   normalizeServiceName,
   mapServiceRow,
+  isServiceFollowUpCampaignsEnabled,
 };

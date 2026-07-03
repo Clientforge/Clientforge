@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const { isRebookingJobType } = require('./service-followup-campaign.service');
 
 const REBOOKING_JOB_TYPES = [
   'rebooking',
@@ -7,7 +8,9 @@ const REBOOKING_JOB_TYPES = [
   'rebooking_followup_2',
 ];
 
-const isRebookingJobType = (jobType) => REBOOKING_JOB_TYPES.includes(jobType);
+const REBOOKING_JOB_SQL = `(job_type = 'rebooking'
+  OR job_type = 'rebooking_initial'
+  OR job_type LIKE 'rebooking_followup_%')`;
 
 /**
  * True when the contact has a future appointment on the calendar (excluding optional source visit).
@@ -43,10 +46,10 @@ const cancelRebookingJobsForContact = async (tenantId, contactId) => {
      SET status = 'cancelled', cancelled_at = NOW()
      WHERE tenant_id = $1
        AND contact_id = $2
-       AND job_type = ANY($3::text[])
        AND status = 'pending'
+       AND ${REBOOKING_JOB_SQL}
      RETURNING id`,
-    [tenantId, contactId, REBOOKING_JOB_TYPES],
+    [tenantId, contactId],
   );
 
   if (result.rowCount > 0) {
@@ -60,6 +63,7 @@ const cancelRebookingJobsForContact = async (tenantId, contactId) => {
 
 module.exports = {
   REBOOKING_JOB_TYPES,
+  REBOOKING_JOB_SQL,
   isRebookingJobType,
   hasFutureBooking,
   cancelRebookingJobsForContact,

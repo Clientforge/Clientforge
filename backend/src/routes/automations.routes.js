@@ -141,7 +141,7 @@ router.put('/birthday', async (req, res, next) => {
 
 router.get('/services', async (req, res, next) => {
   try {
-    const result = await tenantService.listServices(req.tenantId);
+    const result = await tenantService.listServicesWithMeta(req.tenantId);
     res.json(result);
   } catch (err) { next(err); }
 });

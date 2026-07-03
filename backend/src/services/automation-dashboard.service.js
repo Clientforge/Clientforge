@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const { formatJobTypeLabel } = require('./service-followup-campaign.service');
 const { inboxEmail } = require('./bookingEmailIngest.service');
 const { normalizeBusinessName } = require('./bookingEmailParse.service');
 
@@ -298,7 +299,7 @@ const mapAppointmentRow = (row) => ({
 const mapJobRow = (row) => ({
   id: row.id,
   jobType: row.job_type,
-  jobTypeLabel: JOB_TYPE_LABELS[row.job_type] || row.job_type,
+  jobTypeLabel: JOB_TYPE_LABELS[row.job_type] || formatJobTypeLabel(row.job_type) || row.job_type,
   channel: row.channel,
   messageBody: row.message_body,
   emailSubject: row.email_subject,
