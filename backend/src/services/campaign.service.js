@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const { normalizeLastVisitPreset, appendLastVisitCondition } = require('../utils/lastVisitFilter');
 
 const PREVIEW_MAX = 2000;
 
@@ -50,9 +51,12 @@ const normalizeAudienceTags = (filter) => {
 };
 
 const normalizeAudienceFilter = (raw) => {
+  const out = {};
   const tags = normalizeAudienceTags(raw);
-  if (tags.length === 0) return {};
-  return { tags };
+  if (tags.length > 0) out.tags = tags;
+  const lastVisit = normalizeLastVisitPreset(raw?.lastVisit);
+  if (lastVisit) out.lastVisit = lastVisit;
+  return out;
 };
 
 /**
@@ -76,6 +80,8 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
     params.push(tags);
     idx++;
   }
+
+  appendLastVisitCondition(conditions, filter.lastVisit);
 
   const ch = ['sms', 'email', 'both'].includes(channel) ? channel : 'sms';
   if (ch === 'email') {

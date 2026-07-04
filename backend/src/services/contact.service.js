@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
 const { parse } = require('csv-parse/sync');
+const { appendLastVisitCondition } = require('../utils/lastVisitFilter');
 
 /** Normalize CSV header for flexible matching (case, spaces, underscores). */
 function normalizeCsvKey(key) {
@@ -186,17 +187,7 @@ const listContacts = async (tenantId, {
     idx++;
   }
 
-  if (lastVisit === 'none') {
-    conditions.push('last_visit_at IS NULL');
-  } else if (lastVisit === '30d') {
-    conditions.push(`last_visit_at >= NOW() - INTERVAL '30 days'`);
-  } else if (lastVisit === '90d') {
-    conditions.push(`last_visit_at >= NOW() - INTERVAL '90 days'`);
-  } else if (lastVisit === '365d') {
-    conditions.push(`last_visit_at >= NOW() - INTERVAL '365 days'`);
-  } else if (lastVisit === 'older90d') {
-    conditions.push(`last_visit_at < NOW() - INTERVAL '90 days'`);
-  }
+  appendLastVisitCondition(conditions, lastVisit);
 
   const where = conditions.join(' AND ');
   const orderBy = sortBy === 'last_visit_at' || lastVisit

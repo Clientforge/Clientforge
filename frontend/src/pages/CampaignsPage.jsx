@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
+import { LAST_VISIT_OPTIONS, formatLastVisitLabel } from '../utils/lastVisitFilter';
 
 const STATUS_STYLES = {
   draft: { bg: '#f3f4f6', color: '#6b7280' },
@@ -24,15 +25,35 @@ function getAudienceTags(filter) {
   return [];
 }
 
+function buildAudienceFilter({ tags = [], lastVisit = '' } = {}) {
+  const out = {};
+  const cleanTags = tags.filter(Boolean);
+  if (cleanTags.length > 0) out.tags = cleanTags;
+  if (lastVisit) out.lastVisit = lastVisit;
+  return out;
+}
+
 function normalizeAudienceFilterForForm(filter) {
-  const tags = getAudienceTags(filter);
-  return tags.length > 0 ? { tags } : {};
+  return buildAudienceFilter({
+    tags: getAudienceTags(filter),
+    lastVisit: filter?.lastVisit || '',
+  });
 }
 
 function formatAudienceTagsLabel(filter) {
   const tags = getAudienceTags(filter);
   if (tags.length === 0) return null;
   return tags.join(', ');
+}
+
+function formatAudienceSummary(filter) {
+  const tags = formatAudienceTagsLabel(filter);
+  const lastVisit = formatLastVisitLabel(filter?.lastVisit);
+  if (!tags && !lastVisit) return null;
+  const parts = [];
+  if (tags) parts.push(`Tags (any): ${tags}`);
+  if (lastVisit) parts.push(`Last visit: ${lastVisit}`);
+  return parts.join(' · ');
 }
 
 export default function CampaignsPage() {
@@ -256,12 +277,12 @@ function CampaignDetail({ campaign, formatDate }) {
       <div className="detail-channel-label">
         <span className={`channel-badge ch-${ch}`}>{CHANNEL_ICONS[ch]} {CHANNEL_LABELS[ch]}</span>
       </div>
-      {formatAudienceTagsLabel(campaign.audienceFilter) ? (
+      {formatAudienceSummary(campaign.audienceFilter) ? (
         <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-          Audience tags (any): <strong>{formatAudienceTagsLabel(campaign.audienceFilter)}</strong>
+          Audience: <strong>{formatAudienceSummary(campaign.audienceFilter)}</strong>
         </p>
       ) : (
-        <p className="muted" style={{ margin: '0.35rem 0 0' }}>Audience: all eligible contacts (no tag filter)</p>
+        <p className="muted" style={{ margin: '0.35rem 0 0' }}>Audience: all eligible contacts (no filters)</p>
       )}
 
       {schedule.length > 0 && (
@@ -695,9 +716,22 @@ function CreateCampaignModal({ onClose, onSuccess }) {
         : [...current, tag];
       return {
         ...prev,
-        audienceFilter: next.length > 0 ? { tags: next } : {},
+        audienceFilter: buildAudienceFilter({
+          tags: next,
+          lastVisit: prev.audienceFilter?.lastVisit || '',
+        }),
       };
     });
+  };
+
+  const setAudienceLastVisit = (lastVisit) => {
+    setForm((prev) => ({
+      ...prev,
+      audienceFilter: buildAudienceFilter({
+        tags: getAudienceTags(prev.audienceFilter),
+        lastVisit,
+      }),
+    }));
   };
 
   const showSms = form.channel === 'sms' || form.channel === 'both';
@@ -1025,7 +1059,8 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               <div className="audience-campaign-block" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)' }}>
                 <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem' }}>Audience</h4>
                 <p className="hint" style={{ marginBottom: '0.75rem' }}>
-                  Optional tags: include contacts who have <strong>any</strong> selected tag. Leave empty for everyone who can receive
+                  Optional filters: narrow by tags and/or last visit. Tags match <strong>any</strong> selection.
+                  Leave both empty for everyone who can receive
                   {form.channel === 'sms' && ' SMS (has phone)'}
                   {form.channel === 'email' && ' email (has address)'}
                   {form.channel === 'both' && ' both SMS and email (has phone and email)'}
@@ -1059,12 +1094,31 @@ function CreateCampaignModal({ onClose, onSuccess }) {
                       <button
                         type="button"
                         className="btn btn-sm btn-ghost"
-                        onClick={() => setForm({ ...form, audienceFilter: {} })}
+                        onClick={() => setForm((prev) => ({
+                          ...prev,
+                          audienceFilter: buildAudienceFilter({
+                            tags: [],
+                            lastVisit: prev.audienceFilter?.lastVisit || '',
+                          }),
+                        }))}
                       >
                         Clear tags
                       </button>
                     </p>
                   )}
+                </div>
+                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                  <label htmlFor="campaign-last-visit-filter">Filter by last visit</label>
+                  <select
+                    id="campaign-last-visit-filter"
+                    className="filter-select"
+                    value={form.audienceFilter?.lastVisit || ''}
+                    onChange={(e) => setAudienceLastVisit(e.target.value)}
+                  >
+                    {LAST_VISIT_OPTIONS.map((opt) => (
+                      <option key={opt.value || 'any'} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={{ marginTop: '0.5rem' }}>
                   <button type="button" className="btn btn-ghost" onClick={() => setAudiencePreviewOpen(true)}>
@@ -1110,15 +1164,15 @@ function CreateCampaignModal({ onClose, onSuccess }) {
                   <span className={`channel-badge ch-${form.channel}`}>{CHANNEL_ICONS[form.channel]} {CHANNEL_LABELS[form.channel]}</span>
                   <span className="muted">{form.schedule.length}-wave {form.schedule.length > 1 ? 'sequence' : 'broadcast'}</span>
                 </div>
-                {formatAudienceTagsLabel(form.audienceFilter) ? (
+                {formatAudienceSummary(form.audienceFilter) ? (
                   <p style={{ margin: '0.5rem 0 0' }}>
-                    Tag filter (any): <strong>{formatAudienceTagsLabel(form.audienceFilter)}</strong>
+                    Audience: <strong>{formatAudienceSummary(form.audienceFilter)}</strong>
                     {' '}
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudiencePreviewOpen(true)}>Preview recipients</button>
                   </p>
                 ) : (
                   <p className="muted" style={{ margin: '0.5rem 0 0' }}>
-                    Audience: all eligible contacts (no tag)
+                    Audience: all eligible contacts (no filters)
                     {' '}
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudiencePreviewOpen(true)}>Preview recipients</button>
                   </p>

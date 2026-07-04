@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
+import { LAST_VISIT_OPTIONS } from '../utils/lastVisitFilter';
 
 export default function ContactsPage() {
   const { tenant } = useAuth();
@@ -212,12 +213,9 @@ export default function ContactsPage() {
             }}
             aria-label="Filter by last visit"
           >
-            <option value="">Any last visit</option>
-            <option value="30d">Visited last 30 days</option>
-            <option value="90d">Visited last 90 days</option>
-            <option value="365d">Visited last year</option>
-            <option value="older90d">Not visited in 90+ days</option>
-            <option value="none">No visit on file</option>
+            {LAST_VISIT_OPTIONS.map((opt) => (
+              <option key={opt.value || 'any'} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
           <button type="submit" className="btn btn-secondary btn-sm">Apply</button>
           {hasActiveFilters && (
