@@ -17,6 +17,24 @@ const CHANNEL_ICONS = {
   both: <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
 };
 
+function getAudienceTags(filter) {
+  if (!filter || typeof filter !== 'object') return [];
+  if (Array.isArray(filter.tags)) return filter.tags.filter(Boolean);
+  if (filter.tag) return [filter.tag];
+  return [];
+}
+
+function normalizeAudienceFilterForForm(filter) {
+  const tags = getAudienceTags(filter);
+  return tags.length > 0 ? { tags } : {};
+}
+
+function formatAudienceTagsLabel(filter) {
+  const tags = getAudienceTags(filter);
+  if (tags.length === 0) return null;
+  return tags.join(', ');
+}
+
 export default function CampaignsPage() {
   const { tenant } = useAuth();
   const simple = isSimpleMode(tenant);
@@ -238,9 +256,9 @@ function CampaignDetail({ campaign, formatDate }) {
       <div className="detail-channel-label">
         <span className={`channel-badge ch-${ch}`}>{CHANNEL_ICONS[ch]} {CHANNEL_LABELS[ch]}</span>
       </div>
-      {campaign.audienceFilter?.tag ? (
+      {formatAudienceTagsLabel(campaign.audienceFilter) ? (
         <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-          Audience tag: <strong>{campaign.audienceFilter.tag}</strong>
+          Audience tags (any): <strong>{formatAudienceTagsLabel(campaign.audienceFilter)}</strong>
         </p>
       ) : (
         <p className="muted" style={{ margin: '0.35rem 0 0' }}>Audience: all eligible contacts (no tag filter)</p>
@@ -667,6 +685,21 @@ function CreateCampaignModal({ onClose, onSuccess }) {
   const [contactTags, setContactTags] = useState([]);
   const [audiencePreviewOpen, setAudiencePreviewOpen] = useState(false);
 
+  const selectedAudienceTags = getAudienceTags(form.audienceFilter);
+
+  const toggleAudienceTag = (tag) => {
+    setForm((prev) => {
+      const current = getAudienceTags(prev.audienceFilter);
+      const next = current.includes(tag)
+        ? current.filter((t) => t !== tag)
+        : [...current, tag];
+      return {
+        ...prev,
+        audienceFilter: next.length > 0 ? { tags: next } : {},
+      };
+    });
+  };
+
   const showSms = form.channel === 'sms' || form.channel === 'both';
   const showEmail = form.channel === 'email' || form.channel === 'both';
 
@@ -704,7 +737,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
         name: `${c.name} (Copy)`,
         channel: c.channel || 'sms',
         schedule: (c.schedule || []).map((w, i) => ({ ...w, step: i + 1 })),
-        audienceFilter: c.audienceFilter || {},
+        audienceFilter: normalizeAudienceFilterForForm(c.audienceFilter),
       });
       setStartMode(START_MODE.copy);
       setWizardStep(2);
@@ -717,7 +750,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
       name: template.name,
       channel: template.channel || 'sms',
       schedule: (template.schedule || []).map((w, i) => ({ ...w, step: i + 1 })),
-      audienceFilter: template.audienceFilter || {},
+      audienceFilter: normalizeAudienceFilterForForm(template.audienceFilter),
     });
     setStartMode(START_MODE.template);
     setWizardStep(2);
@@ -992,29 +1025,48 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               <div className="audience-campaign-block" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)' }}>
                 <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem' }}>Audience</h4>
                 <p className="hint" style={{ marginBottom: '0.75rem' }}>
-                  Optional tag: only matching contacts are included. Leave empty for everyone who can receive
+                  Optional tags: include contacts who have <strong>any</strong> selected tag. Leave empty for everyone who can receive
                   {form.channel === 'sms' && ' SMS (has phone)'}
                   {form.channel === 'email' && ' email (has address)'}
                   {form.channel === 'both' && ' both SMS and email (has phone and email)'}
                   . Unsubscribed contacts are always excluded.
                 </p>
-                <div className="form-row" style={{ flexWrap: 'wrap', alignItems: 'flex-end', gap: '0.5rem' }}>
-                  <div className="form-group" style={{ flex: '1 1 12rem' }}>
-                    <label>Filter by tag</label>
-                    <input
-                      type="text"
-                      list="campaign-audience-tag-list"
-                      value={form.audienceFilter?.tag || ''}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setForm({ ...form, audienceFilter: v.trim() ? { tag: v.trim() } : {} });
-                      }}
-                      placeholder="e.g. vip, returning"
-                    />
-                    <datalist id="campaign-audience-tag-list">
-                      {contactTags.map((t) => <option key={t} value={t} />)}
-                    </datalist>
-                  </div>
+                <div className="form-group">
+                  <label>Filter by tags</label>
+                  {contactTags.length === 0 ? (
+                    <p className="hint">No contact tags yet — import contacts or add tags first.</p>
+                  ) : (
+                    <div className="campaign-tag-picker">
+                      {contactTags.map((tag) => {
+                        const selected = selectedAudienceTags.includes(tag);
+                        return (
+                          <label key={tag} className={`campaign-tag-option ${selected ? 'selected' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => toggleAudienceTag(tag)}
+                            />
+                            <span>{tag}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedAudienceTags.length > 0 && (
+                    <p className="hint" style={{ marginTop: '0.5rem' }}>
+                      Selected ({selectedAudienceTags.length}): {selectedAudienceTags.join(', ')}
+                      {' '}
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => setForm({ ...form, audienceFilter: {} })}
+                      >
+                        Clear tags
+                      </button>
+                    </p>
+                  )}
+                </div>
+                <div style={{ marginTop: '0.5rem' }}>
                   <button type="button" className="btn btn-ghost" onClick={() => setAudiencePreviewOpen(true)}>
                     Preview recipients
                   </button>
@@ -1058,9 +1110,9 @@ function CreateCampaignModal({ onClose, onSuccess }) {
                   <span className={`channel-badge ch-${form.channel}`}>{CHANNEL_ICONS[form.channel]} {CHANNEL_LABELS[form.channel]}</span>
                   <span className="muted">{form.schedule.length}-wave {form.schedule.length > 1 ? 'sequence' : 'broadcast'}</span>
                 </div>
-                {form.audienceFilter?.tag ? (
+                {formatAudienceTagsLabel(form.audienceFilter) ? (
                   <p style={{ margin: '0.5rem 0 0' }}>
-                    Tag filter: <strong>{form.audienceFilter.tag}</strong>
+                    Tag filter (any): <strong>{formatAudienceTagsLabel(form.audienceFilter)}</strong>
                     {' '}
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudiencePreviewOpen(true)}>Preview recipients</button>
                   </p>

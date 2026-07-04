@@ -35,7 +35,29 @@ const parseBatchOptions = (options = {}) => {
 };
 
 /**
+ * Normalize tag list from audience_filter (supports legacy { tag } or { tags: [] }).
+ */
+const normalizeAudienceTags = (filter) => {
+  if (!filter || typeof filter !== 'object') return [];
+  if (Array.isArray(filter.tags)) {
+    return [...new Set(filter.tags.map((t) => String(t).trim()).filter(Boolean))];
+  }
+  if (filter.tag) {
+    const single = String(filter.tag).trim();
+    return single ? [single] : [];
+  }
+  return [];
+};
+
+const normalizeAudienceFilter = (raw) => {
+  const tags = normalizeAudienceTags(raw);
+  if (tags.length === 0) return {};
+  return { tags };
+};
+
+/**
  * SQL WHERE + params for campaign audience (shared by launch, preview, counts).
+ * Multiple tags match ANY (OR).
  * @param {string} channel 'sms' | 'email' | 'both'
  */
 const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
@@ -44,13 +66,15 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
   const params = [tenantId];
   let idx = 2;
 
-  if (filter.tag) {
-    const tag = String(filter.tag).trim();
-    if (tag) {
-      conditions.push(`tags @> $${idx}::jsonb`);
-      params.push(JSON.stringify([tag]));
-      idx++;
-    }
+  const tags = normalizeAudienceTags(filter);
+  if (tags.length === 1) {
+    conditions.push(`tags @> $${idx}::jsonb`);
+    params.push(JSON.stringify([tags[0]]));
+    idx++;
+  } else if (tags.length > 1) {
+    conditions.push(`tags ?| $${idx}::text[]`);
+    params.push(tags);
+    idx++;
   }
 
   const ch = ['sms', 'email', 'both'].includes(channel) ? channel : 'sms';
@@ -251,7 +275,7 @@ const createCampaign = async (tenantId, data) => {
       channel,
       schedule[0]?.message || data.messageBody || '',
       JSON.stringify(schedule),
-      JSON.stringify(data.audienceFilter || {}),
+      JSON.stringify(normalizeAudienceFilter(data.audienceFilter)),
     ],
   );
   return formatCampaign(result.rows[0]);
@@ -272,7 +296,10 @@ const updateCampaign = async (tenantId, campaignId, data) => {
     sets.push(`type = $${idx++}`);
     params.push(type);
   }
-  if (data.audienceFilter !== undefined) { sets.push(`audience_filter = $${idx++}`); params.push(JSON.stringify(data.audienceFilter)); }
+  if (data.audienceFilter !== undefined) {
+    sets.push(`audience_filter = $${idx++}`);
+    params.push(JSON.stringify(normalizeAudienceFilter(data.audienceFilter)));
+  }
   if (data.status !== undefined) { sets.push(`status = $${idx++}`); params.push(data.status); }
 
   if (sets.length === 0) return getCampaign(tenantId, campaignId);
@@ -529,7 +556,7 @@ const formatCampaign = (row) => ({
   status: row.status,
   channel: row.channel || 'sms',
   messageBody: row.message_body,
-  audienceFilter: row.audience_filter || {},
+  audienceFilter: normalizeAudienceFilter(row.audience_filter),
   schedule: row.schedule || [],
   totalRecipients: row.total_recipients,
   sentCount: row.sent_count,
@@ -610,7 +637,7 @@ const createTemplate = async (tenantId, data) => {
       data.name,
       ['sms', 'email', 'both'].includes(data.channel) ? data.channel : 'sms',
       JSON.stringify(data.schedule || []),
-      JSON.stringify(data.audienceFilter || {}),
+      JSON.stringify(normalizeAudienceFilter(data.audienceFilter)),
     ],
   );
   return formatTemplate(result.rows[0]);
@@ -660,7 +687,7 @@ const formatTemplate = (row) => ({
   name: row.name,
   channel: row.channel || 'sms',
   schedule: row.schedule || [],
-  audienceFilter: row.audience_filter || {},
+  audienceFilter: normalizeAudienceFilter(row.audience_filter),
   createdAt: row.created_at,
 });
 
@@ -673,6 +700,8 @@ module.exports = {
   getCampaignStats,
   getCampaignLinkClicks,
   buildAudienceWhere,
+  normalizeAudienceTags,
+  normalizeAudienceFilter,
   parseBatchOptions,
   previewAudience,
   previewAudienceForCampaign,
