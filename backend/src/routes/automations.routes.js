@@ -125,6 +125,13 @@ router.put('/appointments', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/birthday/upcoming', async (req, res, next) => {
+  try {
+    const upcoming = await birthdayCampaignService.getBirthdaysThisWeek(req.tenantId);
+    res.json(upcoming);
+  } catch (err) { next(err); }
+});
+
 router.get('/birthday', async (req, res, next) => {
   try {
     const config = await birthdayCampaignService.getBirthdayCampaign(req.tenantId);

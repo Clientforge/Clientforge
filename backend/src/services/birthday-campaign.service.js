@@ -43,9 +43,12 @@ const fromApiConfig = (api) => {
   });
 };
 
-const getLocalDateTimeParts = (timezone) => {
+const formatDateKey = (year, month, day) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const getLocalDateTimeParts = (timezone, dayOffset = 0) => {
   const tz = timezone || 'America/New_York';
-  const now = new Date();
+  const now = new Date(Date.now() + dayOffset * 24 * 60 * 60 * 1000);
 
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat('en-US', {
@@ -68,13 +71,58 @@ const getLocalDateTimeParts = (timezone) => {
     day: parts.day,
     hour: parts.hour === 24 ? 0 : parts.hour,
     minute: parts.minute,
-    dateKey: `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`,
+    dateKey: formatDateKey(parts.year, parts.month, parts.day),
   };
+};
+
+const WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/** Sunday–Saturday week in the clinic timezone. */
+const getWeekRange = (timezone) => {
+  const tz = timezone || 'America/New_York';
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(new Date());
+  const todayIndex = WEEKDAY_INDEX[weekday] ?? 0;
+  const days = [];
+
+  for (let i = 0; i < 7; i += 1) {
+    const parts = getLocalDateTimeParts(tz, i - todayIndex);
+    days.push({
+      month: parts.month,
+      day: parts.day,
+      dateKey: parts.dateKey,
+    });
+  }
+
+  const local = getLocalDateTimeParts(tz);
+  return {
+    weekStart: days[0].dateKey,
+    weekEnd: days[6].dateKey,
+    days,
+    calendarYear: local.year,
+    todayKey: local.dateKey,
+  };
+};
+
+const birthdayOccurrenceInWeek = (dateOfBirth, weekDays, calendarYear) => {
+  let month;
+  let day;
+  if (dateOfBirth instanceof Date) {
+    month = dateOfBirth.getUTCMonth() + 1;
+    day = dateOfBirth.getUTCDate();
+  } else {
+    const iso = String(dateOfBirth).slice(0, 10);
+    const [, m, d] = iso.split('-').map(Number);
+    month = m;
+    day = d;
+  }
+  const match = weekDays.find((w) => w.month === month && w.day === day);
+  if (!match) return null;
+  return formatDateKey(calendarYear, month, day);
 };
 
 const getConfigForTenant = async (tenantId) => {
   const result = await db.query(
-    `SELECT birthday_campaign_config, name, timezone, phone_number, booking_link, review_link
+    `SELECT birthday_campaign_config, name, timezone, phone_number, booking_link
      FROM tenants WHERE id = $1`,
     [tenantId],
   );
@@ -106,12 +154,83 @@ const updateBirthdayCampaign = async (tenantId, updates) => {
   return getBirthdayCampaign(tenantId);
 };
 
+const getBirthdaysThisWeek = async (tenantId) => {
+  const { tenant } = await getConfigForTenant(tenantId);
+  const timezone = tenant.timezone || 'America/New_York';
+  const week = getWeekRange(timezone);
+  const months = week.days.map((d) => d.month);
+  const days = week.days.map((d) => d.day);
+
+  const result = await db.query(
+    `SELECT
+       c.id,
+       c.first_name,
+       c.last_name,
+       c.phone,
+       c.date_of_birth,
+       c.unsubscribed,
+       s.sent_at,
+       m.delivery_status
+     FROM contacts c
+     INNER JOIN unnest($2::int[], $3::int[]) AS w(month, day)
+       ON EXTRACT(MONTH FROM c.date_of_birth)::int = w.month
+      AND EXTRACT(DAY FROM c.date_of_birth)::int = w.day
+     LEFT JOIN birthday_campaign_sends s
+       ON s.contact_id = c.id
+      AND s.tenant_id = c.tenant_id
+      AND s.calendar_year = $4
+     LEFT JOIN messages m ON m.id = s.message_id
+     WHERE c.tenant_id = $1
+       AND c.date_of_birth IS NOT NULL
+     ORDER BY w.month, w.day, c.last_name ASC NULLS LAST, c.first_name ASC NULLS LAST`,
+    [tenantId, months, days, week.calendarYear],
+  );
+
+  const contacts = result.rows.map((row) => {
+    const birthdayThisYear = birthdayOccurrenceInWeek(row.date_of_birth, week.days, week.calendarYear);
+    const eligible = !row.unsubscribed && !!row.phone;
+    const sent = !!row.sent_at && row.delivery_status === 'sent';
+    let status = 'scheduled';
+    if (sent) {
+      status = 'sent';
+    } else if (!eligible) {
+      status = row.unsubscribed ? 'unsubscribed' : 'no_phone';
+    } else if (birthdayThisYear && birthdayThisYear < week.todayKey) {
+      status = 'pending';
+    } else if (birthdayThisYear === week.todayKey) {
+      status = 'scheduled';
+    }
+
+    return {
+      id: row.id,
+      displayName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.phone || 'Unknown',
+      dateOfBirth: row.date_of_birth instanceof Date
+        ? row.date_of_birth.toISOString().slice(0, 10)
+        : String(row.date_of_birth).slice(0, 10),
+      birthdayThisYear,
+      phone: row.phone || '',
+      eligible,
+      sent,
+      sentAt: row.sent_at || null,
+      status,
+    };
+  });
+
+  return {
+    weekStart: week.weekStart,
+    weekEnd: week.weekEnd,
+    timezone,
+    calendarYear: week.calendarYear,
+    contacts,
+  };
+};
+
 const buildTemplateVars = ({ tenant, contact }) => ({
   firstName: contact.first_name || 'there',
   lastName: contact.last_name || '',
   businessName: tenant.name || 'us',
   bookingLink: tenant.booking_link || '',
-  reviewLink: tenant.review_link || tenant.booking_link || '',
+  reviewLink: tenant.booking_link || '',
 });
 
 const findBirthdayContacts = async (tenantId, month, day, calendarYear) => {
@@ -224,7 +343,7 @@ const processBirthdayCampaignForTenant = async (tenantRow) => {
 
 const processAllBirthdayCampaigns = async () => {
   const result = await db.query(
-    `SELECT id, name, timezone, phone_number, booking_link, review_link, birthday_campaign_config
+    `SELECT id, name, timezone, phone_number, booking_link, birthday_campaign_config
      FROM tenants
      WHERE birthday_campaign_config IS NOT NULL
        AND (birthday_campaign_config->>'enabled')::boolean = true`,
@@ -248,7 +367,10 @@ module.exports = {
   normalizeConfig,
   getBirthdayCampaign,
   updateBirthdayCampaign,
+  getBirthdaysThisWeek,
   getLocalDateTimeParts,
+  getWeekRange,
+  birthdayOccurrenceInWeek,
   findBirthdayContacts,
   processBirthdayCampaignForTenant,
   processAllBirthdayCampaigns,

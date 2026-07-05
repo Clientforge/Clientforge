@@ -292,6 +292,42 @@ a:hover { text-decoration: underline; }
 .winback-bucket-count { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-1); }
 .winback-summary-actions { margin-top: 16px; }
 .winback-summary-actions .btn { width: 100%; justify-content: center; }
+
+.birthday-week-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.birthday-week-list { display: flex; flex-direction: column; }
+.birthday-week-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border-light);
+}
+.birthday-week-row:last-child { border-bottom: none; }
+.birthday-week-row.ineligible { opacity: 0.65; }
+.birthday-week-check {
+  width: 20px;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green);
+  text-align: center;
+}
+.birthday-week-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.birthday-week-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.birthday-week-date { font-size: 11px; color: var(--text-3); }
+.birthday-week-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.birthday-week-status.sent { color: var(--green); }
+.birthday-week-status.scheduled { color: var(--primary); }
+.birthday-week-status.pending { color: #d97706; }
 .stat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-3); }
 .stat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
