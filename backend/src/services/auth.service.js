@@ -122,7 +122,8 @@ const login = async ({ email, password }) => {
     `SELECT u.id, u.tenant_id, u.email, u.password_hash, u.first_name, u.last_name, u.role, u.active,
             t.name as tenant_name, t.plan as tenant_plan, t.active as tenant_active, t.ui_mode as tenant_ui_mode,
             t.automation_test_mode as tenant_automation_test_mode,
-            t.service_followup_campaigns_enabled as tenant_service_followup_campaigns_enabled
+            t.service_followup_campaigns_enabled as tenant_service_followup_campaigns_enabled,
+            t.retention_dashboard_enabled as tenant_retention_dashboard_enabled
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.email = $1`,
@@ -180,6 +181,7 @@ const login = async ({ email, password }) => {
       uiMode: user.tenant_ui_mode || 'simple',
       automationTestMode: !!user.tenant_automation_test_mode,
       serviceFollowupCampaignsEnabled: !!user.tenant_service_followup_campaigns_enabled,
+      retentionDashboardEnabled: !!user.tenant_retention_dashboard_enabled,
     },
     ...tokens,
   };
@@ -227,7 +229,7 @@ const getProfile = async (userId) => {
             t.id as tenant_id, t.name as tenant_name, t.industry, t.plan,
             t.phone_number, t.booking_link, t.timezone, t.ui_mode,
             t.automation_test_mode, t.automation_test_phone, t.automation_test_email, t.automation_live_at,
-            t.service_followup_campaigns_enabled
+            t.service_followup_campaigns_enabled, t.retention_dashboard_enabled
      FROM users u
      JOIN tenants t ON t.id = u.tenant_id
      WHERE u.id = $1`,
@@ -266,6 +268,7 @@ const getProfile = async (userId) => {
       automationTestEmail: row.automation_test_email || '',
       automationLiveAt: row.automation_live_at,
       serviceFollowupCampaignsEnabled: !!row.service_followup_campaigns_enabled,
+      retentionDashboardEnabled: !!row.retention_dashboard_enabled,
     },
   };
 };

@@ -260,6 +260,9 @@ a:hover { text-decoration: underline; }
 .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: all var(--transition); }
 .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.retention-bucket-card { text-align: left; cursor: pointer; width: 100%; font: inherit; color: inherit; }
+.retention-bucket-card.selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.retention-page .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
 .stat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-3); }
 .stat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }

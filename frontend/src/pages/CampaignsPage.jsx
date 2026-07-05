@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
@@ -59,11 +60,13 @@ function formatAudienceSummary(filter) {
 export default function CampaignsPage() {
   const { tenant } = useAuth();
   const simple = isSimpleMode(tenant);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [campaigns, setCampaigns] = useState([]);
   const [stats, setStats] = useState({});
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [createAudience, setCreateAudience] = useState(null);
   const [linkClicksModal, setLinkClicksModal] = useState(null);
 
   const loadCampaigns = async (page = 1) => {
@@ -81,6 +84,18 @@ export default function CampaignsPage() {
   };
 
   useEffect(() => { loadCampaigns(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    const lastVisit = searchParams.get('lastVisit') || '';
+    const tags = (searchParams.get('tags') || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    setCreateAudience(buildAudienceFilter({ tags, lastVisit }));
+    setShowCreate(true);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -145,7 +160,13 @@ export default function CampaignsPage() {
         )}
       </div>
 
-      {showCreate && <CreateCampaignModal onClose={() => setShowCreate(false)} onSuccess={() => { setShowCreate(false); loadCampaigns(); }} />}
+      {showCreate && (
+        <CreateCampaignModal
+          initialAudience={createAudience}
+          onClose={() => { setShowCreate(false); setCreateAudience(null); }}
+          onSuccess={() => { setShowCreate(false); setCreateAudience(null); loadCampaigns(); }}
+        />
+      )}
       {linkClicksModal && (
         <LinkClicksModal
           campaignId={linkClicksModal.id}
@@ -690,10 +711,15 @@ function AudiencePreviewModal({ onClose, title, campaignId, audienceFilter, chan
 
 const START_MODE = { scratch: 'scratch', copy: 'copy', template: 'template' };
 
-function CreateCampaignModal({ onClose, onSuccess }) {
+function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
   const [startMode, setStartMode] = useState(null);
   const [wizardStep, setWizardStep] = useState(1);
-  const [form, setForm] = useState({ name: '', channel: 'sms', schedule: [], audienceFilter: {} });
+  const [form, setForm] = useState({
+    name: '',
+    channel: 'sms',
+    schedule: [],
+    audienceFilter: initialAudience ? normalizeAudienceFilterForForm(initialAudience) : {},
+  });
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -747,6 +773,18 @@ function CreateCampaignModal({ onClose, onSuccess }) {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!initialAudience) return;
+    const hasAudience = getAudienceTags(initialAudience).length > 0 || initialAudience.lastVisit;
+    if (!hasAudience) return;
+    setStartMode(START_MODE.scratch);
+    setWizardStep(2);
+    setForm((prev) => ({
+      ...prev,
+      audienceFilter: normalizeAudienceFilterForForm(initialAudience),
+    }));
+  }, [initialAudience]);
 
   const loadCampaigns = async () => {
     try {

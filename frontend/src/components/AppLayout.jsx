@@ -30,14 +30,22 @@ function NavLinkItem({ to, icon, label, badge, onNavigate }) {
   );
 }
 
-function NavItems({ onNavigate, simple, needsReplyCount }) {
+const RETENTION_ICON = (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+);
+
+function NavItems({ onNavigate, simple, needsReplyCount, tenant }) {
   const close = onNavigate || (() => {});
+  const showRetention = !!tenant?.retentionDashboardEnabled;
 
   if (simple) {
     return (
       <>
         <NavLinkItem to="/conversations" icon={INBOX_ICONS} label="Inbox" badge={needsReplyCount} onNavigate={close} />
         <NavLinkItem to="/contacts" icon={CLIENTS_ICON} label="Clients" onNavigate={close} />
+        {showRetention && (
+          <NavLinkItem to="/retention" icon={RETENTION_ICON} label="Retention" onNavigate={close} />
+        )}
         <NavLinkItem to="/campaigns" icon={OUTREACH_ICON} label="Outreach" onNavigate={close} />
         <NavLinkItem to="/settings" icon={SETTINGS_ICON} label="Settings" onNavigate={close} />
       </>
@@ -60,6 +68,9 @@ function NavItems({ onNavigate, simple, needsReplyCount }) {
         onNavigate={close}
       />
       <NavLinkItem to="/contacts" icon={CLIENTS_ICON} label="Contacts" onNavigate={close} />
+      {showRetention && (
+        <NavLinkItem to="/retention" icon={RETENTION_ICON} label="Retention" onNavigate={close} />
+      )}
       <NavLinkItem to="/campaigns" icon={OUTREACH_ICON} label="Campaigns" onNavigate={close} />
       <NavLinkItem
         to="/automations"
@@ -165,7 +176,7 @@ export default function AppLayout() {
         </div>
 
         <nav className="sidebar-nav">
-          <NavItems onNavigate={closeNav} simple={simple} needsReplyCount={needsReplyCount} />
+          <NavItems onNavigate={closeNav} simple={simple} needsReplyCount={needsReplyCount} tenant={tenant} />
         </nav>
 
         <div className="sidebar-footer">
