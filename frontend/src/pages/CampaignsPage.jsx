@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS, formatLastVisitLabel } from '../utils/lastVisitFilter';
+import WinBackRetentionPanel from '../components/WinBackRetentionPanel';
 
 const STATUS_STYLES = {
   draft: { bg: '#f3f4f6', color: '#6b7280' },
@@ -60,6 +61,7 @@ function formatAudienceSummary(filter) {
 export default function CampaignsPage() {
   const { tenant } = useAuth();
   const simple = isSimpleMode(tenant);
+  const retentionEnabled = !!tenant?.retentionDashboardEnabled;
   const [searchParams, setSearchParams] = useSearchParams();
   const [campaigns, setCampaigns] = useState([]);
   const [stats, setStats] = useState({});
@@ -100,8 +102,27 @@ export default function CampaignsPage() {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
+  const handleLaunchWinBackCampaign = (audienceFilter) => {
+    setCreateAudience(normalizeAudienceFilterForForm(audienceFilter));
+    setShowCreate(true);
+  };
+
   return (
     <div className="campaigns-page">
+      {retentionEnabled && simple && (
+        <div className="card winback-retention-embedded" style={{ marginBottom: '1.25rem' }}>
+          <div className="card-header-row" style={{ marginBottom: '0.5rem' }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Win-back &amp; retention</h3>
+              <p className="hint" style={{ margin: '0.25rem 0 0' }}>
+                Identify lapsed patients, then create a targeted outreach campaign below.
+              </p>
+            </div>
+          </div>
+          <WinBackRetentionPanel embedded onLaunchCampaign={handleLaunchWinBackCampaign} />
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <h1>{simple ? 'Outreach' : 'Campaigns'}</h1>

@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { isSimpleMode } from '../utils/uiMode';
 
 const BUCKET_ORDER = ['not30d', 'not90d', 'not180d', 'not365d'];
 
@@ -11,16 +9,33 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function buildCampaignUrl({ bucket, segment }) {
+export function buildWinBackCampaignUrl({ bucket, segment }) {
   const params = new URLSearchParams({ create: '1' });
   if (bucket?.campaignLastVisit) params.set('lastVisit', bucket.campaignLastVisit);
   if (segment?.campaignTags?.length) params.set('tags', segment.campaignTags.join(','));
   return `/campaigns?${params.toString()}`;
 }
 
-export default function RetentionPage() {
-  const { tenant } = useAuth();
-  const simple = isSimpleMode(tenant);
+export function buildWinBackAudienceFilter({ bucket, segment }) {
+  const filter = {};
+  const lastVisit = bucket?.campaignLastVisit || bucket?.key;
+  if (lastVisit) filter.lastVisit = lastVisit;
+  if (segment?.campaignTags?.length) filter.tags = segment.campaignTags;
+  return filter;
+}
+
+/**
+ * Filter-driven win-back / retention panel (Sluice).
+ * @param {object} props
+ * @param {boolean} [props.embedded] — compact layout for Outreach page
+ * @param {(filter: object, meta: object) => void} [props.onLaunchCampaign] — open campaign composer in-place
+ * @param {(stats: { inactiveCount: number, bucketKey: string, categoryKey: string }) => void} [props.onStatsChange]
+ */
+export default function WinBackRetentionPanel({
+  embedded = false,
+  onLaunchCampaign,
+  onStatsChange,
+}) {
   const [overview, setOverview] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBucket, setSelectedBucket] = useState('not90d');
@@ -37,7 +52,7 @@ export default function RetentionPage() {
       const data = await api.get('/retention/overview');
       setOverview(data);
     } catch (err) {
-      setError(err.message || 'Could not load retention overview');
+      setError(err.message || 'Could not load win-back data');
     } finally {
       setLoadingOverview(false);
     }
@@ -50,7 +65,7 @@ export default function RetentionPage() {
         category: selectedCategory,
         bucket: selectedBucket,
         page: String(page),
-        limit: '25',
+        limit: embedded ? '10' : '25',
       });
       const data = await api.get(`/retention/contacts?${params}`);
       setContacts(data.contacts || []);
@@ -60,52 +75,75 @@ export default function RetentionPage() {
     } finally {
       setLoadingContacts(false);
     }
-  }, [selectedCategory, selectedBucket]);
+  }, [selectedCategory, selectedBucket, embedded]);
 
   useEffect(() => {
-    if (tenant?.retentionDashboardEnabled) loadOverview();
-  }, [tenant?.retentionDashboardEnabled, loadOverview]);
+    loadOverview();
+  }, [loadOverview]);
 
   useEffect(() => {
-    if (tenant?.retentionDashboardEnabled) loadContacts(1);
-  }, [tenant?.retentionDashboardEnabled, selectedCategory, selectedBucket, loadContacts]);
-
-  if (!tenant?.retentionDashboardEnabled) {
-    return <Navigate to={simple ? '/conversations' : '/dashboard'} replace />;
-  }
+    loadContacts(1);
+  }, [selectedCategory, selectedBucket, loadContacts]);
 
   const activeSegment = overview?.segments?.find((s) => s.key === selectedCategory);
   const activeBucketMeta = overview?.buckets?.find((b) => b.key === selectedBucket);
   const bucketCounts = activeSegment?.buckets || {};
 
+  useEffect(() => {
+    if (!onStatsChange) return;
+    onStatsChange({
+      inactiveCount: bucketCounts[selectedBucket] ?? pagination.total ?? 0,
+      bucketKey: selectedBucket,
+      categoryKey: selectedCategory,
+    });
+  }, [bucketCounts, selectedBucket, selectedCategory, pagination.total, onStatsChange]);
+
+  const launchMeta = {
+    bucket: activeBucketMeta || { campaignLastVisit: selectedBucket, key: selectedBucket },
+    segment: activeSegment,
+  };
+
+  const campaignAction = onLaunchCampaign ? (
+    <button
+      type="button"
+      className="btn btn-primary btn-sm"
+      onClick={() => onLaunchCampaign(buildWinBackAudienceFilter(launchMeta), launchMeta)}
+    >
+      Create win-back campaign
+    </button>
+  ) : (
+    <Link className="btn btn-primary btn-sm" to={buildWinBackCampaignUrl(launchMeta)}>
+      Create win-back campaign
+    </Link>
+  );
+
   return (
-    <div className="retention-page">
-      <div className="page-header">
-        <div>
-          <h1>Retention</h1>
-          <p className="page-subtitle">
-            Find lapsed patients by time since last visit and service type — then launch win-back outreach.
-          </p>
-        </div>
-      </div>
+    <div className={`winback-retention-panel ${embedded ? 'embedded' : ''}`}>
+      {!embedded && (
+        <p className="hint" style={{ margin: '0 0 1rem' }}>
+          Filter lapsed patients by service and time since last visit, then launch a targeted win-back campaign.
+        </p>
+      )}
 
       {error && <div className="form-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-      <div className="form-group" style={{ marginBottom: '1rem' }}>
-        <label htmlFor="retention-category">Service segment</label>
-        <select
-          id="retention-category"
-          className="filter-select"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-          {(overview?.segments || []).map((seg) => (
-            <option key={seg.key} value={seg.key}>{seg.label}</option>
-          ))}
-        </select>
+      <div className="winback-retention-filters">
+        <div className="form-group" style={{ marginBottom: embedded ? '0.75rem' : '1rem', flex: 1 }}>
+          <label htmlFor="winback-category">Service segment</label>
+          <select
+            id="winback-category"
+            className="filter-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            {(overview?.segments || []).map((seg) => (
+              <option key={seg.key} value={seg.key}>{seg.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="retention-buckets stat-cards" style={{ marginBottom: '1.25rem' }}>
+      <div className="retention-buckets stat-cards" style={{ marginBottom: embedded ? '1rem' : '1.25rem' }}>
         {BUCKET_ORDER.map((bucketKey) => {
           const meta = overview?.buckets?.find((b) => b.key === bucketKey);
           const count = bucketCounts[bucketKey] ?? (loadingOverview ? '…' : 0);
@@ -127,11 +165,13 @@ export default function RetentionPage() {
         })}
       </div>
 
-      <div className="card">
+      <div className={embedded ? '' : 'card'} style={embedded ? { padding: 0 } : undefined}>
         <div className="card-header-row">
           <div>
-            <h3>
-              {activeSegment?.label || 'Patients'}
+            <h3 style={embedded ? { fontSize: '1rem', margin: 0 } : undefined}>
+              {embedded ? 'Inactive patients' : 'Win-back patients'}
+              {' · '}
+              {activeSegment?.label || 'All services'}
               {' · '}
               {activeBucketMeta?.label || selectedBucket}
             </h3>
@@ -139,21 +179,13 @@ export default function RetentionPage() {
               {pagination.total} patient{pagination.total === 1 ? '' : 's'} eligible for SMS win-back
             </p>
           </div>
-          <Link
-            className="btn btn-primary btn-sm"
-            to={buildCampaignUrl({
-              bucket: activeBucketMeta || { campaignLastVisit: selectedBucket },
-              segment: activeSegment,
-            })}
-          >
-            Create win-back campaign
-          </Link>
+          {campaignAction}
         </div>
 
         {loadingContacts ? (
-          <div className="page-loader">Loading patients…</div>
+          <div className="page-loader" style={{ padding: '1.5rem 0' }}>Loading patients…</div>
         ) : contacts.length === 0 ? (
-          <div className="empty-state">
+          <div className="empty-state" style={{ padding: embedded ? '1rem 0' : undefined }}>
             <p>No inactive patients in this segment</p>
             <span>Try another time bucket or service category</span>
           </div>
@@ -167,7 +199,7 @@ export default function RetentionPage() {
                     <th>Phone</th>
                     <th>Last visit</th>
                     <th>Days inactive</th>
-                    <th>Tags</th>
+                    {!embedded && <th>Tags</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -177,7 +209,12 @@ export default function RetentionPage() {
                       <td className="muted">{c.phone || '—'}</td>
                       <td className="muted">{formatDate(c.lastVisitAt)}</td>
                       <td>{c.daysSinceVisit != null ? c.daysSinceVisit : '—'}</td>
-                      <td className="muted">{(c.tags || []).slice(0, 3).join(', ')}{(c.tags || []).length > 3 ? '…' : ''}</td>
+                      {!embedded && (
+                        <td className="muted">
+                          {(c.tags || []).slice(0, 3).join(', ')}
+                          {(c.tags || []).length > 3 ? '…' : ''}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

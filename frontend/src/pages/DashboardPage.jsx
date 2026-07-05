@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import WinBackRetentionPanel from '../components/WinBackRetentionPanel';
 
 const BADGE_STYLES = {
   booked: { bg: '#d1fae5', color: '#059669' },
@@ -44,9 +46,16 @@ function initials(name) {
 }
 
 export default function DashboardPage() {
+  const { tenant } = useAuth();
+  const retentionEnabled = !!tenant?.retentionDashboardEnabled;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [nudging, setNudging] = useState(null);
+  const [retentionStats, setRetentionStats] = useState(null);
+
+  const handleRetentionStats = useCallback((stats) => {
+    setRetentionStats(stats);
+  }, []);
 
   const load = async () => {
     try {
@@ -82,6 +91,9 @@ export default function DashboardPage() {
 
   const { impact, todayAppointments, recentConversations, liveActivity, winBack, timezone } = data;
   const displayTz = timezone || 'America/New_York';
+  const winBackDueDisplay = retentionEnabled && retentionStats
+    ? retentionStats.inactiveCount
+    : impact.winBackDueCount;
 
   return (
     <div className="dashboard ops-dashboard">
@@ -99,7 +111,7 @@ export default function DashboardPage() {
           <div className="ops-hero-stats-inline">
             <div><strong>{impact.remindersSent}</strong> reminders sent</div>
             <div><strong>{impact.missedCallsCaptured}</strong> missed calls captured</div>
-            <div><strong>{impact.winBackDueCount}</strong> clients due for win-back</div>
+            <div><strong>{winBackDueDisplay}</strong> clients due for win-back</div>
           </div>
         </div>
         <div className="ops-hero-side">
@@ -243,6 +255,7 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {!retentionEnabled && (
         <div className="card">
           <div className="card-header-row">
             <h3>🚨 Win-back needed</h3>
@@ -279,7 +292,17 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        )}
       </div>
+
+      {retentionEnabled && (
+        <div className="card" style={{ marginTop: '1.25rem' }}>
+          <div className="card-header-row" style={{ marginBottom: '0.5rem' }}>
+            <h3>🚨 Win-back &amp; retention</h3>
+          </div>
+          <WinBackRetentionPanel onStatsChange={handleRetentionStats} />
+        </div>
+      )}
     </div>
   );
 }

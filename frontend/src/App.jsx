@@ -13,7 +13,6 @@ import ConversationsPage from './pages/ConversationsPage';
 import SettingsPage from './pages/SettingsPage';
 import ContactsPage from './pages/ContactsPage';
 import CampaignsPage from './pages/CampaignsPage';
-import RetentionPage from './pages/RetentionPage';
 import AutomationsPage from './pages/AutomationsPage';
 import PlatformDashboard from './pages/admin/PlatformDashboard';
 import TenantListPage from './pages/admin/TenantListPage';
@@ -53,7 +52,7 @@ export default function App() {
             <Route path="leads/:id" element={<LeadDetailPage />} />
             <Route path="contacts" element={<ContactsPage />} />
             <Route path="campaigns" element={<CampaignsPage />} />
-            <Route path="retention" element={<RetentionPage />} />
+            <Route path="retention" element={<Navigate to="/campaigns" replace />} />
             <Route path="automations" element={<AutomationsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
