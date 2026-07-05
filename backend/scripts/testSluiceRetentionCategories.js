@@ -21,7 +21,7 @@ function check(label, cond) {
 }
 
 check('4 retention buckets', RETENTION_BUCKETS.length === 4);
-check('bucket keys', RETENTION_BUCKETS.map((b) => b.key).join(',') === 'not30d,not90d,not180d,not365d');
+check('bucket keys', RETENTION_BUCKETS.map((b) => b.key).join(',') === 'not30d,not90d,not120d,not365d');
 check('4 service categories', SLUICE_SERVICE_CATEGORIES.length === 4);
 check('IV hydration tag slugs', IV_HYDRATION_TAG_SLUGS.length >= 18);
 check('immune-defense-drip slug', IV_HYDRATION_TAG_SLUGS.includes('immune-defense-drip'));

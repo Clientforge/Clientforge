@@ -25,7 +25,7 @@ const IV_HYDRATION_TAG_SLUGS = [
 const RETENTION_BUCKETS = [
   { key: 'not30d', label: '30+ days inactive', days: 30, campaignLastVisit: 'not30d' },
   { key: 'not90d', label: '90+ days inactive', days: 90, campaignLastVisit: 'not90d' },
-  { key: 'not180d', label: '180+ days inactive', days: 180, campaignLastVisit: 'not180d' },
+  { key: 'not120d', label: '120+ days inactive', days: 120, campaignLastVisit: 'not120d' },
   { key: 'not365d', label: '1 year+ inactive', days: 365, campaignLastVisit: 'not365d' },
 ];
 

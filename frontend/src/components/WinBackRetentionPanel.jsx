@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 
-const BUCKET_ORDER = ['not30d', 'not90d', 'not180d', 'not365d'];
+const BUCKET_ORDER = ['not30d', 'not90d', 'not120d', 'not365d'];
 
 function formatDate(d) {
   if (!d) return 'No visit on file';
@@ -27,22 +27,25 @@ export function buildWinBackAudienceFilter({ bucket, segment }) {
 /**
  * Filter-driven win-back / retention panel (Sluice).
  * @param {object} props
+ * @param {'full' | 'summary'} [props.variant] — summary: bucket counts only (dashboard)
  * @param {boolean} [props.embedded] — compact layout for Outreach page
  * @param {(filter: object, meta: object) => void} [props.onLaunchCampaign] — open campaign composer in-place
  * @param {(stats: { inactiveCount: number, bucketKey: string, categoryKey: string }) => void} [props.onStatsChange]
  */
 export default function WinBackRetentionPanel({
+  variant = 'full',
   embedded = false,
   onLaunchCampaign,
   onStatsChange,
 }) {
+  const isSummary = variant === 'summary';
   const [overview, setOverview] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBucket, setSelectedBucket] = useState('not90d');
   const [contacts, setContacts] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loadingOverview, setLoadingOverview] = useState(true);
-  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [loadingContacts, setLoadingContacts] = useState(!isSummary);
   const [error, setError] = useState('');
 
   const loadOverview = useCallback(async () => {
@@ -59,6 +62,7 @@ export default function WinBackRetentionPanel({
   }, []);
 
   const loadContacts = useCallback(async (page = 1) => {
+    if (isSummary) return;
     setLoadingContacts(true);
     try {
       const params = new URLSearchParams({
@@ -75,7 +79,7 @@ export default function WinBackRetentionPanel({
     } finally {
       setLoadingContacts(false);
     }
-  }, [selectedCategory, selectedBucket, embedded]);
+  }, [selectedCategory, selectedBucket, embedded, isSummary]);
 
   useEffect(() => {
     loadOverview();
@@ -92,11 +96,11 @@ export default function WinBackRetentionPanel({
   useEffect(() => {
     if (!onStatsChange) return;
     onStatsChange({
-      inactiveCount: bucketCounts[selectedBucket] ?? pagination.total ?? 0,
+      inactiveCount: bucketCounts[selectedBucket] ?? (isSummary ? 0 : pagination.total ?? 0),
       bucketKey: selectedBucket,
       categoryKey: selectedCategory,
     });
-  }, [bucketCounts, selectedBucket, selectedCategory, pagination.total, onStatsChange]);
+  }, [bucketCounts, selectedBucket, selectedCategory, pagination.total, onStatsChange, isSummary]);
 
   const launchMeta = {
     bucket: activeBucketMeta || { campaignLastVisit: selectedBucket, key: selectedBucket },
@@ -106,16 +110,85 @@ export default function WinBackRetentionPanel({
   const campaignAction = onLaunchCampaign ? (
     <button
       type="button"
-      className="btn btn-primary btn-sm"
+      className={`btn btn-primary ${isSummary ? '' : 'btn-sm'}`}
       onClick={() => onLaunchCampaign(buildWinBackAudienceFilter(launchMeta), launchMeta)}
     >
       Create win-back campaign
     </button>
   ) : (
-    <Link className="btn btn-primary btn-sm" to={buildWinBackCampaignUrl(launchMeta)}>
+    <Link className={`btn btn-primary ${isSummary ? '' : 'btn-sm'}`} to={buildWinBackCampaignUrl(launchMeta)}>
       Create win-back campaign
     </Link>
   );
+
+  const bucketList = (
+    <div className={isSummary ? 'winback-bucket-list' : 'retention-buckets stat-cards'} style={!isSummary && embedded ? { marginBottom: '1rem' } : !isSummary ? { marginBottom: '1.25rem' } : undefined}>
+      {BUCKET_ORDER.map((bucketKey) => {
+        const meta = overview?.buckets?.find((b) => b.key === bucketKey);
+        const count = bucketCounts[bucketKey] ?? (loadingOverview ? '…' : 0);
+        const selected = selectedBucket === bucketKey;
+        if (isSummary) {
+          return (
+            <button
+              key={bucketKey}
+              type="button"
+              className={`winback-bucket-row ${selected ? 'selected' : ''}`}
+              onClick={() => setSelectedBucket(bucketKey)}
+            >
+              <span className="winback-bucket-label">{meta?.label || bucketKey}</span>
+              <span className="winback-bucket-count">{count}</span>
+            </button>
+          );
+        }
+        return (
+          <button
+            key={bucketKey}
+            type="button"
+            className={`stat-card retention-bucket-card ${selected ? 'selected' : ''}`}
+            onClick={() => setSelectedBucket(bucketKey)}
+          >
+            <div className="stat-top">
+              <span className="stat-label">{meta?.label || bucketKey}</span>
+            </div>
+            <div className="stat-value">{count}</div>
+            <div className="stat-change neutral">Inactive patients</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (isSummary) {
+    return (
+      <div className="winback-retention-panel summary">
+        {error && <div className="form-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+
+        <div className="form-group winback-summary-segment">
+          <select
+            id="winback-category"
+            className="filter-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            aria-label="Service segment"
+          >
+            {(overview?.segments || []).map((seg) => (
+              <option key={seg.key} value={seg.key}>{seg.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {loadingOverview ? (
+          <div className="page-loader" style={{ padding: '1rem 0' }}>Loading…</div>
+        ) : (
+          bucketList
+        )}
+
+        <div className="winback-summary-actions">
+          {campaignAction}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`winback-retention-panel ${embedded ? 'embedded' : ''}`}>
@@ -143,27 +216,7 @@ export default function WinBackRetentionPanel({
         </div>
       </div>
 
-      <div className="retention-buckets stat-cards" style={{ marginBottom: embedded ? '1rem' : '1.25rem' }}>
-        {BUCKET_ORDER.map((bucketKey) => {
-          const meta = overview?.buckets?.find((b) => b.key === bucketKey);
-          const count = bucketCounts[bucketKey] ?? (loadingOverview ? '…' : 0);
-          const selected = selectedBucket === bucketKey;
-          return (
-            <button
-              key={bucketKey}
-              type="button"
-              className={`stat-card retention-bucket-card ${selected ? 'selected' : ''}`}
-              onClick={() => setSelectedBucket(bucketKey)}
-            >
-              <div className="stat-top">
-                <span className="stat-label">{meta?.label || bucketKey}</span>
-              </div>
-              <div className="stat-value">{count}</div>
-              <div className="stat-change neutral">Inactive patients</div>
-            </button>
-          );
-        })}
-      </div>
+      {bucketList}
 
       <div className={embedded ? '' : 'card'} style={embedded ? { padding: 0 } : undefined}>
         <div className="card-header-row">

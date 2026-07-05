@@ -255,54 +255,52 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {!retentionEnabled && (
-        <div className="card">
-          <div className="card-header-row">
-            <h3>🚨 Win-back needed</h3>
-            {impact.winBackDueCount > winBack.length && (
-              <Link to="/contacts" className="card-link">View {impact.winBackDueCount} →</Link>
+        {retentionEnabled ? (
+          <div className="card">
+            <div className="card-header-row">
+              <h3>🚨 Win-back &amp; retention</h3>
+            </div>
+            <WinBackRetentionPanel variant="summary" onStatsChange={handleRetentionStats} />
+          </div>
+        ) : (
+          <div className="card">
+            <div className="card-header-row">
+              <h3>🚨 Win-back needed</h3>
+              {impact.winBackDueCount > winBack.length && (
+                <Link to="/contacts" className="card-link">View {impact.winBackDueCount} →</Link>
+              )}
+            </div>
+            {winBack.length === 0 ? (
+              <div className="empty-state">
+                <p>All caught up</p>
+                <span>Clients past their rebook interval will show here</span>
+              </div>
+            ) : (
+              <div className="ops-winback-list">
+                {winBack.map((w) => (
+                  <div key={w.contactId} className="ops-winback-row">
+                    <div className="ops-avatar">{initials(w.displayName)}</div>
+                    <div className="ops-winback-body">
+                      <span className="ops-convo-name">{w.displayName}</span>
+                      <span className="ops-winback-meta">
+                        Last visit {w.daysSinceVisit} days ago · {w.serviceName || 'Service'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-nudge"
+                      disabled={nudging === w.contactId}
+                      onClick={() => handleNudge(w.contactId)}
+                    >
+                      {nudging === w.contactId ? 'Sending…' : 'Nudge'}
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-          {winBack.length === 0 ? (
-            <div className="empty-state">
-              <p>All caught up</p>
-              <span>Clients past their rebook interval will show here</span>
-            </div>
-          ) : (
-            <div className="ops-winback-list">
-              {winBack.map((w) => (
-                <div key={w.contactId} className="ops-winback-row">
-                  <div className="ops-avatar">{initials(w.displayName)}</div>
-                  <div className="ops-winback-body">
-                    <span className="ops-convo-name">{w.displayName}</span>
-                    <span className="ops-winback-meta">
-                      Last visit {w.daysSinceVisit} days ago · {w.serviceName || 'Service'}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-nudge"
-                    disabled={nudging === w.contactId}
-                    onClick={() => handleNudge(w.contactId)}
-                  >
-                    {nudging === w.contactId ? 'Sending…' : 'Nudge'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
         )}
       </div>
-
-      {retentionEnabled && (
-        <div className="card" style={{ marginTop: '1.25rem' }}>
-          <div className="card-header-row" style={{ marginBottom: '0.5rem' }}>
-            <h3>🚨 Win-back &amp; retention</h3>
-          </div>
-          <WinBackRetentionPanel onStatsChange={handleRetentionStats} />
-        </div>
-      )}
     </div>
   );
 }
