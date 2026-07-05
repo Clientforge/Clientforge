@@ -3,6 +3,16 @@ import { api } from '../../api/client';
 
 const TEMPLATE_VARS = ['{firstName}', '{lastName}', '{serviceName}', '{businessName}', '{bookingLink}'];
 
+function countAliases(service) {
+  const text = service.aliasesText ?? (service.aliases || []).join(', ');
+  if (!text.trim()) return 0;
+  return text.split(',').map((a) => a.trim()).filter(Boolean).length;
+}
+
+function countEnabledFollowUps(service) {
+  return (service.followUpCampaigns || []).filter((step) => step.enabled !== false && step.intervalDays).length;
+}
+
 const emptyService = () => ({
   name: '',
   aliases: [],
@@ -208,7 +218,12 @@ export default function ServicesPanel() {
                 )}
               </div>
               <div className="field">
-                <label>Aliases (comma-separated)</label>
+                <label>
+                  Aliases (comma-separated)
+                  {countAliases(s) > 0 && (
+                    <span className="hint" style={{ marginLeft: 8 }}>{countAliases(s)} alias{countAliases(s) === 1 ? '' : 'es'}</span>
+                  )}
+                </label>
                 <input
                   value={s.aliasesText ?? (s.aliases || []).join(', ')}
                   onChange={(e) => updateService(idx, 'aliasesText', e.target.value)}
@@ -228,7 +243,14 @@ export default function ServicesPanel() {
                 <div className="service-followup-campaigns">
                   <div className="automation-section-header" style={{ marginTop: '12px' }}>
                     <div>
-                      <h4>Follow-up Campaigns</h4>
+                      <h4>
+                        Follow-up Campaigns
+                        {(s.followUpCampaigns || []).length > 0 && (
+                          <span className="hint" style={{ marginLeft: 8, fontWeight: 400 }}>
+                            {countEnabledFollowUps(s)} enabled
+                          </span>
+                        )}
+                      </h4>
                       <p className="hint">
                         Each follow-up sends on its own schedule — days after the visit or checkout date.
                         Variables: {TEMPLATE_VARS.map((v) => <code key={v}>{v}</code>)}

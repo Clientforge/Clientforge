@@ -28,7 +28,7 @@ const SLUICE_TENANT_ID = process.env.SLUICE_TENANT_ID || '5f793c52-f8e0-457b-97b
 
 async function main() {
   const tenantCheck = await db.query(
-    'SELECT id, name, service_followup_campaigns_enabled FROM tenants WHERE id = $1',
+    'SELECT id, name FROM tenants WHERE id = $1',
     [SLUICE_TENANT_ID],
   );
   if (tenantCheck.rows.length === 0) {
@@ -39,12 +39,24 @@ async function main() {
   const tenant = tenantCheck.rows[0];
   console.log(`Tenant: ${tenant.name} (${tenant.id})`);
 
-  if (!tenant.service_followup_campaigns_enabled) {
-    await db.query(
-      'UPDATE tenants SET service_followup_campaigns_enabled = true, updated_at = NOW() WHERE id = $1',
+  try {
+    const flagResult = await db.query(
+      'SELECT service_followup_campaigns_enabled FROM tenants WHERE id = $1',
       [SLUICE_TENANT_ID],
     );
-    console.log('Enabled service_followup_campaigns_enabled for tenant.');
+    if (!flagResult.rows[0]?.service_followup_campaigns_enabled) {
+      await db.query(
+        'UPDATE tenants SET service_followup_campaigns_enabled = true, updated_at = NOW() WHERE id = $1',
+        [SLUICE_TENANT_ID],
+      );
+      console.log('Enabled service_followup_campaigns_enabled for tenant.');
+    }
+  } catch (err) {
+    if (err.code === '42703') {
+      console.error('Database missing service follow-up columns — run migrations first (047_service_followup_campaigns).');
+      process.exit(1);
+    }
+    throw err;
   }
 
   const { services: existing } = await listServices(SLUICE_TENANT_ID);
