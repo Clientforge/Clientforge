@@ -617,9 +617,170 @@ const sendAppointmentEmail = async (tenantId, contactId, to, tenant, subject, bo
   }
 };
 
+/**
+ * Re-schedule pre-visit automations for an upcoming appointment without sending
+ * immediate confirmation/reschedule messages (used after go-live recovery).
+ */
+const redeployBookingWorkflowsForAppointment = async (tenantId, appointmentId) => {
+  const apptResult = await db.query(
+    `SELECT id, contact_id, status, scheduled_at, provider
+     FROM appointments WHERE id = $1 AND tenant_id = $2`,
+    [appointmentId, tenantId],
+  );
+  const apptRow = apptResult.rows[0];
+  if (!apptRow) {
+    throw Object.assign(new Error('Appointment not found'), { statusCode: 404, isOperational: true });
+  }
+  if (!['scheduled', 'rescheduled'].includes(apptRow.status)) {
+    return { appointmentId, skipped: true, reason: 'not_upcoming', jobsScheduled: 0 };
+  }
+  if (new Date(apptRow.scheduled_at) <= new Date()) {
+    return { appointmentId, skipped: true, reason: 'past', jobsScheduled: 0 };
+  }
+
+  const contactId = apptRow.contact_id;
+  const [tenantRow, contactRow, appointmentRow] = await Promise.all([
+    db.query(
+      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+              appointment_automation_config, optimantra_checkout_automations,
+              service_followup_campaigns_enabled
+       FROM tenants WHERE id = $1`,
+      [tenantId],
+    ),
+    db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
+    db.query(
+      `SELECT scheduled_at, service_name, timezone, provider, matched_service_id
+       FROM appointments WHERE id = $1`,
+      [appointmentId],
+    ),
+  ]);
+
+  const tenant = tenantRow.rows[0];
+  const contact = contactRow.rows[0];
+  const appointment = appointmentRow.rows[0];
+
+  if (!tenant || !contact || !appointment) {
+    return { appointmentId, skipped: true, reason: 'missing_context', jobsScheduled: 0 };
+  }
+  if (contact.unsubscribed) {
+    return { appointmentId, skipped: true, reason: 'unsubscribed', jobsScheduled: 0 };
+  }
+
+  await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
+  await rebookingCampaign.cancelRebookingJobsForContact(tenantId, contactId);
+
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  const vars = automationService.buildTemplateVars({ tenant, contact, appointment });
+  const bookingCategories = categoriesForBookingDispatch(tenant, appointment);
+
+  const jobsScheduled = await scheduleAutomationSteps(
+    tenantId,
+    appointmentId,
+    contactId,
+    contact,
+    tenant,
+    appointment,
+    config,
+    vars,
+    { categories: bookingCategories, skipImmediate: true },
+  );
+
+  let rebookingJobs = 0;
+  if (shouldScheduleRebookingOnBooking(tenant, appointment)) {
+    const rebookingResult = await scheduleRebooking(
+      tenantId,
+      appointmentId,
+      contactId,
+      contact,
+      tenant,
+      appointment,
+      config,
+      vars,
+    );
+    rebookingJobs = rebookingResult.scheduledCount || 0;
+  }
+
+  console.log(
+    `[APPT-WORKFLOW] Redeployed booking workflows for appointment ${appointmentId}:`
+    + ` ${jobsScheduled} pre-visit job(s)`,
+  );
+
+  return {
+    appointmentId,
+    contactId,
+    jobsScheduled: jobsScheduled + rebookingJobs,
+    preVisitJobs: jobsScheduled,
+    rebookingJobs,
+  };
+};
+
+const redeployUpcomingBookingWorkflows = async (tenantId, { dryRun = false } = {}) => {
+  const result = await db.query(
+    `SELECT a.id, a.contact_id, a.scheduled_at, a.status,
+            c.first_name, c.last_name, c.phone
+     FROM appointments a
+     JOIN contacts c ON c.id = a.contact_id
+     WHERE a.tenant_id = $1
+       AND a.status IN ('scheduled', 'rescheduled')
+       AND a.scheduled_at > NOW()
+     ORDER BY a.scheduled_at ASC`,
+    [tenantId],
+  );
+
+  const outcomes = [];
+
+  for (const row of result.rows) {
+    const label = [row.first_name, row.last_name].filter(Boolean).join(' ') || row.phone || row.id;
+    if (dryRun) {
+      outcomes.push({
+        appointmentId: row.id,
+        contactName: label,
+        scheduledAt: row.scheduled_at,
+        dryRun: true,
+      });
+      continue;
+    }
+
+    try {
+      const outcome = await redeployBookingWorkflowsForAppointment(tenantId, row.id);
+      outcomes.push({
+        ...outcome,
+        contactName: label,
+        scheduledAt: row.scheduled_at,
+      });
+    } catch (err) {
+      console.error(`[APPT-WORKFLOW] Redeploy failed for appointment ${row.id}:`, err.message);
+      outcomes.push({
+        appointmentId: row.id,
+        contactName: label,
+        scheduledAt: row.scheduled_at,
+        error: err.message,
+        jobsScheduled: 0,
+      });
+    }
+  }
+
+  const redeployed = outcomes.filter((o) => (o.jobsScheduled || 0) > 0).length;
+  const skipped = outcomes.filter((o) => o.skipped).length;
+  const failed = outcomes.filter((o) => o.error).length;
+  const totalJobs = outcomes.reduce((sum, o) => sum + (o.jobsScheduled || 0), 0);
+
+  return {
+    dryRun,
+    appointmentsFound: result.rows.length,
+    redeployed,
+    skipped,
+    failed,
+    totalJobsScheduled: totalJobs,
+    outcomes,
+  };
+};
+
 module.exports = {
   dispatchWorkflows,
   dispatchCheckoutWorkflows,
+  redeployBookingWorkflowsForAppointment,
+  redeployUpcomingBookingWorkflows,
   isOptimantraCheckoutMode,
   PRE_VISIT_CATEGORIES,
   POST_VISIT_CATEGORIES,

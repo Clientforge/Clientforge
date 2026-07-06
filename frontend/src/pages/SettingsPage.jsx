@@ -117,6 +117,7 @@ function AutomationTestModePanel({ settings, onSave, onReload, saving, updateTen
   const [testPhone, setTestPhone] = useState(automation.testPhone || '');
   const [testEmail, setTestEmail] = useState(automation.testEmail || '');
   const [goingLive, setGoingLive] = useState(false);
+  const [redeploying, setRedeploying] = useState(false);
 
   useEffect(() => {
     setTestPhone(automation.testPhone || '');
@@ -137,22 +138,43 @@ function AutomationTestModePanel({ settings, onSave, onReload, saving, updateTen
   };
 
   const handleGoLive = async () => {
-    const msg = 'Go live? Pending appointment automations will be cancelled. New automations will go to real clients.';
+    const msg = 'Go live? Pending test automations will be cleared, then upcoming appointment reminders will be re-scheduled for real clients.';
     if (!window.confirm(msg)) return;
     setGoingLive(true);
     try {
       const result = await api.post('/settings/automation-go-live');
       updateTenant({ automationTestMode: false });
       await onReload();
-      alert(
-        result.cancelledPendingJobs > 0
-          ? `You are live. Cancelled ${result.cancelledPendingJobs} pending automation job(s).`
-          : 'You are live. Automations will now go to real clients.',
-      );
+      const parts = ['You are live. Automations now go to real clients.'];
+      if (result.cancelledPendingJobs > 0) {
+        parts.push(`Cleared ${result.cancelledPendingJobs} pending test job(s).`);
+      }
+      if (result.upcomingJobsScheduled > 0) {
+        parts.push(`Re-scheduled ${result.upcomingJobsScheduled} reminder(s) across ${result.upcomingRedeployed} upcoming appointment(s).`);
+      }
+      alert(parts.join(' '));
     } catch (err) {
       alert(err.message || 'Failed to go live');
     } finally {
       setGoingLive(false);
+    }
+  };
+
+  const handleRedeployUpcoming = async () => {
+    const msg = 'Restore upcoming appointment reminders? This re-schedules confirmations and reminders for all future booked visits (no messages sent now).';
+    if (!window.confirm(msg)) return;
+    setRedeploying(true);
+    try {
+      const result = await api.post('/automations/redeploy-upcoming-booking-workflows');
+      alert(
+        result.totalJobsScheduled > 0
+          ? `Scheduled ${result.totalJobsScheduled} reminder(s) across ${result.redeployed} appointment(s).`
+          : `No new reminders scheduled (${result.appointmentsFound} upcoming appointment(s) checked).`,
+      );
+    } catch (err) {
+      alert(err.message || 'Failed to restore reminders');
+    } finally {
+      setRedeploying(false);
     }
   };
 
@@ -216,14 +238,27 @@ function AutomationTestModePanel({ settings, onSave, onReload, saving, updateTen
               Went live {new Date(automation.liveAt).toLocaleString()}.
             </p>
           )}
-          <button
-            type="button"
-            className="btn-sm"
-            onClick={() => onSave({ automation: { testMode: true, testPhone, testEmail } })}
-            disabled={saving}
-          >
-            Re-enable test mode
-          </button>
+          <p className="field-hint" style={{ marginBottom: 12 }}>
+            If reminders were cancelled when you went live, use Restore to re-schedule them for upcoming appointments.
+          </p>
+          <div className="automation-test-mode-actions">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleRedeployUpcoming}
+              disabled={redeploying}
+            >
+              {redeploying ? 'Restoring…' : 'Restore upcoming reminders'}
+            </button>
+            <button
+              type="button"
+              className="btn-sm"
+              onClick={() => onSave({ automation: { testMode: true, testPhone, testEmail } })}
+              disabled={saving}
+            >
+              Re-enable test mode
+            </button>
+          </div>
         </div>
       )}
     </div>

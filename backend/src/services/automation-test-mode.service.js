@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
+const appointmentWorkflowService = require('./appointment-workflow.service');
 
 async function getTenantAutomationTestConfig(tenantId) {
   if (!tenantId) return null;
@@ -111,7 +112,14 @@ async function goLive(tenantId) {
     [tenantId],
   );
 
-  return { cancelledPendingJobs: cancelled.rows.length };
+  const redeploy = await appointmentWorkflowService.redeployUpcomingBookingWorkflows(tenantId);
+
+  return {
+    cancelledPendingJobs: cancelled.rows.length,
+    upcomingAppointmentsFound: redeploy.appointmentsFound,
+    upcomingRedeployed: redeploy.redeployed,
+    upcomingJobsScheduled: redeploy.totalJobsScheduled,
+  };
 }
 
 module.exports = {
