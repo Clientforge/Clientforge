@@ -32,6 +32,7 @@ export default function ConversationsPage() {
   const [listError, setListError] = useState(null);
   const [threadLoading, setThreadLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [search, setSearch] = useState('');
   const searchRef = useRef(search);
