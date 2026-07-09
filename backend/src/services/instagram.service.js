@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 const db = require('../db/connection');
+const conversationArchive = require('./conversation-archive.service');
 const { encrypt, decrypt } = require('../utils/tokenCrypto');
 const { parseInstagramWebhook } = require('../adapters/instagram.adapter');
 
@@ -352,6 +353,8 @@ async function recordInboundMessage({
     `UPDATE instagram_conversations SET last_message_at = $2, updated_at = NOW() WHERE id = $1`,
     [conversationId, createdAt || new Date()],
   );
+
+  await conversationArchive.unarchiveIfArchived(tenantId, 'instagram', conversationId);
 
   return { duplicate: false, id: result.rows[0].id };
 }

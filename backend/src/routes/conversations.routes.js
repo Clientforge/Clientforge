@@ -16,13 +16,38 @@ router.get('/summary', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { page, limit, search, needsReply } = req.query;
+    const { page, limit, search, needsReply, archived } = req.query;
     const result = await conversationService.listConversations(req.tenantId, {
       page: parseInt(page, 10) || 1,
       limit: Math.min(parseInt(limit, 10) || 25, 100),
       search: search || undefined,
       needsReply,
+      archived,
     });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/v1/conversations/:participantType/:participantId/archive
+ * Body: { archived: true | false }
+ */
+router.patch('/:participantType/:participantId/archive', async (req, res, next) => {
+  try {
+    const { participantType, participantId } = req.params;
+    const { archived } = req.body;
+    if (typeof archived !== 'boolean') {
+      return res.status(400).json({ error: 'archived must be true or false' });
+    }
+    const result = await conversationService.setConversationArchived(
+      req.tenantId,
+      participantType,
+      participantId,
+      archived,
+      req.user?.id ?? null,
+    );
     res.json(result);
   } catch (err) {
     next(err);

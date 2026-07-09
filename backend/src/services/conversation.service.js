@@ -3,6 +3,7 @@ const { getTenantTimezone, scheduledTodayInTimezone } = require('../utils/tenant
 const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
 const instagramService = require('./instagram.service');
+const conversationArchive = require('./conversation-archive.service');
 
 const phoneDigits = (expr) => `regexp_replace(COALESCE(${expr}, ''), '[^0-9]', '', 'g')`;
 
@@ -99,10 +100,21 @@ const CONVERSATION_BASE_CTE = `
   )
 `;
 
+const VALID_PARTICIPANT_TYPES = conversationArchive.VALID_PARTICIPANT_TYPES;
+
+const parseArchivedFilter = (raw) => raw === true || raw === 'true';
+
 const buildConversationFilters = (options = {}) => {
   const filters = [];
   const params = [];
   let paramIdx = 2;
+
+  const archived = parseArchivedFilter(options.archived);
+  if (archived) {
+    filters.push(' AND ca.participant_id IS NOT NULL ');
+  } else {
+    filters.push(' AND ca.participant_id IS NULL ');
+  }
 
   if (options.search) {
     const searchLower = options.search.toLowerCase();
@@ -153,6 +165,7 @@ const mapRowToConversation = (row) => {
     channel: row.channel,
     participantType: row.participant_type,
     participantId: row.participant_id,
+    archived: !!row.archived,
     participant,
     lastMessage: row.last_msg_id
       ? {
@@ -171,11 +184,19 @@ const mapRowToConversation = (row) => {
 const queryConversationCounts = async (tenantId, options = {}) => {
   const { filters, params } = buildConversationFilters(options);
   const result = await db.query(
-    `${CONVERSATION_BASE_CTE}
+    `${CONVERSATION_BASE_CTE},
+     scoped AS (
+       SELECT sc.*, (ca.participant_id IS NOT NULL) AS archived
+       FROM combined sc
+       LEFT JOIN conversation_archives ca
+         ON ca.tenant_id = $1
+        AND ca.participant_type = sc.participant_type
+        AND ca.participant_id = sc.participant_id
+     )
      SELECT
        COUNT(*)::int AS total,
        COUNT(*) FILTER (WHERE sc.needs_reply)::int AS needs_reply_count
-     FROM combined sc
+     FROM scoped sc
      WHERE 1 = 1
      ${filters}`,
     [tenantId, ...params],
@@ -197,12 +218,20 @@ const listConversations = async (tenantId, options = {}) => {
   const offsetParam = nextParamIdx + 1;
   listParams.push(limit, (page - 1) * limit);
 
-  const [listResult, counts] = await Promise.all([
+  const [listResult, counts, archivedCounts] = await Promise.all([
     db.query(
       `${CONVERSATION_BASE_CTE},
+       scoped AS (
+         SELECT sc.*, (ca.participant_id IS NOT NULL) AS archived
+         FROM combined sc
+         LEFT JOIN conversation_archives ca
+           ON ca.tenant_id = $1
+          AND ca.participant_type = sc.participant_type
+          AND ca.participant_id = sc.participant_id
+       ),
        filtered AS (
          SELECT sc.*
-         FROM combined sc
+         FROM scoped sc
          WHERE 1 = 1
          ${filters}
        )
@@ -213,6 +242,7 @@ const listConversations = async (tenantId, options = {}) => {
       listParams,
     ),
     queryConversationCounts(tenantId, options),
+    queryConversationCounts(tenantId, { archived: true }),
   ]);
 
   const { total, needsReplyCount } = counts;
@@ -225,14 +255,21 @@ const listConversations = async (tenantId, options = {}) => {
       total,
       totalPages: Math.ceil(total / limit) || 1,
     },
-    needsReplyCount,
+    needsReplyCount: parseArchivedFilter(options.archived) ? 0 : needsReplyCount,
+    archivedCount: archivedCounts.total,
   };
 };
 
+const getArchivedCount = async (tenantId) => {
+  const counts = await queryConversationCounts(tenantId, { archived: true });
+  return counts.total;
+};
+
 const getInboxSummary = async (tenantId) => {
-  const counts = await queryConversationCounts(tenantId);
+  const counts = await queryConversationCounts(tenantId, { archived: false });
   const needsReplyCount = counts.needsReplyCount;
   const totalConversations = counts.total;
+  const archivedCount = await getArchivedCount(tenantId);
 
   const timezone = await getTenantTimezone(tenantId);
   const todayClause = scheduledTodayInTimezone('a.scheduled_at', 2);
@@ -248,6 +285,7 @@ const getInboxSummary = async (tenantId) => {
   return {
     needsReplyCount,
     totalConversations,
+    archivedCount,
     appointmentsToday: apptResult.rows[0]?.count ?? 0,
   };
 };
@@ -255,6 +293,48 @@ const getInboxSummary = async (tenantId) => {
 /**
  * Get a single conversation thread (all messages for a participant).
  */
+const isConversationArchived = conversationArchive.isArchived;
+
+const assertParticipantExists = async (tenantId, participantType, participantId) => {
+  if (!VALID_PARTICIPANT_TYPES.includes(participantType)) {
+    throw Object.assign(new Error('Invalid participant type'), { statusCode: 400, isOperational: true });
+  }
+
+  if (participantType === 'instagram') {
+    const row = await instagramService.getConversationById(tenantId, participantId);
+    if (!row) {
+      throw Object.assign(new Error('Conversation not found'), { statusCode: 404, isOperational: true });
+    }
+    return;
+  }
+
+  if (participantType === 'lead') {
+    const result = await db.query(
+      'SELECT id FROM leads WHERE id = $1 AND tenant_id = $2',
+      [participantId, tenantId],
+    );
+    if (result.rows.length === 0) {
+      throw Object.assign(new Error('Lead not found'), { statusCode: 404, isOperational: true });
+    }
+    return;
+  }
+
+  const result = await db.query(
+    'SELECT id FROM contacts WHERE id = $1 AND tenant_id = $2',
+    [participantId, tenantId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
+  }
+};
+
+const setConversationArchived = async (tenantId, participantType, participantId, archived, userId = null) => {
+  await assertParticipantExists(tenantId, participantType, participantId);
+  return conversationArchive.setArchived(tenantId, participantType, participantId, archived, userId);
+};
+
+const unarchiveConversationIfArchived = conversationArchive.unarchiveIfArchived;
+
 const getConversation = async (tenantId, participantType, participantId) => {
   if (participantType === 'instagram') {
     const row = await instagramService.getConversationById(tenantId, participantId);
@@ -278,6 +358,7 @@ const getConversation = async (tenantId, participantType, participantId) => {
     return {
       channel: 'instagram',
       participantType: 'instagram',
+      archived: await isConversationArchived(tenantId, 'instagram', participantId),
       participant: {
         id: row.id,
         firstName: row.display_name || row.instagram_username || null,
@@ -373,6 +454,7 @@ const getConversation = async (tenantId, participantType, participantId) => {
     participant,
     messages,
     participantType,
+    archived: await isConversationArchived(tenantId, participantType, participantId),
     aiReply: {
       tenantDefault,
       override,
@@ -536,4 +618,6 @@ module.exports = {
   updateAiReplyOverride,
   getEffectiveAiAutoReply,
   getRecentThreadMessagesForAi,
+  setConversationArchived,
+  unarchiveConversationIfArchived,
 };

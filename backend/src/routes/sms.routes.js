@@ -17,6 +17,24 @@ const resolveAiParticipant = (inbound) => {
   return null;
 };
 
+const unarchiveInboundConversation = async (inbound) => {
+  if (!inbound?.tenantId) return;
+  const who = resolveAiParticipant(inbound);
+  if (!who?.participantId) return;
+  await conversationService.unarchiveConversationIfArchived(
+    inbound.tenantId,
+    who.participantType,
+    who.participantId,
+  );
+  if (inbound.lead && inbound.contact) {
+    await conversationService.unarchiveConversationIfArchived(
+      inbound.tenantId,
+      'contact',
+      inbound.contact.id,
+    );
+  }
+};
+
 /**
  * When AI auto-reply is enabled, generate and send one SMS. Returns a result object or null.
  */
@@ -166,6 +184,7 @@ router.post('/inbound', async (req, res, next) => {
     if (compliance.isOptOut(body)) {
       const inbound = await smsService.handleInbound({ from, to, body, twilioSid: messageSid || undefined });
       if (inbound) {
+        await unarchiveInboundConversation(inbound);
         if (inbound.participantType === 'lead') {
           await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
           await followupService.cancelFollowUps(inbound.lead.id);
@@ -180,6 +199,8 @@ router.post('/inbound', async (req, res, next) => {
     if (!inbound) {
       return res.status(200).json({ received: true, action: 'no_lead_found' });
     }
+
+    await unarchiveInboundConversation(inbound);
 
     if (!inbound.keywordWelcomeSent) {
       const aiResult = await trySendAiAutoReply(inbound, body);
@@ -256,6 +277,7 @@ router.post('/simulate', async (req, res, next) => {
     if (compliance.isOptOut(body)) {
       const inbound = await smsService.handleInbound({ from, to: simulateTo, body, twilioSid: null });
       if (inbound) {
+        await unarchiveInboundConversation(inbound);
         if (inbound.participantType === 'lead') {
           await compliance.handleOptOut(inbound.lead.id, inbound.tenantId);
           await followupService.cancelFollowUps(inbound.lead.id);
@@ -270,6 +292,8 @@ router.post('/simulate', async (req, res, next) => {
     if (!inbound) {
       return res.json({ received: true, action: 'no_lead_found' });
     }
+
+    await unarchiveInboundConversation(inbound);
 
     if (!inbound.keywordWelcomeSent) {
       const aiResult = await trySendAiAutoReply(inbound, body);

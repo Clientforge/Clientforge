@@ -23,6 +23,8 @@ export default function ConversationsPage() {
   const [pagination, setPagination] = useState({});
   const [summary, setSummary] = useState(null);
   const [needsReplyFilter, setNeedsReplyFilter] = useState(false);
+  const [archivedView, setArchivedView] = useState(false);
+  const [archivedCount, setArchivedCount] = useState(0);
   const [selected, setSelected] = useState(null);
   const [thread, setThread] = useState(null);
   const [composeBody, setComposeBody] = useState('');
@@ -30,17 +32,23 @@ export default function ConversationsPage() {
   const [listError, setListError] = useState(null);
   const [threadLoading, setThreadLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [aiSaving, setAiSaving] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [search, setSearch] = useState('');
   const searchRef = useRef(search);
   searchRef.current = search;
   const needsReplyRef = useRef(needsReplyFilter);
   needsReplyRef.current = needsReplyFilter;
 
+  const archivedViewRef = useRef(archivedView);
+  archivedViewRef.current = archivedView;
+
   const loadSummary = async () => {
     try {
       const data = await api.get('/conversations/summary');
       setSummary(data);
+      if (data.archivedCount !== undefined) {
+        setArchivedCount(data.archivedCount);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -52,12 +60,19 @@ export default function ConversationsPage() {
     try {
       const params = new URLSearchParams({ page, limit: 25 });
       if (search) params.set('search', search);
-      if (needsReplyFilter) params.set('needsReply', 'true');
+      if (archivedView) {
+        params.set('archived', 'true');
+      } else if (needsReplyFilter) {
+        params.set('needsReply', 'true');
+      }
       const data = await api.get(`/conversations?${params}`);
       setConversations(data.conversations);
       setPagination(data.pagination || {});
-      if (data.needsReplyCount !== undefined) {
+      if (!archivedView && data.needsReplyCount !== undefined) {
         setSummary((prev) => ({ ...prev, needsReplyCount: data.needsReplyCount }));
+      }
+      if (data.archivedCount !== undefined) {
+        setArchivedCount(data.archivedCount);
       }
     } catch (err) {
       console.error(err);
@@ -106,6 +121,35 @@ export default function ConversationsPage() {
     }
   };
 
+  const toggleArchive = async (archived) => {
+    if (!selected) return;
+    const label = archived ? 'Archive this conversation?' : 'Move back to inbox?';
+    if (!window.confirm(label)) return;
+    setArchiving(true);
+    try {
+      await api.patch(
+        `/conversations/${selected.participantType}/${selected.participantId}/archive`,
+        { archived },
+      );
+      if (archived) {
+        setSelected(null);
+        setThread(null);
+      } else {
+        const data = await api.get(
+          `/conversations/${selected.participantType}/${selected.participantId}`,
+        );
+        setThread(data);
+      }
+      loadConversations(pagination.page || 1);
+      loadSummary();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Could not update archive status');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const updateAiOverride = async (value) => {
     if (!selected) return;
     let aiAutoReplyOverride = null;
@@ -129,7 +173,7 @@ export default function ConversationsPage() {
   useEffect(() => {
     loadConversations(1);
     loadSummary();
-  }, [search, needsReplyFilter]);
+  }, [search, needsReplyFilter, archivedView]);
 
   // Poll open thread + inbox list so inbound SMS appears without refresh.
   useEffect(() => {
@@ -143,7 +187,11 @@ export default function ConversationsPage() {
         const listParams = new URLSearchParams({ page: String(page), limit: '25' });
         const s = searchRef.current;
         if (s) listParams.set('search', s);
-        if (needsReplyRef.current) listParams.set('needsReply', 'true');
+        if (archivedViewRef.current) {
+          listParams.set('archived', 'true');
+        } else if (needsReplyRef.current) {
+          listParams.set('needsReply', 'true');
+        }
 
         const [threadData, listData, summaryData] = await Promise.all([
           api.get(`/conversations/${participantType}/${participantId}`),
@@ -155,6 +203,9 @@ export default function ConversationsPage() {
         setConversations(listData.conversations);
         setPagination(listData.pagination || {});
         setSummary(summaryData);
+        if (summaryData.archivedCount !== undefined) {
+          setArchivedCount(summaryData.archivedCount);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -170,7 +221,7 @@ export default function ConversationsPage() {
       clearInterval(iv);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [selected, pagination.page, needsReplyFilter]);
+  }, [selected, pagination.page, needsReplyFilter, archivedView]);
 
   const formatTime = (d) =>
     d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
@@ -241,18 +292,39 @@ export default function ConversationsPage() {
           <div className="inbox-filters">
             <button
               type="button"
-              className={`inbox-filter-btn ${!needsReplyFilter ? 'active' : ''}`}
-              onClick={() => setNeedsReplyFilter(false)}
+              className={`inbox-filter-btn ${!needsReplyFilter && !archivedView ? 'active' : ''}`}
+              onClick={() => {
+                setNeedsReplyFilter(false);
+                setArchivedView(false);
+              }}
             >
               All
             </button>
             <button
               type="button"
-              className={`inbox-filter-btn ${needsReplyFilter ? 'active' : ''}`}
-              onClick={() => setNeedsReplyFilter(true)}
+              className={`inbox-filter-btn ${needsReplyFilter && !archivedView ? 'active' : ''}`}
+              onClick={() => {
+                setNeedsReplyFilter(true);
+                setArchivedView(false);
+              }}
             >
               Needs reply
-              {needsReplyCount > 0 && <span className="inbox-filter-badge">{needsReplyCount}</span>}
+              {needsReplyCount > 0 && !archivedView && (
+                <span className="inbox-filter-badge">{needsReplyCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`inbox-filter-btn ${archivedView ? 'active' : ''}`}
+              onClick={() => {
+                setNeedsReplyFilter(false);
+                setArchivedView(true);
+              }}
+            >
+              Archived
+              {archivedCount > 0 && (
+                <span className="inbox-filter-badge muted">{archivedCount}</span>
+              )}
             </button>
           </div>
           <div className="inbox-list">
@@ -262,7 +334,11 @@ export default function ConversationsPage() {
               <div className="inbox-empty">{listError}</div>
             ) : conversations.length === 0 ? (
               <div className="inbox-empty">
-                {needsReplyFilter ? 'No conversations waiting for a reply' : 'No conversations yet'}
+                {archivedView
+                  ? 'No archived conversations'
+                  : needsReplyFilter
+                    ? 'No conversations waiting for a reply'
+                    : 'No conversations yet'}
               </div>
             ) : (
               conversations.map((c) => {
@@ -416,6 +492,20 @@ export default function ConversationsPage() {
                       </select>
                     </div>
                   )}
+                </div>
+                <div className="inbox-thread-actions">
+                  <button
+                    type="button"
+                    className="btn-sm inbox-archive-btn"
+                    disabled={archiving}
+                    onClick={() => toggleArchive(!archivedView && !thread.archived)}
+                  >
+                    {archiving
+                      ? 'Saving…'
+                      : archivedView || thread.archived
+                        ? 'Unarchive'
+                        : 'Archive'}
+                  </button>
                 </div>
               </div>
 

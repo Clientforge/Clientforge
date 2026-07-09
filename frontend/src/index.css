@@ -486,6 +486,7 @@ a:hover { text-decoration: underline; }
 .inbox-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
 .inbox-filter-btn.active { background: var(--primary-bg); border-color: var(--primary); color: var(--primary); }
 .inbox-filter-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--primary); color: #fff; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.inbox-filter-badge.muted { background: var(--text-3); }
 .inbox-item.needs-reply { border-left: 3px solid var(--primary); }
 .inbox-reply-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); margin-right: 4px; vertical-align: middle; }
 .inbox-layout { display: flex; flex: 1; min-height: 0; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
@@ -512,9 +513,12 @@ a:hover { text-decoration: underline; }
 .inbox-empty { padding: 24px; text-align: center; color: var(--text-3); font-size: 13px; }
 .inbox-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .inbox-placeholder { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-3); font-size: 15px; }
-.inbox-thread-header { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
-.inbox-thread-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--purple)); color: white; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.inbox-thread-header { display: flex; align-items: flex-start; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
 .inbox-thread-info { flex: 1; min-width: 0; }
+.inbox-thread-actions { flex-shrink: 0; padding-top: 2px; }
+.inbox-archive-btn { border: 1px solid var(--border); background: var(--surface); color: var(--text-2); }
+.inbox-archive-btn:hover { border-color: var(--text-3); color: var(--text-1); }
+.inbox-thread-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--purple)); color: white; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .inbox-thread-info h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
 .inbox-thread-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-2); flex-wrap: wrap; }
 .inbox-link { font-size: 12px; }

@@ -218,6 +218,14 @@ const getRecentConversations = async (tenantId, limit = 8) => {
        LEFT JOIN leads l ON l.id = m.lead_id
        WHERE m.tenant_id = $1
          AND (m.contact_id IS NOT NULL OR m.lead_id IS NOT NULL)
+         AND NOT EXISTS (
+           SELECT 1 FROM conversation_archives ca
+           WHERE ca.tenant_id = $1
+             AND (
+               (ca.participant_type = 'contact' AND ca.participant_id = m.contact_id)
+               OR (ca.participant_type = 'lead' AND ca.participant_id = m.lead_id)
+             )
+         )
      ) t
      ORDER BY participant_key, created_at DESC`,
     [tenantId],
