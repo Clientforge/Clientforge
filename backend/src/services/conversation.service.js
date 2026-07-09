@@ -111,9 +111,9 @@ const buildConversationFilters = (options = {}) => {
 
   const archived = parseArchivedFilter(options.archived);
   if (archived) {
-    filters.push(' AND ca.participant_id IS NOT NULL ');
+    filters.push(' AND sc.archived = true ');
   } else {
-    filters.push(' AND ca.participant_id IS NULL ');
+    filters.push(' AND sc.archived = false ');
   }
 
   if (options.search) {
