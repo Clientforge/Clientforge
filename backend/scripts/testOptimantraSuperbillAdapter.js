@@ -10,6 +10,7 @@ const {
   titleCaseServiceType,
 } = require('../src/adapters/optimantra-superbill.adapter');
 const { pickPrimaryService } = require('../src/services/optimantra-checkout.service');
+const { SLUICE_TENANT_ID } = require('./sluiceCheckoutRules');
 
 function check(label, actual, expected) {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
@@ -88,8 +89,29 @@ if (!sluiceFullNormalized) {
   failed += check('Sluice full services count', sluiceFullNormalized.services.length, 2);
   failed += check('Sluice full office type (first bucket)', sluiceFullNormalized.services[0].serviceType, 'Office Visit');
   failed += check('Sluice full lab type (second bucket)', sluiceFullNormalized.services[1].serviceType, 'Lab Work');
-  const sluicePrimary = pickPrimaryService(sluiceFullNormalized.services);
+  const sluicePrimary = pickPrimaryService(sluiceFullNormalized.services, { tenantId: SLUICE_TENANT_ID });
   failed += check('Sluice full primary prefers Office Visit over Lab Work', sluicePrimary?.serviceType, 'Office Visit');
+}
+
+// Sluice — add-on must not beat the attached primary service (Vickie Matlaga live shape)
+const sluiceAddOnVisit = normalizeOptimantraSuperbillPayload({
+  firstName: 'Vickie',
+  lastName: 'Matlaga',
+  phone: '770-712-6811',
+  officeVisit: [
+    { code: 'Glutathione Add on', quantity: 1, charge: 40, discount: 6, netCharge: 34 },
+    { code: "Myers' Cocktail Drip", quantity: 1, charge: 190, discount: 0, netCharge: 190 },
+    { code: 'SDS service charge', quantity: 1, charge: 5, discount: 0, netCharge: 5 },
+  ],
+});
+if (!sluiceAddOnVisit) {
+  console.log('✗ Sluice add-on superbill returned null');
+  failed += 1;
+} else {
+  const addOnPrimary = pickPrimaryService(sluiceAddOnVisit.services, { tenantId: SLUICE_TENANT_ID });
+  failed += check('Sluice add-on visit primary is drip not add-on', addOnPrimary?.serviceName, "Myers' Cocktail Drip");
+  const genericPrimary = pickPrimaryService(sluiceAddOnVisit.services);
+  failed += check('Non-Sluice tenant unchanged (first line)', genericPrimary?.serviceName, 'Glutathione Add on');
 }
 
 // Legacy services[] shape still supported

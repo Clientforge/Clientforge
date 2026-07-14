@@ -2,6 +2,10 @@ const db = require('../db/connection');
 const appointmentService = require('./appointment.service');
 const tenantService = require('./tenant-service.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const {
+  isSluiceTenant,
+  filterSluicePrimaryCandidates,
+} = require('../../scripts/sluiceCheckoutRules');
 
 const TYPE_PRIORITY = {
   Procedure: 1,
@@ -10,7 +14,7 @@ const TYPE_PRIORITY = {
   Other: 4,
 };
 
-function pickPrimaryService(services) {
+function pickByTypePriority(services) {
   if (!services?.length) return null;
   const sorted = [...services].sort((a, b) => {
     const pa = TYPE_PRIORITY[a.serviceType] || 99;
@@ -18,6 +22,23 @@ function pickPrimaryService(services) {
     return pa - pb;
   });
   return sorted[0];
+}
+
+/**
+ * Choose the primary checkout service for appointment name + automations.
+ * Sluice: skip add-ons and fee lines so the attached primary treatment wins.
+ */
+function pickPrimaryService(services, { tenantId } = {}) {
+  if (!services?.length) return null;
+
+  if (isSluiceTenant(tenantId)) {
+    const candidates = filterSluicePrimaryCandidates(services);
+    if (candidates.length > 0) {
+      return pickByTypePriority(candidates);
+    }
+  }
+
+  return pickByTypePriority(services);
 }
 
 async function findCheckoutByExternalId(tenantId, externalId) {
@@ -134,7 +155,7 @@ async function processSuperbillCheckout(tenantId, normalized) {
     checkedOutAt: checkout.checkedOutAt,
   });
 
-  const primary = pickPrimaryService(services);
+  const primary = pickPrimaryService(services, { tenantId });
   const primaryServiceName = primary?.serviceName || null;
 
   const checkoutResult = await db.query(
