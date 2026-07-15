@@ -9,6 +9,8 @@ const {
 } = require('../adapters/googleCalendar.adapter');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const sluiceCalendarBridge = require('./googleCalendarOptimantraBridge.service');
+const { isSluiceTenant } = require('../config/sluiceTenant');
 const { normalizePhone } = require('./lead.service');
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -438,6 +440,62 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
     return { skipped: true, reason: skipReason };
   }
 
+  if (isSluiceTenant(tenantId)) {
+    const contactId = existingContactId;
+    if (!contactId) {
+      await logSyncEvent(tenantId, googleEvent.id, {
+        syncAction: 'skipped',
+        skipReason: 'bridge_no_contact_match',
+        rawPayload: {
+          id: googleEvent.id,
+          summary: googleEvent.summary,
+          firstName: normalized.contact.firstName,
+          lastName: normalized.contact.lastName,
+          email: normalized.contact.email,
+        },
+      });
+      return { skipped: true, reason: 'bridge_no_contact_match' };
+    }
+
+    try {
+      const result = await sluiceCalendarBridge.processSluiceCalendarEvent(
+        tenantId,
+        googleEvent,
+        normalized,
+        { contactId },
+      );
+
+      if (result.skipped) {
+        await logSyncEvent(tenantId, googleEvent.id, {
+          syncAction: 'skipped',
+          skipReason: result.reason,
+          rawPayload: { id: googleEvent.id, summary: googleEvent.summary },
+        });
+        return result;
+      }
+
+      await logSyncEvent(tenantId, googleEvent.id, {
+        syncAction: 'processed',
+        appointmentId: result.appointmentId,
+        eventType: result.eventType,
+      });
+
+      console.log(
+        `[GCAL][SLUICE-BRIDGE] ${result.eventType} appointment ${result.appointmentId}`
+        + ` ← gcal:${googleEvent.id}`,
+      );
+
+      return { processed: true, bridged: true, ...result };
+    } catch (err) {
+      await logSyncEvent(tenantId, googleEvent.id, {
+        syncAction: 'failed',
+        errorMessage: err.message,
+        rawPayload: { id: googleEvent.id },
+      });
+      throw err;
+    }
+  }
+
   try {
     const result = await appointmentService.processBookingEvent(tenantId, {
       eventType: normalized.eventType,
@@ -734,6 +792,8 @@ const SKIP_REASON_LABELS = {
   missing_contact_identity: 'Missing client name or email',
   missing_phone: 'Missing valid phone (required to create contact)',
   contact_not_in_list: 'Client not in Contacts and missing phone or name',
+  bridge_no_contact_match: 'Client not in Contacts (Sluice bridge — OptiMantra owns new bookings)',
+  bridge_no_optimantra_match: 'No matching OptiMantra appointment to link (Sluice bridge)',
 };
 
 function mapSyncLogRow(row) {

@@ -3,17 +3,13 @@
  * Add-ons and fee lines are extensions of the visit, not the primary service.
  */
 
-const SLUICE_TENANT_ID = process.env.SLUICE_TENANT_ID || '5f793c52-f8e0-457b-97b5-86af987c2a8d';
+const { SLUICE_TENANT_ID, isSluiceTenant } = require('../src/config/sluiceTenant');
 
 const ADD_ON_PATTERN = /\badd[\s-]?on\b/i;
 const FEE_LINE_PATTERNS = [
   /\bservice charge\b/i,
   /^sds\b/i,
 ];
-
-function isSluiceTenant(tenantId) {
-  return tenantId === SLUICE_TENANT_ID;
-}
 
 function isSluiceAddOn(serviceName) {
   return ADD_ON_PATTERN.test(String(serviceName || ''));

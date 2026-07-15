@@ -1401,6 +1401,8 @@ const GCAL_SKIP_HINTS = {
   past_event: 'Only current and upcoming appointments are imported.',
   no_contact_identity: 'Often a staff block or personal event — not a client booking.',
   missing_contact_identity: 'Could not parse a client name or email from the calendar event.',
+  bridge_no_contact_match: 'Client must already be in Contacts (OptiMantra creates bookings for Sluice).',
+  bridge_no_optimantra_match: 'No OptiMantra appointment matched this calendar event — skipped to avoid duplicates.',
 };
 
 function formatSkippedClient(event) {
