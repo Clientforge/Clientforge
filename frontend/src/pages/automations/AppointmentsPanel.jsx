@@ -80,7 +80,7 @@ export default function AppointmentsPanel() {
         {loading ? (
           <div className="page-loader">Loading appointments...</div>
         ) : appointments.length === 0 ? (
-          <div className="empty-state card"><p>No appointments yet</p><p className="muted">Appointments from Calendly, Google Calendar, or forwarded booking emails will appear here.</p></div>
+          <div className="empty-state card"><p>No appointments yet</p><p className="muted">Appointments from OptiMantra, Calendly, Google Calendar, and other booking sources will appear here.</p></div>
         ) : (
           <>
             <div className="card automation-record-list">

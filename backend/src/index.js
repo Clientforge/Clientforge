@@ -6,8 +6,8 @@ const db = require('./db/connection');
 const followupWorker = require('./workers/followup.worker');
 const campaignWorker = require('./workers/campaign.worker');
 const appointmentWorker = require('./workers/appointment.worker');
-const bookingEmailWorker = require('./workers/bookingEmail.worker');
 const googleCalendarWorker = require('./workers/googleCalendar.worker');
+const { isBookingEmailIngestEnabled } = require('./config/bookingEmailIngest');
 const birthdayWorker = require('./workers/birthday.worker');
 const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
@@ -36,7 +36,11 @@ const startServer = async () => {
     followupWorker.startWorker();
     campaignWorker.startWorker();
     appointmentWorker.startWorker();
-    bookingEmailWorker.startWorker();
+    if (isBookingEmailIngestEnabled()) {
+      require('./workers/bookingEmail.worker').startWorker();
+    } else {
+      console.log('[BOOKING-EMAIL] Ingest disabled (set BOOKING_EMAIL_INGEST_ENABLED=true to enable)');
+    }
     googleCalendarWorker.startWorker();
     birthdayWorker.startWorker();
   });

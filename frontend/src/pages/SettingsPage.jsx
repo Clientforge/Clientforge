@@ -1326,7 +1326,7 @@ function GoogleCalendarSection({ settings, onReload }) {
     <div className="integration-block">
       <h3>Google Calendar</h3>
       <p className="settings-desc">
-        Sync appointments booked directly on Google Calendar into ClientForge. Client events with a guest attendee are matched to contacts and trigger the same automations as email ingest and Calendly (reminders, reviews, rebooking).
+        Sync appointments booked directly on Google Calendar into ClientForge. Client events with a guest attendee are matched to contacts and trigger the same automations as Calendly (reminders, reviews, rebooking).
       </p>
 
       {!gcal.connected ? (

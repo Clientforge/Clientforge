@@ -207,7 +207,7 @@ export default function DashboardPage() {
           {todayAppointments.length === 0 ? (
             <div className="empty-state">
               <p>No appointments today</p>
-              <span>Synced from Google Calendar or booking emails</span>
+              <span>Synced from Google Calendar and booking integrations</span>
             </div>
           ) : (
             <div className="ops-appt-list">

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import WorkflowsPanel from './automations/WorkflowsPanel';
 import AppointmentsPanel from './automations/AppointmentsPanel';
-import EmailIngestPanel from './automations/EmailIngestPanel';
 import ServicesPanel from './automations/ServicesPanel';
 import BirthdayCampaignPanel from './automations/BirthdayCampaignPanel';
 
@@ -10,7 +9,6 @@ const VIEWS = [
   { key: 'services', label: 'Services' },
   { key: 'appointments', label: 'Appointments' },
   { key: 'birthday', label: 'Birthday Campaign' },
-  { key: 'email', label: 'Email Ingest' },
 ];
 
 export default function AutomationsPage() {
@@ -22,7 +20,7 @@ export default function AutomationsPage() {
         <div>
           <h1>Booking Automations</h1>
           <p className="page-subtitle">
-            Configure message sequences, track appointment timelines, and monitor forwarded booking emails
+            Configure message sequences, track appointment timelines, and manage booking automations
           </p>
         </div>
       </div>
@@ -60,7 +58,6 @@ export default function AutomationsPage() {
       {view === 'services' && <ServicesPanel />}
       {view === 'appointments' && <AppointmentsPanel />}
       {view === 'birthday' && <BirthdayCampaignPanel />}
-      {view === 'email' && <EmailIngestPanel />}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
 const { processInboundBookingEmail, inboxEmail } = require('../services/bookingEmailIngest.service');
 
 const INBOX_KEY = 'default';
@@ -33,6 +34,10 @@ function imapConfigured() {
  * Poll IMAP inbox for new messages (requires imapflow + mailparser).
  */
 async function pollBookingInboxOnce() {
+  if (!isBookingEmailIngestEnabled()) {
+    return { skipped: true, reason: 'ingest_disabled' };
+  }
+
   if (!imapConfigured()) return { skipped: true, reason: 'imap_not_configured' };
 
   let ImapFlow;
@@ -54,6 +59,12 @@ async function pollBookingInboxOnce() {
       pass: process.env.BOOKING_INBOX_IMAP_PASSWORD,
     },
     logger: false,
+    socketTimeout: 120000,
+    greetingTimeout: 30000,
+  });
+
+  client.on('error', (err) => {
+    console.error('[BOOKING-EMAIL] IMAP client error:', err.message);
   });
 
   const lastUid = await getLastUid();
@@ -91,7 +102,11 @@ async function pollBookingInboxOnce() {
       lock.release();
     }
   } finally {
-    await client.logout();
+    try {
+      await client.logout();
+    } catch (err) {
+      console.warn('[BOOKING-EMAIL] IMAP logout failed:', err.message);
+    }
   }
 
   if (maxUid > lastUid) {

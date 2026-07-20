@@ -166,6 +166,7 @@ export default function CampaignsPage() {
                   formatDate={formatDate}
                   onRefresh={loadCampaigns}
                   onOpenLinkClicks={(camp) => setLinkClicksModal({ id: camp.id, name: camp.name })}
+                  timezone={tenant?.timezone}
                 />
               ))}
             </tbody>
@@ -200,7 +201,7 @@ export default function CampaignsPage() {
   );
 }
 
-function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
+function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezone }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
   const [audiencePreview, setAudiencePreview] = useState(null);
@@ -283,7 +284,7 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
         </td>
       </tr>
       {expanded && (
-        <tr className="campaign-detail-row"><td colSpan="9"><CampaignDetail campaign={detail || campaign} formatDate={formatDate} /></td></tr>
+        <tr className="campaign-detail-row"><td colSpan="9"><CampaignDetail campaign={detail || campaign} formatDate={formatDate} timezone={timezone} /></td></tr>
       )}
       {audiencePreview && (
         <AudiencePreviewModal
@@ -307,7 +308,56 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks }) {
   );
 }
 
-function CampaignDetail({ campaign, formatDate }) {
+const DEFAULT_SEND_TIME = '10:00';
+
+function formatTimezoneShort(timeZone) {
+  if (!timeZone) return '';
+  try {
+    const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+      .formatToParts(new Date())
+      .find((p) => p.type === 'timeZoneName');
+    return part?.value || timeZone;
+  } catch {
+    return timeZone;
+  }
+}
+
+function formatSendTimeLabel(sendTime) {
+  const match = String(sendTime || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const probe = new Date(Date.UTC(2026, 0, 1, hour, minute));
+  return probe.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
+}
+
+function formatWaveTiming(wave, timezone) {
+  const delay = wave.delay_days || 0;
+  const timeLabel = formatSendTimeLabel(wave.send_time);
+  if (!timeLabel) {
+    return delay === 0 ? 'Immediate' : `Day ${delay}`;
+  }
+  const dayLabel = delay === 0 ? 'Same day' : `Day ${delay}`;
+  const tz = formatTimezoneShort(timezone);
+  return tz ? `${dayLabel} at ${timeLabel} (${tz})` : `${dayLabel} at ${timeLabel}`;
+}
+
+function formatWaveTimingReview(wave, timezone) {
+  const delay = wave.delay_days || 0;
+  const timeLabel = formatSendTimeLabel(wave.send_time);
+  if (!timeLabel) {
+    return delay === 0 ? 'Sent immediately' : `Day ${delay}`;
+  }
+  const dayLabel = delay === 0 ? 'Same day' : `Day ${delay}`;
+  const tz = formatTimezoneShort(timezone);
+  return tz ? `${dayLabel} at ${timeLabel} (${tz})` : `${dayLabel} at ${timeLabel}`;
+}
+
+function withDefaultSendTime(wave) {
+  return { ...wave, send_time: wave.send_time || DEFAULT_SEND_TIME };
+}
+
+function CampaignDetail({ campaign, formatDate, timezone }) {
   const schedule = campaign.schedule || [];
   const waveStats = campaign.waveStats || [];
   const ch = campaign.channel || 'sms';
@@ -347,7 +397,7 @@ function CampaignDetail({ campaign, formatDate }) {
                 <div key={i} className="wave-card">
                   <div className="wave-header">
                     <span className="wave-number">Wave {wave.step}</span>
-                    <span className="wave-timing">{wave.delay_days === 0 ? 'Immediate' : `Day ${wave.delay_days}`}</span>
+                    <span className="wave-timing">{formatWaveTiming(wave, timezone)}</span>
                   </div>
                   {showSms && wave.message && (
                     <div className="wave-msg-block">
@@ -733,6 +783,8 @@ function AudiencePreviewModal({ onClose, title, campaignId, audienceFilter, chan
 const START_MODE = { scratch: 'scratch', copy: 'copy', template: 'template' };
 
 function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
+  const { tenant } = useAuth();
+  const clinicTimezone = tenant?.timezone || 'America/New_York';
   const [startMode, setStartMode] = useState(null);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState({
@@ -829,7 +881,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
       setForm({
         name: `${c.name} (Copy)`,
         channel: c.channel || 'sms',
-        schedule: (c.schedule || []).map((w, i) => ({ ...w, step: i + 1 })),
+        schedule: (c.schedule || []).map((w, i) => withDefaultSendTime({ ...w, step: i + 1 })),
         audienceFilter: normalizeAudienceFilterForForm(c.audienceFilter),
       });
       setStartMode(START_MODE.copy);
@@ -842,7 +894,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
     setForm({
       name: template.name,
       channel: template.channel || 'sms',
-      schedule: (template.schedule || []).map((w, i) => ({ ...w, step: i + 1 })),
+      schedule: (template.schedule || []).map((w, i) => withDefaultSendTime({ ...w, step: i + 1 })),
       audienceFilter: normalizeAudienceFilterForForm(template.audienceFilter),
     });
     setStartMode(START_MODE.template);
@@ -888,6 +940,15 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
     finally { setSaving(false); }
   };
 
+  const campaignSendTime = form.schedule[0]?.send_time || DEFAULT_SEND_TIME;
+
+  const setCampaignSendTime = (sendTime) => {
+    setForm((prev) => ({
+      ...prev,
+      schedule: prev.schedule.map((w) => ({ ...w, send_time: sendTime })),
+    }));
+  };
+
   const updateWave = (index, field, value) => {
     const updated = [...form.schedule];
     updated[index] = { ...updated[index], [field]: value };
@@ -900,7 +961,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
       ...form,
       schedule: [
         ...form.schedule,
-        { step: form.schedule.length + 1, delay_days: lastDelay + 3, message: '', email_subject: '', email_body: '' },
+        { step: form.schedule.length + 1, delay_days: lastDelay + 3, send_time: campaignSendTime, message: '', email_subject: '', email_body: '' },
       ],
     });
   };
@@ -1025,7 +1086,14 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                 </div>
                 <div className="modal-actions">
                   <button className="btn btn-secondary" onClick={() => {
-                    if (form.schedule.length === 0) setForm({ ...form, schedule: [{ step: 1, delay_days: 0, message: '', email_subject: '', email_body: '' }] });
+                    if (form.schedule.length === 0) {
+                      setForm({
+                        ...form,
+                        schedule: [{
+                          step: 1, delay_days: 0, send_time: DEFAULT_SEND_TIME, message: '', email_subject: '', email_body: '',
+                        }],
+                      });
+                    }
                     setWizardStep(2);
                   }}>Skip — I'll write my own</button>
                   <button className="btn btn-ai" onClick={generateSequence} disabled={generating || !form.name}>
@@ -1039,6 +1107,24 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
           {/* Step 2: Sequence Editor */}
           {wizardStep === 2 && (
             <div className="wizard-content">
+              <div className="form-group campaign-send-time-group">
+                <label htmlFor="campaign-send-time">Send time (clinic timezone)</label>
+                <div className="campaign-send-time-row">
+                  <input
+                    id="campaign-send-time"
+                    type="time"
+                    value={campaignSendTime}
+                    onChange={(e) => setCampaignSendTime(e.target.value || DEFAULT_SEND_TIME)}
+                  />
+                  <span className="hint campaign-send-time-tz">{formatTimezoneShort(clinicTimezone)}</span>
+                </div>
+                <p className="hint">
+                  Each wave sends on its scheduled day at this time in your clinic timezone
+                  ({clinicTimezone.replace(/_/g, ' ')}). Change it in Settings if needed.
+                  Wave 1 on the same day waits until this time if you launch earlier.
+                </p>
+              </div>
+
               <div className="sequence-editor">
                 {form.schedule.map((wave, i) => (
                   <div key={i} className="wave-editor-card">
@@ -1244,7 +1330,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                     <div className="review-wave-header">
                       <span className="wave-dot" />
                       <span className="wave-number">Wave {wave.step}</span>
-                      <span className="wave-timing">{wave.delay_days === 0 ? 'Sent immediately' : `Day ${wave.delay_days}`}</span>
+                      <span className="wave-timing">{formatWaveTimingReview(wave, clinicTimezone)}</span>
                     </div>
                     {showSms && wave.message && (
                       <div className="review-msg-block">

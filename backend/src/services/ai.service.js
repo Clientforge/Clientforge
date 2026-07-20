@@ -238,6 +238,7 @@ ${jsonFormat}`;
     return sequence.map((s, i) => ({
       step: i + 1,
       delay_days: s.delay_days !== undefined ? s.delay_days : (defaultDelays[i] ?? (i * 3)),
+      send_time: s.send_time || '10:00',
       message: s.message || '',
       ...(isEmail || isBoth ? {
         email_subject: s.email_subject || '',

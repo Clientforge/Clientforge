@@ -6,6 +6,11 @@ const birthdayCampaignService = require('../services/birthday-campaign.service')
 const dashboardService = require('../services/automation-dashboard.service');
 const tenantService = require('../services/tenant-service.service');
 const aiService = require('../services/ai.service');
+const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
+
+function rejectBookingEmailIngestDisabled(_req, res) {
+  return res.status(404).json({ error: 'Booking email ingest is disabled' });
+}
 
 router.get('/appointment-records', async (req, res, next) => {
   try {
@@ -53,6 +58,7 @@ router.post('/appointment-records/:appointmentId/workflow-jobs/:jobId/cancel', a
 });
 
 router.get('/booking-emails', async (req, res, next) => {
+  if (!isBookingEmailIngestEnabled()) return rejectBookingEmailIngestDisabled(req, res);
   try {
     const { page, limit, parseStatus } = req.query;
     const result = await dashboardService.listBookingEmails(req.tenantId, {
@@ -65,6 +71,7 @@ router.get('/booking-emails', async (req, res, next) => {
 });
 
 router.get('/booking-emails/:id', async (req, res, next) => {
+  if (!isBookingEmailIngestEnabled()) return rejectBookingEmailIngestDisabled(req, res);
   try {
     const email = await dashboardService.getBookingEmail(req.tenantId, req.params.id);
     res.json(email);
@@ -72,6 +79,7 @@ router.get('/booking-emails/:id', async (req, res, next) => {
 });
 
 router.get('/booking-email-setup', async (req, res, next) => {
+  if (!isBookingEmailIngestEnabled()) return rejectBookingEmailIngestDisabled(req, res);
   try {
     const setup = await dashboardService.getBookingEmailSetup(req.tenantId);
     res.json(setup);
@@ -79,6 +87,7 @@ router.get('/booking-email-setup', async (req, res, next) => {
 });
 
 router.put('/booking-email-setup', async (req, res, next) => {
+  if (!isBookingEmailIngestEnabled()) return rejectBookingEmailIngestDisabled(req, res);
   try {
     const setup = await dashboardService.updateBookingEmailAliases(req.tenantId, req.body.aliases);
     res.json(setup);

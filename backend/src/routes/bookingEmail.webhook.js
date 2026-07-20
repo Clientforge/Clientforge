@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
 const { processInboundBookingEmail } = require('../services/bookingEmailIngest.service');
 const { stripHtml } = require('../services/bookingEmailParse.service');
 
@@ -29,6 +30,10 @@ function messageIdFromPayload(body, headers = {}) {
  */
 async function handleBookingEmailWebhook(req, res, next) {
   try {
+    if (!isBookingEmailIngestEnabled()) {
+      return res.status(503).json({ error: 'Booking email ingest is disabled' });
+    }
+
     if (!verifyWebhookSecret(req)) {
       return res.status(401).json({ error: 'Invalid webhook secret' });
     }

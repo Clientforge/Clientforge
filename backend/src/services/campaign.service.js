@@ -1,5 +1,11 @@
 const db = require('../db/connection');
 const { normalizeLastVisitPreset, appendLastVisitCondition } = require('../utils/lastVisitFilter');
+const { getTenantTimezone } = require('../utils/tenantTimezone');
+const {
+  computeWaveScheduledAt,
+  normalizeSchedule,
+  DEFAULT_SEND_TIME,
+} = require('../utils/campaignSchedule');
 
 const PREVIEW_MAX = 2000;
 
@@ -261,11 +267,17 @@ const fetchAudienceForLaunch = async (tenantId, { audienceFilter, channel, batch
 };
 
 const createCampaign = async (tenantId, data) => {
-  const schedule = Array.isArray(data.schedule) && data.schedule.length > 0
+  const rawSchedule = Array.isArray(data.schedule) && data.schedule.length > 0
     ? data.schedule
     : data.messageBody
       ? [{ step: 1, delay_days: 0, message: data.messageBody }]
       : [];
+
+  const schedule = normalizeSchedule(rawSchedule).map((wave, i) => ({
+    ...wave,
+    step: wave.step ?? i + 1,
+    send_time: wave.send_time || DEFAULT_SEND_TIME,
+  }));
 
   const type = schedule.length > 1 ? 'sequence' : 'broadcast';
   const channel = ['sms', 'email', 'both'].includes(data.channel) ? data.channel : 'sms';
@@ -296,9 +308,14 @@ const updateCampaign = async (tenantId, campaignId, data) => {
   if (data.messageBody !== undefined) { sets.push(`message_body = $${idx++}`); params.push(data.messageBody); }
   if (data.channel !== undefined) { sets.push(`channel = $${idx++}`); params.push(data.channel); }
   if (data.schedule !== undefined) {
+    const normalized = normalizeSchedule(data.schedule).map((wave, i) => ({
+      ...wave,
+      step: wave.step ?? i + 1,
+      send_time: wave.send_time || DEFAULT_SEND_TIME,
+    }));
     sets.push(`schedule = $${idx++}`);
-    params.push(JSON.stringify(data.schedule));
-    const type = data.schedule.length > 1 ? 'sequence' : 'broadcast';
+    params.push(JSON.stringify(normalized));
+    const type = normalized.length > 1 ? 'sequence' : 'broadcast';
     sets.push(`type = $${idx++}`);
     params.push(type);
   }
@@ -437,10 +454,11 @@ const launchCampaign = async (tenantId, campaignId, launchOptions = {}) => {
   }
 
   const tenantRes = await db.query(
-    'SELECT name, booking_link, email_from_name, email_from_address FROM tenants WHERE id = $1',
+    'SELECT name, booking_link, email_from_name, email_from_address, timezone FROM tenants WHERE id = $1',
     [tenantId],
   );
   const tenant = tenantRes.rows[0];
+  const timezone = tenant?.timezone || await getTenantTimezone(tenantId);
 
   const now = new Date();
   const channels = channel === 'both' ? ['sms', 'email'] : [channel];
@@ -449,7 +467,12 @@ const launchCampaign = async (tenantId, campaignId, launchOptions = {}) => {
 
   for (const contact of contactRows) {
     for (const wave of schedule) {
-      const scheduledAt = new Date(now.getTime() + (wave.delay_days || 0) * 24 * 60 * 60 * 1000);
+      const scheduledAt = computeWaveScheduledAt({
+        launchedAt: now,
+        delayDays: wave.delay_days,
+        sendTime: wave.send_time,
+        timezone,
+      });
       const emailSubject = wave.email_subject || campaign.name;
 
       for (const ch of channels) {
@@ -563,7 +586,10 @@ const formatCampaign = (row) => ({
   channel: row.channel || 'sms',
   messageBody: row.message_body,
   audienceFilter: normalizeAudienceFilter(row.audience_filter),
-  schedule: row.schedule || [],
+  schedule: normalizeSchedule(row.schedule || []).map((wave, i) => ({
+    ...wave,
+    step: wave.step ?? i + 1,
+  })),
   totalRecipients: row.total_recipients,
   sentCount: row.sent_count,
   failedCount: row.failed_count,

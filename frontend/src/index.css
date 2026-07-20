@@ -1085,6 +1085,17 @@ a:hover { text-decoration: underline; }
 .delay-picker { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
 .delay-picker select { padding: 4px 8px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; font-family: var(--font); background: var(--surface); outline: none; }
 .delay-picker select:focus { border-color: var(--primary); }
+.campaign-send-time-group { margin-bottom: 1rem; }
+.campaign-send-time-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.campaign-send-time-row input[type="time"] {
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: var(--font);
+  background: var(--surface);
+}
+.campaign-send-time-tz { margin: 0; font-weight: 500; color: var(--text-2); }
 .wave-remove { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: none; border: 1.5px solid var(--border); border-radius: 6px; color: var(--text-3); cursor: pointer; font-size: 16px; transition: all var(--transition); }
 .wave-remove:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
