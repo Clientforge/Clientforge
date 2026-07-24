@@ -150,6 +150,24 @@ failed += check(
   ),
   null,
 );
+failed += check(
+  'ambiguous nearby visits (Jul 26 Beauty Drip) → no stale match',
+  pickRescheduleCandidateAppointments(
+    [lolaJul25, lolaJul29],
+    'gcal-beauty-jul26',
+    new Date('2026-07-26T15:30:00.000Z').getTime(),
+  ),
+  null,
+);
+failed += check(
+  'single upcoming row still reschedules',
+  pickRescheduleCandidateAppointments(
+    [lolaJul29],
+    'gcal-jul30-new',
+    jul30Ms,
+  )?.id,
+  'lola-jul29',
+);
 
 if (failed > 0) {
   console.error(`\n${failed} check(s) failed`);

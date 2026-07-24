@@ -7,9 +7,12 @@
 
 const db = require('../db/connection');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const { servicesMatch } = require('./appointment.service');
 
 const ACTIVE_STATUSES = ['scheduled', 'confirmed', 'rescheduled'];
 const SAME_TIME_MS = 60 * 1000;
+/** Min gap between 1st and 2nd candidate old times before stale-match (avoids hijacking nearby visits). */
+const MIN_RESCHEDULE_CANDIDATE_GAP_MS = 2 * 24 * 60 * 60 * 1000;
 
 function parseEventStartMs(googleEvent) {
   const raw = googleEvent?.start?.dateTime || googleEvent?.start?.date;
@@ -74,7 +77,12 @@ async function findOptimantraAppointmentByContactTime(tenantId, contactId, sched
  * Pick the OptiMantra row most likely rescheduled to `scheduledAtMs` when the calendar
  * event id changed or the DB time still reflects the old slot.
  */
-function pickRescheduleCandidateAppointments(rows, googleEventId, scheduledAtMs) {
+function pickRescheduleCandidateAppointments(
+  rows,
+  googleEventId,
+  scheduledAtMs,
+  { serviceName = null, minGapMs = MIN_RESCHEDULE_CANDIDATE_GAP_MS } = {},
+) {
   if (!rows?.length || scheduledAtMs == null || Number.isNaN(scheduledAtMs)) {
     return null;
   }
@@ -88,7 +96,14 @@ function pickRescheduleCandidateAppointments(rows, googleEventId, scheduledAtMs)
   const linkedOther = timeMoved.filter(
     (row) => row.google_calendar_event_id && row.google_calendar_event_id !== googleEventId,
   );
+  if (linkedOther.length === 1) {
+    return linkedOther[0];
+  }
+
   const pool = linkedOther.length > 0 ? linkedOther : timeMoved;
+  if (pool.length === 1) {
+    return pool[0];
+  }
 
   pool.sort((a, b) => {
     const diffA = Math.abs(scheduledAtMs - new Date(a.scheduled_at).getTime());
@@ -97,17 +112,30 @@ function pickRescheduleCandidateAppointments(rows, googleEventId, scheduledAtMs)
   });
 
   const bestDiff = Math.abs(scheduledAtMs - new Date(pool[0].scheduled_at).getTime());
+  const secondDiff = Math.abs(scheduledAtMs - new Date(pool[1].scheduled_at).getTime());
+
+  if (secondDiff - bestDiff > minGapMs) {
+    return pool[0];
+  }
+
   const tied = pool.filter(
     (row) => Math.abs(scheduledAtMs - new Date(row.scheduled_at).getTime()) === bestDiff,
   );
-  return tied.length === 1 ? tied[0] : null;
+  if (serviceName) {
+    const byService = tied.filter((row) => servicesMatch(serviceName, row.service_name));
+    if (byService.length === 1) return byService[0];
+  }
+
+  return null;
 }
 
 /**
  * When OptiMantra creates a new Google event on reschedule (new event id), match the
  * previously linked active OptiMantra row whose old time is closest to the calendar slot.
  */
-async function findStaleOptimantraAppointment(tenantId, contactId, googleEventId, scheduledAt) {
+async function findStaleOptimantraAppointment(tenantId, contactId, googleEventId, scheduledAt, {
+  serviceName = null,
+} = {}) {
   const scheduledAtMs = new Date(scheduledAt).getTime();
   if (Number.isNaN(scheduledAtMs)) return null;
 
@@ -122,13 +150,19 @@ async function findStaleOptimantraAppointment(tenantId, contactId, googleEventId
     [tenantId, contactId, ACTIVE_STATUSES],
   );
 
-  return pickRescheduleCandidateAppointments(upcoming.rows, googleEventId, scheduledAtMs);
+  return pickRescheduleCandidateAppointments(
+    upcoming.rows,
+    googleEventId,
+    scheduledAtMs,
+    { serviceName },
+  );
 }
 
 async function findOptimantraAppointmentForCalendarEvent(tenantId, {
   googleEventId,
   contactId,
   scheduledAt,
+  serviceName = null,
 }) {
   const linked = await findLinkedOptimantraAppointment(tenantId, googleEventId);
   if (linked) return linked;
@@ -136,7 +170,9 @@ async function findOptimantraAppointmentForCalendarEvent(tenantId, {
   const byTime = await findOptimantraAppointmentByContactTime(tenantId, contactId, scheduledAt);
   if (byTime) return byTime;
 
-  return findStaleOptimantraAppointment(tenantId, contactId, googleEventId, scheduledAt);
+  return findStaleOptimantraAppointment(tenantId, contactId, googleEventId, scheduledAt, {
+    serviceName,
+  });
 }
 
 async function applyCalendarBridgeUpdate(tenantId, {
@@ -202,6 +238,7 @@ async function processSluiceCalendarEvent(tenantId, googleEvent, normalized, { c
     googleEventId: googleEvent.id,
     contactId,
     scheduledAt: normalized.appointment.scheduledAt,
+    serviceName: normalized.appointment.serviceName,
   });
 
   if (!match) {
@@ -229,6 +266,7 @@ async function processSluiceCalendarEvent(tenantId, googleEvent, normalized, { c
 
 module.exports = {
   SAME_TIME_MS,
+  MIN_RESCHEDULE_CANDIDATE_GAP_MS,
   ACTIVE_STATUSES,
   classifyCalendarChange,
   parseEventStartMs,

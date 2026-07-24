@@ -473,6 +473,7 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
         rawPayload: {
           id: googleEvent.id,
           summary: googleEvent.summary,
+          scheduledAt: normalized.appointment.scheduledAt,
           firstName: normalized.contact.firstName,
           lastName: normalized.contact.lastName,
           email: normalized.contact.email,
@@ -507,11 +508,17 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
         syncAction: 'processed',
         appointmentId: result.appointmentId,
         eventType: result.eventType,
+        rawPayload: {
+          id: googleEvent.id,
+          summary: googleEvent.summary,
+          scheduledAt: normalized.appointment.scheduledAt,
+          contactId,
+        },
       });
 
       console.log(
         `[GCAL][SLUICE-BRIDGE] ${result.eventType} appointment ${result.appointmentId}`
-        + ` ← gcal:${googleEvent.id}`,
+        + ` ← gcal:${googleEvent.id} "${googleEvent.summary || ''}"`,
       );
 
       return { processed: true, bridged: true, ...result };
@@ -540,6 +547,12 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
       syncAction: 'processed',
       appointmentId: result.appointmentId,
       eventType: result.eventType,
+      rawPayload: {
+        id: googleEvent.id,
+        summary: googleEvent.summary,
+        scheduledAt: normalized.appointment.scheduledAt,
+        contactId,
+      },
     });
 
     return { processed: true, ...result };
@@ -547,7 +560,11 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
     await logSyncEvent(tenantId, googleEvent.id, {
       syncAction: 'failed',
       errorMessage: err.message,
-      rawPayload: { id: googleEvent.id },
+      rawPayload: {
+        id: googleEvent.id,
+        summary: googleEvent.summary,
+        scheduledAt: normalized.appointment.scheduledAt,
+      },
     });
     throw err;
   }

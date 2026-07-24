@@ -576,6 +576,7 @@ module.exports = {
   findUniqueContactByFirstName,
   findContactByFirstNameForSluiceReschedule,
   pickUniqueContactFromAppointmentCandidates,
+  servicesMatch,
   upsertAppointment,
   processBookingEvent,
   scheduleWorkflowJob,
