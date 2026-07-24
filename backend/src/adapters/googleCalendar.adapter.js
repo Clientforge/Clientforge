@@ -36,20 +36,46 @@ function splitFullName(full) {
   return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
 }
 
+function decodeSummaryText(summary) {
+  return stripHtml(String(summary || '')).trim();
+}
+
+/**
+ * OptiMantra → Google Calendar: "Jane Doe {IV Hydration Drip}" or "Carol {Peak Performance Drip}".
+ */
+function parseServiceFromSummary(summary) {
+  const s = decodeSummaryText(summary);
+  if (!s) return null;
+
+  const braceMatch = s.match(/^(.+?)\s*\{([^}]+)\}\s*$/);
+  if (!braceMatch) return null;
+
+  const service = braceMatch[2].trim();
+  return service.length >= 2 ? service : null;
+}
+
 /**
  * Extract client name from event title when attendee displayName is missing.
- * Supports GlossGenius, Portrait Care / booking-system title patterns.
+ * Supports GlossGenius, Portrait Care, OptiMantra brace titles, and dash patterns.
  */
 function parseNameFromSummary(summary) {
   if (!summary || !String(summary).trim()) {
     return { firstName: null, lastName: null };
   }
 
-  const s = String(summary).trim();
+  const s = decodeSummaryText(summary);
 
   const forMatch = s.match(/\sfor\s+(.+)$/i);
   if (forMatch) {
     return splitFullName(forMatch[1].trim());
+  }
+
+  const braceMatch = s.match(/^(.+?)\s*\{([^}]+)\}\s*$/);
+  if (braceMatch) {
+    const namePart = braceMatch[1].trim();
+    if (namePart && !/^service:/i.test(namePart)) {
+      return splitFullName(namePart);
+    }
   }
 
   const parenMatch = s.match(/^(.+?)\s*\([^)]+\)\s*$/);
@@ -235,6 +261,9 @@ function resolveServiceName(event, hasGuestEmail) {
     return summary || 'Appointment';
   }
 
+  const fromSummary = parseServiceFromSummary(summary);
+  if (fromSummary) return fromSummary;
+
   if (!hasGuestEmail || /glossgenius/i.test(summary) || /glossgenius/i.test(description)) {
     const fromDesc = parseServiceFromDescription(description);
     if (fromDesc) return fromDesc;
@@ -342,6 +371,7 @@ module.exports = {
   normalizeGoogleCalendarEvent,
   pickGuestAttendee,
   parseNameFromSummary,
+  parseServiceFromSummary,
   parseServiceFromDescription,
   parseSquareDescription,
   isSquareAppointmentsEvent,

@@ -4,6 +4,7 @@
 const {
   normalizeGoogleCalendarEvent,
   parseNameFromSummary,
+  parseServiceFromSummary,
   parseServiceFromDescription,
   parseSquareDescription,
   isSquareAppointmentsEvent,
@@ -243,6 +244,47 @@ const squareCompactEvent = normalizeGoogleCalendarEvent(
 check('Square compact event service not warning text', squareCompactEvent?.appointment?.serviceName, 'Neuromuscular therapy medical massage');
 check('Square compact event email', squareCompactEvent?.contact?.email, 'butler.calista@gmail.com');
 check('Square compact event phone', squareCompactEvent?.contact?.phone, '(678) 977-5200');
+
+const optimantraBrace = parseNameFromSummary('Aleida Morris {Slim & Refine Assessment}');
+check('OptiMantra brace first name', optimantraBrace.firstName, 'Aleida');
+check('OptiMantra brace last name', optimantraBrace.lastName, 'Morris');
+check(
+  'OptiMantra brace service',
+  parseServiceFromSummary('Aleida Morris {Slim & Refine Assessment}'),
+  'Slim & Refine Assessment',
+);
+
+const optimantraSingle = parseNameFromSummary('Carol {Peak Performance Drip}');
+check('OptiMantra single-name first', optimantraSingle.firstName, 'Carol');
+check('OptiMantra single-name last', optimantraSingle.lastName, null);
+check(
+  'OptiMantra single-name service',
+  parseServiceFromSummary('Carol {Peak Performance Drip}'),
+  'Peak Performance Drip',
+);
+
+check(
+  'OptiMantra service with parens inside braces',
+  parseServiceFromSummary('Tera {Medical Weight Loss Program(Tirz)}'),
+  'Medical Weight Loss Program(Tirz)',
+);
+
+const optimantraEvent = normalizeGoogleCalendarEvent(
+  {
+    id: 'om1',
+    status: 'confirmed',
+    summary: 'Aleida Morris {Slim &amp; Refine Assessment}',
+    start: { dateTime: '2026-07-25T10:00:00-04:00', timeZone: 'America/New_York' },
+    end: { dateTime: '2026-07-25T10:30:00-04:00', timeZone: 'America/New_York' },
+    organizer: { email: 'owner@spa.com', self: true },
+    attendees: [{ email: 'owner@spa.com', organizer: true }],
+  },
+  { ownerEmail: 'owner@spa.com' },
+);
+check('OptiMantra event first name', optimantraEvent?.contact?.firstName, 'Aleida');
+check('OptiMantra event last name', optimantraEvent?.contact?.lastName, 'Morris');
+check('OptiMantra event synthetic phone', optimantraEvent?.contact?.syntheticPhone, 'gcal-aleida-morris');
+check('OptiMantra event service', optimantraEvent?.appointment?.serviceName, 'Slim & Refine Assessment');
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
