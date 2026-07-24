@@ -416,12 +416,26 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
     return { skipped: true, reason: 'missing_contact_identity' };
   }
 
-  const existingContactId = await appointmentService.findExistingContact(
+  let contactId = await appointmentService.findExistingContact(
     tenantId,
     normalized.contact,
   );
 
-  if (!existingContactId && !canAutoCreateGoogleCalendarContact(normalized.contact)) {
+  if (
+    !contactId
+    && isSluiceTenant(tenantId)
+    && normalized.contact.firstName
+    && normalized.appointment.scheduledAt
+  ) {
+    contactId = await appointmentService.findContactByFirstNameAndAppointmentTime(
+      tenantId,
+      normalized.contact.firstName,
+      normalized.appointment.scheduledAt,
+      { serviceName: normalized.appointment.serviceName },
+    );
+  }
+
+  if (!contactId && !isSluiceTenant(tenantId) && !canAutoCreateGoogleCalendarContact(normalized.contact)) {
     const skipReason = normalized.contact.firstName && !hasValidImportPhone(normalized.contact)
       ? 'missing_phone'
       : 'contact_not_in_list';
@@ -441,7 +455,6 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
   }
 
   if (isSluiceTenant(tenantId)) {
-    const contactId = existingContactId;
     if (!contactId) {
       await logSyncEvent(tenantId, googleEvent.id, {
         syncAction: 'skipped',
@@ -502,7 +515,7 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
       contact: normalized.contact,
       appointment: normalized.appointment,
       contactSource: 'google_calendar',
-      existingContactId: existingContactId || undefined,
+      existingContactId: contactId || undefined,
     });
 
     await appointmentWorkflowService.dispatchWorkflows(tenantId, result);
@@ -792,7 +805,7 @@ const SKIP_REASON_LABELS = {
   missing_contact_identity: 'Missing client name or email',
   missing_phone: 'Missing valid phone (required to create contact)',
   contact_not_in_list: 'Client not in Contacts and missing phone or name',
-  bridge_no_contact_match: 'Client not in Contacts (Sluice bridge — OptiMantra owns new bookings)',
+  bridge_no_contact_match: 'No contact matched — import client or ensure OptiMantra booking exists at this time',
   bridge_no_optimantra_match: 'No matching OptiMantra appointment to link (Sluice bridge)',
 };
 

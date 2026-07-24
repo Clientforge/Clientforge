@@ -182,6 +182,48 @@ const findExistingContact = async (tenantId, contactData) => {
   return findContactByName(tenantId, contactData.firstName, contactData.lastName);
 };
 
+/**
+ * When multiple contacts share a first name (e.g. calendar "Carol {Service}"),
+ * pick the one with an OptiMantra appointment at the calendar start time.
+ * Returns null if zero or ambiguous matches remain after optional service tie-break.
+ */
+function pickUniqueContactFromAppointmentCandidates(rows, serviceName) {
+  if (!rows || rows.length === 0) return null;
+  if (rows.length === 1) return rows[0].contact_id;
+
+  if (serviceName) {
+    const filtered = rows.filter((row) => servicesMatch(serviceName, row.service_name));
+    if (filtered.length === 1) return filtered[0].contact_id;
+  }
+
+  return null;
+}
+
+const findContactByFirstNameAndAppointmentTime = async (
+  tenantId,
+  firstName,
+  scheduledAt,
+  { serviceName = null, toleranceSeconds = 60 } = {},
+) => {
+  const fn = (firstName || '').trim().toLowerCase();
+  if (!fn || !scheduledAt) return null;
+
+  const result = await db.query(
+    `SELECT a.contact_id, c.first_name, c.last_name, a.scheduled_at, a.service_name
+     FROM appointments a
+     JOIN contacts c ON c.id = a.contact_id
+     WHERE a.tenant_id = $1
+       AND a.provider = 'optimantra'
+       AND a.status = ANY($2::text[])
+       AND LOWER(TRIM(COALESCE(c.first_name, ''))) = $3
+       AND ABS(EXTRACT(EPOCH FROM (a.scheduled_at - $4::timestamptz))) <= $5
+     ORDER BY a.scheduled_at ASC`,
+    [tenantId, ACTIVE_APPOINTMENT_STATUSES, fn, scheduledAt, toleranceSeconds],
+  );
+
+  return pickUniqueContactFromAppointmentCandidates(result.rows, serviceName);
+};
+
 const upsertContact = async (tenantId, contactData, source = 'calendly') => {
   const rawPhone = contactData.phone || contactData.syntheticPhone || null;
   const phone = rawPhone
@@ -471,6 +513,8 @@ module.exports = {
   upsertContact,
   findExistingContact,
   findContactByName,
+  findContactByFirstNameAndAppointmentTime,
+  pickUniqueContactFromAppointmentCandidates,
   upsertAppointment,
   processBookingEvent,
   scheduleWorkflowJob,
