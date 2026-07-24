@@ -6,6 +6,7 @@
 const {
   classifyCalendarChange,
   parseEventStartMs,
+  pickRescheduleCandidateAppointments,
   SAME_TIME_MS,
 } = require('../src/services/googleCalendarOptimantraBridge.service');
 const {
@@ -107,6 +108,47 @@ failed += check(
     { ...carolJones, scheduled_at: '2026-07-28T18:00:00.000Z', service_name: 'Other' },
   ], 'Peak Performance Drip'),
   'contact-smith',
+);
+
+const lolaJul25 = {
+  id: 'lola-jul25',
+  scheduled_at: '2026-07-25T15:30:00.000Z',
+  google_calendar_event_id: 'gcal-jul25',
+  status: 'scheduled',
+};
+const lolaJul29 = {
+  id: 'lola-jul29',
+  scheduled_at: '2026-07-29T14:00:00.000Z',
+  google_calendar_event_id: 'gcal-jul29',
+  status: 'scheduled',
+};
+const jul30Ms = new Date('2026-07-30T14:00:00.000Z').getTime();
+
+failed += check(
+  'reschedule picks closest upcoming row (Jul 29 not Jul 25)',
+  pickRescheduleCandidateAppointments([lolaJul25, lolaJul29], 'gcal-jul30-new', jul30Ms)?.id,
+  'lola-jul29',
+);
+failed += check(
+  'reschedule returns null when two rows tie for distance',
+  pickRescheduleCandidateAppointments(
+    [
+      { id: 'a', scheduled_at: '2026-07-28T14:00:00.000Z', google_calendar_event_id: 'g1' },
+      { id: 'b', scheduled_at: '2026-08-01T14:00:00.000Z', google_calendar_event_id: 'g2' },
+    ],
+    'gcal-new',
+    new Date('2026-07-30T14:00:00.000Z').getTime(),
+  ),
+  null,
+);
+failed += check(
+  'reschedule returns null when only row matches calendar time',
+  pickRescheduleCandidateAppointments(
+    [lolaJul29],
+    'gcal-jul29',
+    new Date('2026-07-29T14:00:00.000Z').getTime(),
+  ),
+  null,
 );
 
 if (failed > 0) {

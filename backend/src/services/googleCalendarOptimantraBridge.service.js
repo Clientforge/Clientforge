@@ -71,27 +71,45 @@ async function findOptimantraAppointmentByContactTime(tenantId, contactId, sched
 }
 
 /**
+ * Pick the OptiMantra row most likely rescheduled to `scheduledAtMs` when the calendar
+ * event id changed or the DB time still reflects the old slot.
+ */
+function pickRescheduleCandidateAppointments(rows, googleEventId, scheduledAtMs) {
+  if (!rows?.length || scheduledAtMs == null || Number.isNaN(scheduledAtMs)) {
+    return null;
+  }
+
+  const timeMoved = rows.filter((row) => {
+    const oldMs = new Date(row.scheduled_at).getTime();
+    return !Number.isNaN(oldMs) && Math.abs(scheduledAtMs - oldMs) > SAME_TIME_MS;
+  });
+  if (timeMoved.length === 0) return null;
+
+  const linkedOther = timeMoved.filter(
+    (row) => row.google_calendar_event_id && row.google_calendar_event_id !== googleEventId,
+  );
+  const pool = linkedOther.length > 0 ? linkedOther : timeMoved;
+
+  pool.sort((a, b) => {
+    const diffA = Math.abs(scheduledAtMs - new Date(a.scheduled_at).getTime());
+    const diffB = Math.abs(scheduledAtMs - new Date(b.scheduled_at).getTime());
+    return diffA - diffB;
+  });
+
+  const bestDiff = Math.abs(scheduledAtMs - new Date(pool[0].scheduled_at).getTime());
+  const tied = pool.filter(
+    (row) => Math.abs(scheduledAtMs - new Date(row.scheduled_at).getTime()) === bestDiff,
+  );
+  return tied.length === 1 ? tied[0] : null;
+}
+
+/**
  * When OptiMantra creates a new Google event on reschedule (new event id), match the
- * previously linked or sole active future OptiMantra row for this contact.
+ * previously linked active OptiMantra row whose old time is closest to the calendar slot.
  */
 async function findStaleOptimantraAppointment(tenantId, contactId, googleEventId, scheduledAt) {
-  const linkedOther = await db.query(
-    `SELECT id, contact_id, scheduled_at, status, provider, google_calendar_event_id, service_name
-     FROM appointments
-     WHERE tenant_id = $1
-       AND contact_id = $2
-       AND provider = 'optimantra'
-       AND status = ANY($3::text[])
-       AND scheduled_at > NOW() - INTERVAL '1 day'
-       AND google_calendar_event_id IS NOT NULL
-       AND google_calendar_event_id <> $4
-     ORDER BY scheduled_at ASC
-     LIMIT 1`,
-    [tenantId, contactId, ACTIVE_STATUSES, googleEventId],
-  );
-  if (linkedOther.rows[0]) {
-    return linkedOther.rows[0];
-  }
+  const scheduledAtMs = new Date(scheduledAt).getTime();
+  if (Number.isNaN(scheduledAtMs)) return null;
 
   const upcoming = await db.query(
     `SELECT id, contact_id, scheduled_at, status, provider, google_calendar_event_id, service_name
@@ -104,21 +122,7 @@ async function findStaleOptimantraAppointment(tenantId, contactId, googleEventId
     [tenantId, contactId, ACTIVE_STATUSES],
   );
 
-  if (upcoming.rows.length !== 1) {
-    return null;
-  }
-
-  const row = upcoming.rows[0];
-  const newMs = new Date(scheduledAt).getTime();
-  const oldMs = new Date(row.scheduled_at).getTime();
-  if (Number.isNaN(newMs) || Number.isNaN(oldMs)) {
-    return null;
-  }
-  if (Math.abs(newMs - oldMs) <= SAME_TIME_MS) {
-    return null;
-  }
-
-  return row;
+  return pickRescheduleCandidateAppointments(upcoming.rows, googleEventId, scheduledAtMs);
 }
 
 async function findOptimantraAppointmentForCalendarEvent(tenantId, {
@@ -228,6 +232,7 @@ module.exports = {
   ACTIVE_STATUSES,
   classifyCalendarChange,
   parseEventStartMs,
+  pickRescheduleCandidateAppointments,
   findOptimantraAppointmentForCalendarEvent,
   applyCalendarBridgeUpdate,
   processSluiceCalendarEvent,

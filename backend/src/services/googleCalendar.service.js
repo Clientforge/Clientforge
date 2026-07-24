@@ -421,18 +421,29 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
     normalized.contact,
   );
 
-  if (
-    !contactId
-    && isSluiceTenant(tenantId)
-    && normalized.contact.firstName
-    && normalized.appointment.scheduledAt
-  ) {
-    contactId = await appointmentService.findContactByFirstNameAndAppointmentTime(
-      tenantId,
-      normalized.contact.firstName,
-      normalized.appointment.scheduledAt,
-      { serviceName: normalized.appointment.serviceName },
-    );
+  if (!contactId && isSluiceTenant(tenantId) && normalized.contact.firstName) {
+    if (normalized.appointment.scheduledAt) {
+      contactId = await appointmentService.findContactByFirstNameAndAppointmentTime(
+        tenantId,
+        normalized.contact.firstName,
+        normalized.appointment.scheduledAt,
+        { serviceName: normalized.appointment.serviceName },
+      );
+    }
+    if (!contactId) {
+      contactId = await appointmentService.findUniqueContactByFirstName(
+        tenantId,
+        normalized.contact.firstName,
+      );
+    }
+    if (!contactId && normalized.appointment.scheduledAt) {
+      contactId = await appointmentService.findContactByFirstNameForSluiceReschedule(
+        tenantId,
+        normalized.contact.firstName,
+        normalized.appointment.scheduledAt,
+        { serviceName: normalized.appointment.serviceName },
+      );
+    }
   }
 
   if (!contactId && !isSluiceTenant(tenantId) && !canAutoCreateGoogleCalendarContact(normalized.contact)) {
@@ -482,7 +493,12 @@ async function processGoogleEvent(tenantId, googleEvent, ownerEmail) {
         await logSyncEvent(tenantId, googleEvent.id, {
           syncAction: 'skipped',
           skipReason: result.reason,
-          rawPayload: { id: googleEvent.id, summary: googleEvent.summary },
+          rawPayload: {
+            id: googleEvent.id,
+            summary: googleEvent.summary,
+            scheduledAt: normalized.appointment.scheduledAt,
+            contactId,
+          },
         });
         return result;
       }

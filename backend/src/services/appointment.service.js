@@ -224,6 +224,65 @@ const findContactByFirstNameAndAppointmentTime = async (
   return pickUniqueContactFromAppointmentCandidates(result.rows, serviceName);
 };
 
+/** Sluice calendar titles often include first name only (e.g. "Lola {Beauty Drip}"). */
+const findUniqueContactByFirstName = async (tenantId, firstName) => {
+  const fn = (firstName || '').trim().toLowerCase();
+  if (!fn) return null;
+
+  const result = await db.query(
+    `SELECT id FROM contacts
+     WHERE tenant_id = $1
+       AND LOWER(TRIM(COALESCE(first_name, ''))) = $2`,
+    [tenantId, fn],
+  );
+
+  if (result.rows.length !== 1) return null;
+  return result.rows[0].id;
+};
+
+/**
+ * When a calendar event moved to a new time, match the contact whose OptiMantra row
+ * is closest to (but not at) the new calendar slot — e.g. Jul 29 → Jul 30.
+ */
+const findContactByFirstNameForSluiceReschedule = async (
+  tenantId,
+  firstName,
+  scheduledAt,
+  { serviceName = null } = {},
+) => {
+  const fn = (firstName || '').trim().toLowerCase();
+  const scheduledAtMs = new Date(scheduledAt).getTime();
+  if (!fn || Number.isNaN(scheduledAtMs)) return null;
+
+  const result = await db.query(
+    `SELECT a.contact_id, c.first_name, c.last_name, a.scheduled_at, a.service_name
+     FROM appointments a
+     JOIN contacts c ON c.id = a.contact_id
+     WHERE a.tenant_id = $1
+       AND a.provider = 'optimantra'
+       AND a.status = ANY($2::text[])
+       AND a.scheduled_at > NOW() - INTERVAL '1 day'
+       AND LOWER(TRIM(COALESCE(c.first_name, ''))) = $3
+       AND ABS(EXTRACT(EPOCH FROM (a.scheduled_at - $4::timestamptz))) > 60`,
+    [tenantId, ACTIVE_APPOINTMENT_STATUSES, fn, scheduledAt],
+  );
+
+  if (result.rows.length === 0) return null;
+
+  result.rows.sort((a, b) => {
+    const diffA = Math.abs(scheduledAtMs - new Date(a.scheduled_at).getTime());
+    const diffB = Math.abs(scheduledAtMs - new Date(b.scheduled_at).getTime());
+    return diffA - diffB;
+  });
+
+  const bestDiff = Math.abs(scheduledAtMs - new Date(result.rows[0].scheduled_at).getTime());
+  const closest = result.rows.filter(
+    (row) => Math.abs(scheduledAtMs - new Date(row.scheduled_at).getTime()) === bestDiff,
+  );
+
+  return pickUniqueContactFromAppointmentCandidates(closest, serviceName);
+};
+
 const upsertContact = async (tenantId, contactData, source = 'calendly') => {
   const rawPhone = contactData.phone || contactData.syntheticPhone || null;
   const phone = rawPhone
@@ -514,6 +573,8 @@ module.exports = {
   findExistingContact,
   findContactByName,
   findContactByFirstNameAndAppointmentTime,
+  findUniqueContactByFirstName,
+  findContactByFirstNameForSluiceReschedule,
   pickUniqueContactFromAppointmentCandidates,
   upsertAppointment,
   processBookingEvent,
