@@ -32,7 +32,8 @@ const TERA_CANONICAL = [
   },
   {
     key: 'aug6',
-    externalId: null, // filled from --aug6-external-id or discovery
+    externalId: 'optimantra:23416540',
+    appointmentId: '33abe21e-4720-4968-9af4-38440b065e6c',
     scheduledAt: '2026-08-06T13:15:00.000Z',
     googleCalendarEventId: null,
     serviceName: 'Immune Defense Drip',
@@ -66,7 +67,6 @@ const TERA_CANONICAL = [
 const TERA_CANCEL = [
   { appointmentId: '79d08907-d61e-483e-b4a8-6e71604b72db', externalId: 'optimantra:23416459', reason: 'Aug 14 phantom (ping-pong)' },
   { appointmentId: '885929b1-2081-41b0-8fde-8b73a5fc71b8', externalId: 'optimantra:23416640', reason: 'Aug 14 duplicate' },
-  { appointmentId: '33abe21e-4720-4968-9af4-38440b065e6c', externalId: 'optimantra:23416540', reason: 'Aug 27 phantom (ping-pong)' },
 ];
 
 const ALISHA_KEEP_GCAL = '23575176';
@@ -169,6 +169,19 @@ async function fixAppointment(tenantId, {
 }
 
 async function cancelAppointment(tenantId, { appointmentId, reason, dryRun, label }) {
+  const existing = await db.query(
+    'SELECT status FROM appointments WHERE id = $1 AND tenant_id = $2',
+    [appointmentId, tenantId],
+  );
+  if (!existing.rows.length) {
+    console.log(`  – SKIP CANCEL ${label}: row not found`);
+    return;
+  }
+  if (existing.rows[0].status === 'cancelled') {
+    console.log(`  – SKIP CANCEL ${label}: already cancelled`);
+    return;
+  }
+
   if (dryRun) {
     console.log(`  [dry-run] CANCEL ${label}: ${reason}`);
     return;
@@ -189,20 +202,25 @@ async function discoverAug6ExternalId(tenantId, contactId) {
      FROM appointments
      WHERE tenant_id = $1 AND contact_id = $2 AND provider = 'optimantra'
        AND (
-         scheduled_at BETWEEN '2026-08-05' AND '2026-08-07'
+         external_id = 'optimantra:23416540'
+         OR scheduled_at BETWEEN '2026-08-05' AND '2026-08-07'
          OR service_name ILIKE '%immune%defense%'
-         OR external_id = 'optimantra:23416540'
        )
      ORDER BY
+       CASE WHEN external_id = 'optimantra:23416540' THEN 0 ELSE 1 END,
        CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END,
        scheduled_at`,
     [tenantId, contactId],
   );
+  const preferred = r.rows.find((row) => row.external_id === 'optimantra:23416540');
+  if (preferred) return { externalId: preferred.external_id, appointmentId: preferred.id };
+
   const hit = r.rows.find((row) => (
     row.service_name?.toLowerCase().includes('immune')
-    || (row.scheduled_at >= new Date('2026-08-05') && row.scheduled_at <= new Date('2026-08-07'))
+    || (new Date(row.scheduled_at) >= new Date('2026-08-05T00:00:00Z')
+      && new Date(row.scheduled_at) <= new Date('2026-08-07T23:59:59Z'))
   ));
-  return hit?.external_id || null;
+  return hit ? { externalId: hit.external_id, appointmentId: hit.id } : null;
 }
 
 async function repairTera(tenantId, { dryRun, aug6ExternalId }) {
@@ -230,8 +248,14 @@ async function repairTera(tenantId, { dryRun, aug6ExternalId }) {
   }
 
   const canonical = TERA_CANONICAL.map((row) => ({ ...row }));
+  const aug6Discovered = await discoverAug6ExternalId(tenantId, contactId);
   const aug6 = canonical.find((r) => r.key === 'aug6');
-  aug6.externalId = aug6ExternalId || await discoverAug6ExternalId(tenantId, contactId);
+  if (aug6ExternalId) {
+    aug6.externalId = aug6ExternalId;
+  } else if (aug6Discovered) {
+    aug6.externalId = aug6Discovered.externalId;
+    aug6.appointmentId = aug6Discovered.appointmentId;
+  }
 
   for (const row of canonical) {
     try {
@@ -249,7 +273,7 @@ async function repairTera(tenantId, { dryRun, aug6ExternalId }) {
         googleCalendarEventId: row.googleCalendarEventId,
         serviceName: row.serviceName,
         dryRun,
-        label: `${row.key} ${row.externalId || 'new'}`,
+        label: `${row.key} ${row.externalId || row.appointmentId || 'new'}`,
       });
       if (id) fixedIds.push(id);
     } catch (err) {
@@ -299,10 +323,11 @@ async function repairAlisha(tenantId, { dryRun }) {
   const keep = r.rows.find((row) => row.google_calendar_event_id === ALISHA_KEEP_GCAL);
   const dupes = r.rows.filter((row) => {
     if (keep && row.id === keep.id) return false;
-    const t = new Date(row.scheduled_at).getTime();
-    const keepT = keep ? new Date(keep.scheduled_at).getTime() : null;
-    if (keepT != null && Math.abs(t - keepT) < 2 * 60 * 60 * 1000) return true;
-    return false;
+    if (row.google_calendar_event_id) return false;
+    if (!keep) return false;
+    const rowDay = new Date(row.scheduled_at).toISOString().slice(0, 10);
+    const keepDay = new Date(keep.scheduled_at).toISOString().slice(0, 10);
+    return rowDay === keepDay;
   });
 
   if (keep) {
@@ -342,16 +367,50 @@ async function repairAlisha(tenantId, { dryRun }) {
     try {
       await cancelAppointment(tenantId, {
         appointmentId: row.id,
-        reason: 'Jul 30 duplicate (ping-pong)',
+        reason: 'Jul 30 duplicate (no GCal link)',
         dryRun,
-        label: row.external_id,
+        label: `${row.external_id} (unlinked)`,
       });
     } catch (err) {
       errors.push(`alisha cancel ${row.external_id}: ${err.message}`);
     }
   }
 
+  if (keep && !dryRun) {
+    try {
+      const outcome = await appointmentWorkflowService.redeployBookingWorkflowsForAppointment(
+        tenantId,
+        keep.id,
+      );
+      if (outcome.jobsScheduled > 0) {
+        console.log(`  ↻ Redeployed ${outcome.jobsScheduled} job(s) for Alisha keep row`);
+      }
+    } catch (err) {
+      console.warn(`  ⚠ Alisha redeploy failed: ${err.message}`);
+    }
+  }
+
   return { errors };
+}
+
+async function verifyAlisha(tenantId) {
+  const r = await db.query(
+    `SELECT a.scheduled_at, a.external_id, a.google_calendar_event_id, a.status
+     FROM appointments a
+     JOIN contacts c ON c.id = a.contact_id
+     WHERE a.tenant_id = $1 AND c.first_name = 'Alisha' AND c.last_name = 'Holloway'
+       AND a.provider = 'optimantra'
+       AND a.scheduled_at >= '2026-07-24'
+     ORDER BY a.scheduled_at`,
+    [tenantId],
+  );
+  console.log('\n── Alisha upcoming after repair ──');
+  console.table(r.rows.map((row) => ({
+    scheduled_at: row.scheduled_at,
+    external_id: row.external_id,
+    gcal: row.google_calendar_event_id,
+    status: row.status,
+  })));
 }
 
 async function verifyTera(tenantId) {
@@ -399,6 +458,9 @@ async function main() {
 
   if (!dryRun && runTera) {
     await verifyTera(SLUICE_TENANT_ID);
+  }
+  if (!dryRun && runAlisha) {
+    await verifyAlisha(SLUICE_TENANT_ID);
   }
 
   console.log('\nDone. Run Sync now in Settings → Google Calendar to link any remaining GCal events.');
