@@ -48,7 +48,8 @@ export function ClientsPage() {
         </div>
       ) : (
         <div className="card overflow-hidden rounded-2xl">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr className="border-b border-brand-100/60 bg-brand-50/50 text-left text-xs font-medium uppercase tracking-wider text-stone-500">
                 <th className="px-6 py-3">Client</th>
@@ -107,6 +108,7 @@ export function ClientsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

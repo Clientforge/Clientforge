@@ -63,7 +63,7 @@ export function SessionsPage() {
       <div className="flex flex-wrap gap-2">
         <Link
           to="/sessions"
-          className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+          className={`inline-flex min-h-[44px] items-center rounded-xl px-4 py-2 text-sm font-medium transition-all ${
             !clientId
               ? "bg-brand-100 text-brand-700 shadow-soft"
               : "border border-brand-100 bg-white/70 text-stone-600 hover:bg-brand-50"
@@ -75,7 +75,7 @@ export function SessionsPage() {
           <Link
             key={c.id}
             to={`/sessions?clientId=${c.id}`}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+            className={`inline-flex min-h-[44px] items-center rounded-xl px-4 py-2 text-sm font-medium transition-all ${
               clientId === c.id
                 ? "bg-brand-100 text-brand-700 shadow-soft"
                 : "border border-brand-100 bg-white/70 text-stone-600 hover:bg-brand-50"
@@ -92,7 +92,8 @@ export function SessionsPage() {
         </div>
       ) : (
         <div className="card overflow-hidden rounded-2xl">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-brand-100/60 bg-brand-50/50 text-left text-xs font-medium uppercase tracking-wider text-stone-500">
                 <th className="px-6 py-3">Date</th>
@@ -130,6 +131,7 @@ export function SessionsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

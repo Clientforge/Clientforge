@@ -46,7 +46,7 @@
   }
 
   .page-title {
-    @apply font-display text-3xl font-semibold tracking-tight text-stone-900;
+    @apply font-display text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl;
   }
 
   .page-subtitle {

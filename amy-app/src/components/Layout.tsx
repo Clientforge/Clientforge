@@ -1,15 +1,18 @@
 import { Outlet } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar";
+import { MobileHeader, Sidebar, useMobileSidebar } from "@/components/Sidebar";
 
 export function Layout() {
+  const { mobileOpen, openMobileMenu, closeMobileMenu } = useMobileSidebar();
+
   return (
     <div className="min-h-screen bg-page-gradient">
-      <Sidebar />
-      <main className="pl-64">
-        <div className="mx-auto max-w-7xl p-8">
+      <Sidebar mobileOpen={mobileOpen} onClose={closeMobileMenu} />
+      <div className="min-w-0 md:pl-64">
+        <MobileHeader onOpenMenu={openMobileMenu} />
+        <main className="mx-auto max-w-7xl p-4 sm:p-6 md:p-8">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
