@@ -67,6 +67,7 @@ app.use('/api/v1/public', require('./routes/public.routes'));
 
 // Grace to Grace owner portal (JWT distinct from tenant dashboard — see middleware/g2gOwnerAuth.js)
 app.use('/api/v1/g2g-owner', require('./routes/g2gOwner.routes'));
+app.use('/api/v1/amy', require('./routes/amy.routes'));
 
 // --------------- PUBLIC ROUTES ---------------
 
@@ -254,7 +255,10 @@ app.use(express.static(LANDING_DIR));
 
 // Grace to Grace demo SPA — https://<host>/grace-to-grace/
 const G2G_DIR = path.join(__dirname, '../../grace-to-grace-web/dist');
+// AMY client management SPA — https://<host>/amy-app/
+const AMY_DIR = path.join(__dirname, '../../amy-app/dist');
 app.use('/grace-to-grace', staticWithFreshIndex(G2G_DIR));
+app.use('/amy-app', staticWithFreshIndex(AMY_DIR));
 app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
   const rel = req.path.replace(/^\/grace-to-grace\/?/, '');
   const lastSeg = rel.split('/').filter(Boolean).pop() || '';
@@ -273,6 +277,24 @@ app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
   return res.sendFile(g2gIndex);
 });
 
+app.get(/^\/amy-app\/?.*$/, (req, res, next) => {
+  const rel = req.path.replace(/^\/amy-app\/?/, '');
+  const lastSeg = rel.split('/').filter(Boolean).pop() || '';
+  if (lastSeg.includes('.')) {
+    return res.status(404).type('text').send('Not found');
+  }
+  const amyIndex = path.join(AMY_DIR, 'index.html');
+  if (!fs.existsSync(amyIndex)) {
+    return res.status(503).json({
+      error: 'AMY app not built',
+      message:
+        'amy-app/dist is missing. On the server run: cd backend && npm run build (or npm run build:amy-app).',
+    });
+  }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(amyIndex);
+});
+
 // React app assets (main ClientForge dashboard SPA)
 const FRONTEND_DIR = path.join(__dirname, '../../frontend/dist');
 app.use(staticWithFreshIndex(FRONTEND_DIR));
@@ -280,6 +302,9 @@ app.use(staticWithFreshIndex(FRONTEND_DIR));
 // React SPA fallback for /login, /register, /dashboard, etc. (not /grace-to-grace)
 app.get(/^\/(?!api).*/, (req, res, next) => {
   if (req.path === '/grace-to-grace' || req.path.startsWith('/grace-to-grace/')) {
+    return next();
+  }
+  if (req.path === '/amy-app' || req.path.startsWith('/amy-app/')) {
     return next();
   }
   if (req.path === '/penthos-review' || req.path.startsWith('/penthos-review/')) {
