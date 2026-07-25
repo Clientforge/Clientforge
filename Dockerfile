@@ -19,7 +19,15 @@ RUN npm ci
 COPY grace-to-grace-web/ .
 RUN npm run build
 
-# Stage 3: Production server
+# Stage 3: AMY client management (Vite)
+FROM node:20-alpine AS amy-build
+WORKDIR /app/amy-app
+COPY amy-app/package*.json ./
+RUN npm ci
+COPY amy-app/ .
+RUN npm run build
+
+# Stage 4: Production server
 FROM node:20-alpine AS production
 WORKDIR /app
 
@@ -32,6 +40,7 @@ COPY backend/ ./backend/
 # Static assets the Express app serves (must match paths in backend/src/app.js)
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 COPY --from=g2g-build /app/grace-to-grace-web/dist ./grace-to-grace-web/dist
+COPY --from=amy-build /app/amy-app/dist ./amy-app/dist
 
 # Marketing / legal HTML
 COPY landing/ ./landing/

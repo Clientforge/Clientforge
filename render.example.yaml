@@ -3,7 +3,7 @@
 #   Root Directory: backend
 #   Build Command:  npm install && npm run build
 #   Start Command:  npx knex migrate:latest && npm start
-# `npm run build` runs build:webapps (grace-to-grace-web + frontend) so Express can serve them.
+# `npm run build` runs build:webapps (grace-to-grace-web + amy-app + frontend) so Express can serve them.
 
 services:
   - type: web

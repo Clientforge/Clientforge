@@ -130,7 +130,7 @@ Single **Web Service** + **PostgreSQL**. The API serves the built Vite apps (`fr
 5. **Custom domain (e.g. `app.clientforge.ai`):** Web Service → **Custom Domains** → add the hostname, then at your DNS provider add the **CNAME** (or A records) Render shows. Until that DNS exists, the domain will not resolve (`DNS_PROBE_FINISHED_NXDOMAIN` = DNS, not application code).
 6. The repo’s `render.example.yaml` matches the same **rootDir**, build, start, and health check for Blueprint-style deploys.
 
-**Render: Docker (alternative)** — If you use **Environment: Docker** instead of Node: set **Root Directory** to **empty** (repository root) so Render finds the root `Dockerfile`. The multi-stage `Dockerfile` builds **`frontend/`** and **`grace-to-grace-web/`**, then runs migrations + the API. Do **not** set root to `backend` for Docker, or the build will look for `backend/Dockerfile` and fail.
+**Render: Docker (alternative)** — If you use **Environment: Docker** instead of Node: set **Root Directory** to **empty** (repository root) so Render finds the root `Dockerfile`. The multi-stage `Dockerfile` builds **`frontend/`**, **`grace-to-grace-web/`**, and **`amy-app/`**, then runs migrations + the API. Do **not** set root to `backend` for Docker, or the build will look for `backend/Dockerfile` and fail.
 
 ---
 
