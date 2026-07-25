@@ -125,9 +125,9 @@ const lolaJul29 = {
 const jul30Ms = new Date('2026-07-30T14:00:00.000Z').getTime();
 
 failed += check(
-  'reschedule picks closest upcoming row (Jul 29 not Jul 25)',
-  pickRescheduleCandidateAppointments([lolaJul25, lolaJul29], 'gcal-jul30-new', jul30Ms)?.id,
-  'lola-jul29',
+  'multiple upcoming rows → no stale match (separate calendar visits)',
+  pickRescheduleCandidateAppointments([lolaJul25, lolaJul29], 'gcal-jul30-new', jul30Ms),
+  null,
 );
 failed += check(
   'reschedule returns null when two rows tie for distance',
@@ -160,13 +160,38 @@ failed += check(
   null,
 );
 failed += check(
-  'single upcoming row still reschedules',
+  'single upcoming row still reschedules within 3 days',
   pickRescheduleCandidateAppointments(
     [lolaJul29],
     'gcal-jul30-new',
     jul30Ms,
   )?.id,
   'lola-jul29',
+);
+
+const alishaJul25 = {
+  id: 'alisha-jul25',
+  scheduled_at: '2026-07-25T15:00:00.000Z',
+  google_calendar_event_id: 'gcal-alisha-jul25',
+  status: 'scheduled',
+};
+failed += check(
+  'second calendar slot 5+ days later is not a reschedule (Alisha pattern)',
+  pickRescheduleCandidateAppointments(
+    [alishaJul25],
+    'gcal-alisha-jul30',
+    new Date('2026-07-30T16:00:00.000Z').getTime(),
+  ),
+  null,
+);
+failed += check(
+  'Tera Jul 30 → Aug 14 gap too large for stale match',
+  pickRescheduleCandidateAppointments(
+    [{ id: 'tera-jul30', scheduled_at: '2026-07-30T13:15:00.000Z', google_calendar_event_id: 'g1' }],
+    'gcal-tera-aug14',
+    new Date('2026-08-14T15:00:00.000Z').getTime(),
+  ),
+  null,
 );
 
 if (failed > 0) {

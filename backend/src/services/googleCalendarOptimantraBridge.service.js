@@ -13,6 +13,8 @@ const ACTIVE_STATUSES = ['scheduled', 'confirmed', 'rescheduled'];
 const SAME_TIME_MS = 60 * 1000;
 /** Min gap between 1st and 2nd candidate old times before stale-match (avoids hijacking nearby visits). */
 const MIN_RESCHEDULE_CANDIDATE_GAP_MS = 2 * 24 * 60 * 60 * 1000;
+/** Max |old−new| for stale-match; larger gaps are separate calendar visits, not a move. */
+const MAX_STALE_RESCHEDULE_SHIFT_MS = 3 * 24 * 60 * 60 * 1000;
 
 function parseEventStartMs(googleEvent) {
   const raw = googleEvent?.start?.dateTime || googleEvent?.start?.date;
@@ -77,15 +79,34 @@ async function findOptimantraAppointmentByContactTime(tenantId, contactId, sched
  * Pick the OptiMantra row most likely rescheduled to `scheduledAtMs` when the calendar
  * event id changed or the DB time still reflects the old slot.
  */
+function isPlausibleRescheduleShift(scheduledAtMs, row, maxShiftMs = MAX_STALE_RESCHEDULE_SHIFT_MS) {
+  const oldMs = new Date(row.scheduled_at).getTime();
+  if (Number.isNaN(oldMs)) return false;
+  return Math.abs(scheduledAtMs - oldMs) <= maxShiftMs;
+}
+
 function pickRescheduleCandidateAppointments(
   rows,
   googleEventId,
   scheduledAtMs,
-  { serviceName = null, minGapMs = MIN_RESCHEDULE_CANDIDATE_GAP_MS } = {},
+  {
+    serviceName = null,
+    minGapMs = MIN_RESCHEDULE_CANDIDATE_GAP_MS,
+    maxShiftMs = MAX_STALE_RESCHEDULE_SHIFT_MS,
+  } = {},
 ) {
   if (!rows?.length || scheduledAtMs == null || Number.isNaN(scheduledAtMs)) {
     return null;
   }
+
+  // Separate upcoming visits — only link by GCal event id or exact time match.
+  if (rows.length >= 2) {
+    return null;
+  }
+
+  const accept = (row) => (
+    row && isPlausibleRescheduleShift(scheduledAtMs, row, maxShiftMs) ? row : null
+  );
 
   const timeMoved = rows.filter((row) => {
     const oldMs = new Date(row.scheduled_at).getTime();
@@ -97,12 +118,12 @@ function pickRescheduleCandidateAppointments(
     (row) => row.google_calendar_event_id && row.google_calendar_event_id !== googleEventId,
   );
   if (linkedOther.length === 1) {
-    return linkedOther[0];
+    return accept(linkedOther[0]);
   }
 
   const pool = linkedOther.length > 0 ? linkedOther : timeMoved;
   if (pool.length === 1) {
-    return pool[0];
+    return accept(pool[0]);
   }
 
   pool.sort((a, b) => {
@@ -115,7 +136,7 @@ function pickRescheduleCandidateAppointments(
   const secondDiff = Math.abs(scheduledAtMs - new Date(pool[1].scheduled_at).getTime());
 
   if (secondDiff - bestDiff > minGapMs) {
-    return pool[0];
+    return accept(pool[0]);
   }
 
   const tied = pool.filter(
@@ -123,7 +144,7 @@ function pickRescheduleCandidateAppointments(
   );
   if (serviceName) {
     const byService = tied.filter((row) => servicesMatch(serviceName, row.service_name));
-    if (byService.length === 1) return byService[0];
+    if (byService.length === 1) return accept(byService[0]);
   }
 
   return null;
@@ -149,6 +170,11 @@ async function findStaleOptimantraAppointment(tenantId, contactId, googleEventId
        AND scheduled_at > NOW() - INTERVAL '1 day'`,
     [tenantId, contactId, ACTIVE_STATUSES],
   );
+
+  // Multiple upcoming OptiMantra rows → separate visits; only link by GCal id or exact time.
+  if (upcoming.rows.length >= 2) {
+    return null;
+  }
 
   return pickRescheduleCandidateAppointments(
     upcoming.rows,
@@ -267,9 +293,11 @@ async function processSluiceCalendarEvent(tenantId, googleEvent, normalized, { c
 module.exports = {
   SAME_TIME_MS,
   MIN_RESCHEDULE_CANDIDATE_GAP_MS,
+  MAX_STALE_RESCHEDULE_SHIFT_MS,
   ACTIVE_STATUSES,
   classifyCalendarChange,
   parseEventStartMs,
+  isPlausibleRescheduleShift,
   pickRescheduleCandidateAppointments,
   findOptimantraAppointmentForCalendarEvent,
   applyCalendarBridgeUpdate,
