@@ -5,7 +5,7 @@ export function Layout() {
   const { mobileOpen, openMobileMenu, closeMobileMenu } = useMobileSidebar();
 
   return (
-    <div className="min-h-screen bg-page-gradient">
+    <div className="min-h-screen bg-page-gradient dark:bg-page-gradient-dark">
       <Sidebar mobileOpen={mobileOpen} onClose={closeMobileMenu} />
       <div className="min-w-0 md:pl-64">
         <MobileHeader onOpenMenu={openMobileMenu} />

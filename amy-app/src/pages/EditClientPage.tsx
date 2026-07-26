@@ -160,10 +160,16 @@ export function EditClientPage() {
           <textarea id="notes" name="notes" rows={3} defaultValue={client.notes ?? ""} className="input-field" />
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="isActive" defaultChecked={client.isActive} className="rounded border-slate-300" />
-          Active client
-        </label>
+        <fieldset className="space-y-2 rounded-xl border border-stone-200 p-4 dark:border-stone-700">
+          <legend className="px-1 text-sm font-semibold">Client status</legend>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="isActive" defaultChecked={client.isActive} className="rounded border-stone-300 dark:border-stone-600" />
+            Active client (uncheck to archive)
+          </label>
+          <p className="text-xs muted-text">
+            Archived clients are hidden from the dashboard and session dropdowns. Use the client detail page to delete permanently.
+          </p>
+        </fieldset>
 
         <div className="flex gap-3">
           <button type="submit" disabled={saving} className="btn-primary">

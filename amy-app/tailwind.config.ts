@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -66,7 +67,9 @@ const config: Config = {
       },
       backgroundImage: {
         "page-gradient": "linear-gradient(135deg, #fffcf9 0%, #fdf5f8 40%, #f9f5fa 100%)",
+        "page-gradient-dark": "linear-gradient(135deg, #1c1917 0%, #251a22 45%, #1a1520 100%)",
         "sidebar-gradient": "linear-gradient(180deg, #fffcf9 0%, #fdf8f3 50%, #fbe8ef 100%)",
+        "sidebar-gradient-dark": "linear-gradient(180deg, #1c1917 0%, #221820 50%, #2a1520 100%)",
         "brand-gradient": "linear-gradient(135deg, #e27ba0 0%, #d15580 50%, #bc3a66 100%)",
       },
     },
