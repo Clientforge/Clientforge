@@ -953,7 +953,44 @@ img {
 .pricing-header h3 {
   font-size: 20px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+.plan-tier-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-bottom: 10px;
+}
+
+.plan-tier-badge--flagship {
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.plan-tier-badge--enterprise {
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.pricing-tagline {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
 }
 
 .pricing-desc {
