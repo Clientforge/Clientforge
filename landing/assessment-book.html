@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pick a time for your free 20-minute strategy call with ClientForge.">
+  <title>Pick a Time — ClientForge.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assessment.css">
+</head>
+<body class="book-page">
+
+  <header class="assess-nav">
+    <div class="container assess-nav-inner">
+      <a href="/assessment" class="assess-logo">
+        <span class="assess-logo-mark">CF</span>
+        ClientForge
+      </a>
+      <span class="book-step-badge">Step 2 of 2</span>
+    </div>
+  </header>
+
+  <main class="book-main">
+    <div class="container book-container">
+      <div class="book-header">
+        <span class="section-label">Schedule Your Call</span>
+        <h1 id="book-heading">Pick a time that works for you</h1>
+        <p class="book-lead" id="book-lead">Choose a slot below for your free 20-minute strategy call. We&apos;ll review your practice details and show you how ClientForge can recover revenue from existing patients.</p>
+      </div>
+
+      <div class="book-calendar-wrap">
+        <iframe
+          id="calendar-frame"
+          class="book-calendar-frame"
+          title="Book a 20-minute strategy call"
+          src="https://calendar.app.google/FgBvDwb219BZ7ZHg9"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
+        <p class="book-calendar-fallback">
+          Calendar not loading?
+          <a id="calendar-link" href="https://calendar.app.google/FgBvDwb219BZ7ZHg9" target="_blank" rel="noopener noreferrer">Open scheduling page in a new tab</a>
+        </p>
+      </div>
+
+      <div class="book-after">
+        <h2>After you&apos;ve booked</h2>
+        <p>Once you&apos;ve selected a time on the calendar above, click below to see what to expect on your call.</p>
+        <a href="/assessment/confirmed" class="btn-assess btn-assess-primary btn-assess-full" id="confirmed-link">
+          I&apos;ve booked my call &rarr;
+        </a>
+        <p class="book-note">You&apos;ll also receive a calendar invite by email with your appointment details.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="assess-footer">
+    <div class="container assess-footer-inner">
+      <p>&copy; 2026 ClientForge.ai. All rights reserved.</p>
+      <div class="assess-footer-links">
+        <a href="mailto:info@clientforge-ai.com">info@clientforge-ai.com</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assessment-book.js"></script>
+</body>
+</html>

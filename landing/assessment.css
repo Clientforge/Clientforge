@@ -814,3 +814,253 @@ a {
     text-align: center;
   }
 }
+
+/* --- BOOK PAGE --- */
+.book-page {
+  background: var(--off-white);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.book-step-badge {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.book-main {
+  flex: 1;
+  padding: calc(var(--nav-h) + 32px) 0 64px;
+}
+
+.book-container {
+  max-width: 900px;
+}
+
+.book-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.book-header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 400;
+  color: var(--gray-900);
+  margin-bottom: 12px;
+}
+
+.book-lead {
+  color: var(--gray-500);
+  line-height: 1.7;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.book-calendar-wrap {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-100);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.book-calendar-frame {
+  width: 100%;
+  min-height: 680px;
+  border: 0;
+  display: block;
+}
+
+.book-calendar-fallback {
+  text-align: center;
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--gray-500);
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+}
+
+.book-calendar-fallback a {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.book-after {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-100);
+  padding: 28px 32px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.book-after h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 8px;
+}
+
+.book-after > p {
+  color: var(--gray-500);
+  font-size: 15px;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.book-note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--gray-400);
+}
+
+/* --- CONFIRMED / THANKS --- */
+.thanks-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--off-white);
+}
+
+.thanks-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--nav-h) + 32px) 24px 48px;
+}
+
+.thanks-card {
+  max-width: 560px;
+  width: 100%;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--gray-100);
+}
+
+.thanks-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 24px;
+  background: #dcfce7;
+  color: var(--green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thanks-card h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: 12px;
+  color: var(--gray-900);
+}
+
+.thanks-card .lead {
+  color: var(--gray-500);
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+
+.thanks-steps {
+  text-align: left;
+  margin: 28px 0;
+  padding: 20px 24px;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.thanks-steps h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  margin-bottom: 12px;
+}
+
+.thanks-steps ol {
+  padding-left: 20px;
+  color: var(--gray-700);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.confirmed-tips {
+  text-align: left;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: var(--blue-light);
+  border-radius: var(--radius);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+}
+
+.confirmed-tips h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 12px;
+}
+
+.confirmed-tips ul {
+  padding-left: 20px;
+  color: var(--gray-700);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.thanks-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-assess-outline {
+  background: transparent;
+  color: var(--gray-700);
+  border: 1.5px solid var(--gray-100);
+  box-shadow: none;
+}
+
+.btn-assess-outline:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: var(--blue-light);
+}
+
+.confirmed-help {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--gray-500);
+}
+
+.confirmed-help a {
+  color: var(--blue);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .book-calendar-frame {
+    min-height: 520px;
+  }
+
+  .book-after {
+    padding: 24px 20px;
+  }
+
+  .thanks-card {
+    padding: 36px 24px;
+  }
+}

@@ -132,7 +132,7 @@ async function maybeNotifyTeam(submission) {
       tenantId: null,
       to: notifyTo,
       fromName: 'ClientForge',
-      subject: `New assessment lead: ${submission.practiceName}`,
+      subject: `New qualified lead (pre-call): ${submission.practiceName}`,
       body: lines.join('\n'),
     });
   } catch (err) {

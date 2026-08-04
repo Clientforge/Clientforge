@@ -233,6 +233,12 @@ app.get('/cherished-onboarding/thanks', (req, res) => {
 app.get('/assessment', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'assessment.html'));
 });
+app.get('/assessment/book', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'assessment-book.html'));
+});
+app.get('/assessment/confirmed', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'assessment-confirmed.html'));
+});
 app.get('/assessment/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'assessment-thanks.html'));
 });

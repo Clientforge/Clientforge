@@ -1,4 +1,6 @@
 (function () {
+  var CALENDAR_URL = 'https://calendar.app.google/FgBvDwb219BZ7ZHg9';
+
   var form = document.getElementById('assessment-form');
   var errorEl = document.getElementById('form-error');
   var submitBtn = document.getElementById('submit-btn');
@@ -96,13 +98,22 @@
       .then(function (res) {
         return res.json().then(function (data) {
           if (!res.ok) throw new Error(data.error || 'Something went wrong.');
-          window.location.href = '/assessment/thanks';
+          var params = new URLSearchParams({
+            firstName: payload.firstName,
+            lastName: payload.lastName,
+            email: payload.email,
+            practice: payload.practiceName,
+          });
+          if (data.id) params.set('ref', data.id);
+          window.location.href = '/assessment/book?' + params.toString();
         });
       })
       .catch(function (err) {
         showError(err.message || 'Could not submit. Please try again.');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Get My Free Revenue Recovery Assessment &rarr;';
+        submitBtn.innerHTML = 'Continue to Pick a Time &rarr;';
       });
   });
+
+  window.CLIENTFORGE_CALENDAR_URL = CALENDAR_URL;
 })();
