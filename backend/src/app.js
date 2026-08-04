@@ -230,6 +230,12 @@ app.get('/cherished-onboarding', (req, res) => {
 app.get('/cherished-onboarding/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-onboarding-thanks.html'));
 });
+app.get('/assessment', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'assessment.html'));
+});
+app.get('/assessment/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'assessment-thanks.html'));
+});
 
 /** Grace to Grace — internal team vehicle photo review (secret link per submission). */
 app.get('/g2g-review/:token', (req, res) => {
@@ -323,6 +329,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/cherished-onboarding' || req.path.startsWith('/cherished-onboarding/')) {
+    return next();
+  }
+  if (req.path === '/assessment' || req.path.startsWith('/assessment/')) {
     return next();
   }
   if (req.path === '/g2g-review' || req.path.startsWith('/g2g-review/')) {

@@ -29,6 +29,10 @@ const {
   getPublicConfig,
   CherishedOnboardingError,
 } = require('../services/cherishedOnboarding.service');
+const {
+  submitAssessment,
+  RevenueAssessmentError,
+} = require('../services/revenueAssessment.service');
 
 const router = express.Router();
 
@@ -408,6 +412,23 @@ router.post('/cherished-onboarding', sellIntentLimiter, async (req, res) => {
     }
     console.error('[public/cherished-onboarding]', err);
     return res.status(500).json({ error: 'Could not save your information.' });
+  }
+});
+
+/**
+ * ClientForge — public revenue recovery assessment (landing page lead capture).
+ */
+router.post('/revenue-assessment', sellIntentLimiter, async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const result = await submitAssessment(req.body);
+    return res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof RevenueAssessmentError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/revenue-assessment]', err);
+    return res.status(500).json({ error: 'Could not submit your assessment. Please try again.' });
   }
 });
 
