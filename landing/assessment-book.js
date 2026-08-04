@@ -15,7 +15,7 @@
 
   if (practice && lead) {
     lead.textContent =
-      'Choose a slot below for your free 20-minute strategy call. We\u2019ll use what you shared about '
+      'Click below to open our calendar and choose a slot for your free 20-minute strategy call. We\u2019ll use what you shared about '
       + practice
       + ' to personalize the conversation.';
   }
