@@ -68,12 +68,17 @@ function buildSegmentedContactsQuery(tenantId, categoryKey) {
           c.email,
           c.tags,
           c.last_visit_at,
-          COALESCE(
-            (SELECT MAX(a.scheduled_at) FROM appointments a
-             WHERE a.tenant_id = c.tenant_id AND a.contact_id = c.id
-               AND a.status NOT IN ('cancelled')),
-            c.last_visit_at
-          ) AS effective_last_at
+        COALESCE(
+          (SELECT MAX(a.scheduled_at) FROM appointments a
+           WHERE a.tenant_id = c.tenant_id AND a.contact_id = c.id
+             AND a.status NOT IN ('cancelled')),
+          c.last_visit_at,
+          CASE
+            WHEN c.notes ~ 'Last visit: [0-9]{4}-[0-9]{2}-[0-9]{2}'
+            THEN (substring(c.notes from 'Last visit: ([0-9]{4}-[0-9]{2}-[0-9]{2})'))::timestamptz
+            ELSE NULL
+          END
+        ) AS effective_last_at
         FROM contacts c
         WHERE c.tenant_id = $1
           AND c.unsubscribed = false

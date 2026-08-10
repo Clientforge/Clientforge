@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const { normalizeLastVisitPreset, appendLastVisitCondition } = require('../utils/lastVisitFilter');
+const { buildAudienceContactsCte } = require('../utils/effectiveLastVisit');
 const { getTenantTimezone } = require('../utils/tenantTimezone');
 const {
   computeWaveScheduledAt,
@@ -67,38 +68,72 @@ const normalizeAudienceFilter = (raw) => {
 
 /**
  * SQL WHERE + params for campaign audience (shared by launch, preview, counts).
- * Multiple tags match ANY (OR).
+ * When lastVisit is set, uses effective last visit (appointments + last_visit_at + notes).
  * @param {string} channel 'sms' | 'email' | 'both'
+ * @returns {{ cteSql: string|null, whereSql: string, params: unknown[], fromTable: string }}
  */
 const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
   const filter = audienceFilter && typeof audienceFilter === 'object' ? audienceFilter : {};
-  const conditions = ['tenant_id = $1', 'unsubscribed = false'];
+  const baseConditions = ['tenant_id = $1', 'unsubscribed = false'];
   const params = [tenantId];
   let idx = 2;
 
   const tags = normalizeAudienceTags(filter);
   if (tags.length === 1) {
-    conditions.push(`tags @> $${idx}::jsonb`);
+    baseConditions.push(`tags @> $${idx}::jsonb`);
     params.push(JSON.stringify([tags[0]]));
     idx++;
   } else if (tags.length > 1) {
-    conditions.push(`tags ?| $${idx}::text[]`);
+    baseConditions.push(`tags ?| $${idx}::text[]`);
     params.push(tags);
     idx++;
   }
 
-  appendLastVisitCondition(conditions, filter.lastVisit);
-
   const ch = ['sms', 'email', 'both'].includes(channel) ? channel : 'sms';
   if (ch === 'email') {
-    conditions.push('email IS NOT NULL');
+    baseConditions.push('email IS NOT NULL');
   } else if (ch === 'sms') {
-    conditions.push('phone IS NOT NULL');
+    baseConditions.push('phone IS NOT NULL');
   } else {
-    conditions.push('phone IS NOT NULL');
-    conditions.push('email IS NOT NULL');
+    baseConditions.push('phone IS NOT NULL');
+    baseConditions.push('email IS NOT NULL');
   }
-  return { whereSql: conditions.join(' AND '), params };
+
+  const lastVisit = normalizeLastVisitPreset(filter.lastVisit);
+  if (!lastVisit) {
+    return {
+      cteSql: null,
+      whereSql: baseConditions.join(' AND '),
+      params,
+      fromTable: 'contacts',
+    };
+  }
+
+  const visitConditions = [];
+  appendLastVisitCondition(visitConditions, lastVisit, 'effective_last_at');
+
+  return {
+    cteSql: buildAudienceContactsCte(baseConditions.join(' AND ')),
+    whereSql: visitConditions.join(' AND '),
+    params,
+    fromTable: 'audience_contacts',
+  };
+};
+
+const audienceCountSql = ({ cteSql, fromTable, whereSql }) => (
+  cteSql
+    ? `${cteSql} SELECT COUNT(*)::int AS n FROM ${fromTable} WHERE ${whereSql}`
+    : `SELECT COUNT(*)::int AS n FROM ${fromTable} WHERE ${whereSql}`
+);
+
+const audienceListSql = ({ cteSql, fromTable, whereSql, columns, orderBy, limitParam, offsetParam }) => {
+  let sql = cteSql
+    ? `${cteSql} SELECT ${columns} FROM ${fromTable} WHERE ${whereSql}`
+    : `SELECT ${columns} FROM ${fromTable} WHERE ${whereSql}`;
+  if (orderBy) sql += ` ORDER BY ${orderBy}`;
+  if (limitParam != null) sql += ` LIMIT ${limitParam}`;
+  if (offsetParam != null) sql += ` OFFSET ${offsetParam}`;
+  return sql;
 };
 
 const countLaunchedContacts = async (campaignId) => {
@@ -143,10 +178,10 @@ const previewAudience = async (tenantId, options = {}) => {
     limit: rawLimit,
   });
 
-  const { whereSql, params } = buildAudienceWhere(tenantId, audienceFilter, channel);
+  const audienceQuery = buildAudienceWhere(tenantId, audienceFilter, channel);
   const countRes = await db.query(
-    `SELECT COUNT(*)::int AS n FROM contacts WHERE ${whereSql}`,
-    params,
+    audienceCountSql(audienceQuery),
+    audienceQuery.params,
   );
   const total = countRes.rows[0].n;
 
@@ -173,10 +208,14 @@ const previewAudience = async (tenantId, options = {}) => {
   const queryLimit = batch.mode === 'all' ? previewMax : Math.min(listLimit || previewMax, previewMax);
   const queryOffset = batch.mode === 'all' ? 0 : listOffset;
 
-  const listParams = [...params];
-  let listSql = `SELECT id, first_name, last_name, phone, email
-     FROM contacts WHERE ${whereSql}
-     ORDER BY ${AUDIENCE_ORDER_BY}`;
+  const listParams = [...audienceQuery.params];
+  let listSql = audienceListSql({
+    ...audienceQuery,
+    columns: 'id, first_name, last_name, phone, email',
+    orderBy: AUDIENCE_ORDER_BY,
+    limitParam: null,
+    offsetParam: null,
+  });
   if (queryLimit != null) {
     listParams.push(queryLimit);
     listSql += ` LIMIT $${listParams.length}`;
@@ -235,13 +274,17 @@ const previewAudienceForCampaign = async (tenantId, campaignId, query = {}) => {
 };
 
 const fetchAudienceForLaunch = async (tenantId, { audienceFilter, channel, batch, campaignId }) => {
-  const { whereSql, params } = buildAudienceWhere(tenantId, audienceFilter, channel);
-  const listParams = [...params];
+  const audienceQuery = buildAudienceWhere(tenantId, audienceFilter, channel);
+  const listParams = [...audienceQuery.params];
   let idx = listParams.length + 1;
 
-  let listSql = `SELECT id, phone, email, first_name
-     FROM contacts WHERE ${whereSql}
-     ORDER BY ${AUDIENCE_ORDER_BY}`;
+  let listSql = audienceListSql({
+    ...audienceQuery,
+    columns: 'id, phone, email, first_name',
+    orderBy: AUDIENCE_ORDER_BY,
+    limitParam: null,
+    offsetParam: null,
+  });
 
   if (batch.mode !== 'all' && batch.limit != null) {
     listParams.push(batch.limit);

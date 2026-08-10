@@ -11,7 +11,10 @@ export const LAST_VISIT_OPTIONS = [
   { value: 'not90d', label: 'Not visited in 90 days' },
   { value: 'not120d', label: 'Not visited in 120 days' },
   { value: 'not180d', label: 'Not visited in 180 days' },
-  { value: 'not365d', label: 'Not visited in a year' },
+  { value: 'not365d', label: 'Not visited in 1 year' },
+  { value: 'not730d', label: 'Not visited in 2 years' },
+  { value: 'not1095d', label: 'Not visited in 3 years' },
+  { value: 'not1460d', label: 'Not visited in 4 years' },
   { value: 'none', label: 'No visit on file' },
 ];
 

@@ -27,6 +27,9 @@ const RETENTION_BUCKETS = [
   { key: 'not90d', label: '90+ days inactive', days: 90, campaignLastVisit: 'not90d' },
   { key: 'not120d', label: '120+ days inactive', days: 120, campaignLastVisit: 'not120d' },
   { key: 'not365d', label: '1 year+ inactive', days: 365, campaignLastVisit: 'not365d' },
+  { key: 'not730d', label: '2 years+ inactive', days: 730, campaignLastVisit: 'not730d' },
+  { key: 'not1095d', label: '3 years+ inactive', days: 1095, campaignLastVisit: 'not1095d' },
+  { key: 'not1460d', label: '4 years+ inactive', days: 1460, campaignLastVisit: 'not1460d' },
 ];
 
 const SLUICE_SERVICE_CATEGORIES = [

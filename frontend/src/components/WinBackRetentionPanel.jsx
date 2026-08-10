@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 
-const BUCKET_ORDER = ['not30d', 'not90d', 'not120d', 'not365d'];
+const BUCKET_ORDER = ['not30d', 'not90d', 'not120d', 'not365d', 'not730d', 'not1095d', 'not1460d'];
 
 function formatDate(d) {
   if (!d) return 'No visit on file';
