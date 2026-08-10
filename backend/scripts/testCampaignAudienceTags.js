@@ -31,6 +31,17 @@ check('multi tags', normalizeAudienceTags({ tags: ['a', 'b', 'a'] }), ['a', 'b']
 check('normalize filter', normalizeAudienceFilter({ tag: 'immune-defense-drip' }), { tags: ['immune-defense-drip'] });
 check('normalize filter with last visit', normalizeAudienceFilter({ tags: ['a'], lastVisit: '90d' }), { tags: ['a'], lastVisit: '90d' });
 check('normalize filter with 2yr inactive', normalizeAudienceFilter({ lastVisit: 'not730d' }), { lastVisit: 'not730d' });
+check('normalize visit window', normalizeAudienceFilter({
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'appointments' },
+}), {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'appointments' },
+});
+check('visit window drops lastVisit', normalizeAudienceFilter({
+  lastVisit: 'not90d',
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90 },
+}), {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'effective' },
+});
 check('normalize strips invalid last visit', normalizeAudienceFilter({ lastVisit: 'bogus' }), {});
 check('empty filter', normalizeAudienceFilter({}), {});
 
@@ -53,6 +64,19 @@ includes('not 30d interval', not30, "INTERVAL '30 days'");
 
 const not730 = buildAudienceWhere('tenant-1', { lastVisit: 'not730d' }, 'sms');
 includes('not 730d (2 years)', not730, "INTERVAL '730 days'");
+
+const visitWindow = buildAudienceWhere('tenant-1', {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'effective' },
+}, 'sms');
+includes('visit window outer bound', visitWindow, "INTERVAL '730 days'");
+includes('visit window inner bound', visitWindow, "INTERVAL '90 days'");
+includes('visit window requires date', visitWindow, 'effective_last_at IS NOT NULL');
+check('visit window uses audience CTE', visitWindow.fromTable, 'audience_contacts');
+
+const apptWindow = buildAudienceWhere('tenant-1', {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'appointments' },
+}, 'sms');
+includes('appointments-only window', apptWindow, 'FROM appointments a');
 
 const combined = buildAudienceWhere('tenant-1', { tags: ['vip'], lastVisit: '120d' }, 'email');
 includes('combined tags and visit', combined, 'tags @>');

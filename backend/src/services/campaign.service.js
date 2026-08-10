@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const { normalizeLastVisitPreset, appendLastVisitCondition } = require('../utils/lastVisitFilter');
+const { normalizeVisitWindow, appendVisitWindowConditions } = require('../utils/visitWindowFilter');
 const { buildAudienceContactsCte } = require('../utils/effectiveLastVisit');
 const { getTenantTimezone } = require('../utils/tenantTimezone');
 const {
@@ -61,6 +62,11 @@ const normalizeAudienceFilter = (raw) => {
   const out = {};
   const tags = normalizeAudienceTags(raw);
   if (tags.length > 0) out.tags = tags;
+  const visitWindow = normalizeVisitWindow(raw?.visitWindow);
+  if (visitWindow) {
+    out.visitWindow = visitWindow;
+    return out;
+  }
   const lastVisit = normalizeLastVisitPreset(raw?.lastVisit);
   if (lastVisit) out.lastVisit = lastVisit;
   return out;
@@ -68,7 +74,8 @@ const normalizeAudienceFilter = (raw) => {
 
 /**
  * SQL WHERE + params for campaign audience (shared by launch, preview, counts).
- * When lastVisit is set, uses effective last visit (appointments + last_visit_at + notes).
+ * When lastVisit or visitWindow is set, uses effective last visit (appointments + last_visit_at + notes).
+ * visitWindow.source "appointments" uses booked visits only.
  * @param {string} channel 'sms' | 'email' | 'both'
  * @returns {{ cteSql: string|null, whereSql: string, params: unknown[], fromTable: string }}
  */
@@ -99,8 +106,9 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
     baseConditions.push('email IS NOT NULL');
   }
 
-  const lastVisit = normalizeLastVisitPreset(filter.lastVisit);
-  if (!lastVisit) {
+  const visitWindow = normalizeVisitWindow(filter.visitWindow);
+  const lastVisit = visitWindow ? null : normalizeLastVisitPreset(filter.lastVisit);
+  if (!lastVisit && !visitWindow) {
     return {
       cteSql: null,
       whereSql: baseConditions.join(' AND '),
@@ -110,10 +118,16 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
   }
 
   const visitConditions = [];
-  appendLastVisitCondition(visitConditions, lastVisit, 'effective_last_at');
+  if (visitWindow) {
+    appendVisitWindowConditions(visitConditions, visitWindow, 'effective_last_at');
+  } else {
+    appendLastVisitCondition(visitConditions, lastVisit, 'effective_last_at');
+  }
 
   return {
-    cteSql: buildAudienceContactsCte(baseConditions.join(' AND ')),
+    cteSql: buildAudienceContactsCte(baseConditions.join(' AND '), {
+      visitSource: visitWindow?.source || 'effective',
+    }),
     whereSql: visitConditions.join(' AND '),
     params,
     fromTable: 'audience_contacts',

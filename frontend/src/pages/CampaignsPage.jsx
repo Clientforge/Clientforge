@@ -4,6 +4,14 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS, formatLastVisitLabel } from '../utils/lastVisitFilter';
+import {
+  DEFAULT_VISIT_WINDOW,
+  formatVisitWindowLabel,
+  getVisitFilterMode,
+  normalizeVisitWindowForForm,
+  NOT_VISITED_WITHIN_OPTIONS,
+  VISITED_WITHIN_OPTIONS,
+} from '../utils/visitWindowFilter';
 import WinBackRetentionPanel from '../components/WinBackRetentionPanel';
 
 const STATUS_STYLES = {
@@ -27,18 +35,36 @@ function getAudienceTags(filter) {
   return [];
 }
 
-function buildAudienceFilter({ tags = [], lastVisit = '' } = {}) {
+function buildAudienceFilter({
+  tags = [],
+  lastVisit = '',
+  visitWindow = null,
+  visitFilterMode = 'none',
+} = {}) {
   const out = {};
   const cleanTags = tags.filter(Boolean);
   if (cleanTags.length > 0) out.tags = cleanTags;
-  if (lastVisit) out.lastVisit = lastVisit;
+  if (visitFilterMode === 'window' && visitWindow) {
+    out.visitWindow = {
+      visitedWithinDays: visitWindow.visitedWithinDays,
+      notVisitedWithinDays: visitWindow.notVisitedWithinDays,
+      source: visitWindow.source === 'appointments' ? 'appointments' : 'effective',
+    };
+  } else if (visitFilterMode === 'simple' && lastVisit) {
+    out.lastVisit = lastVisit;
+  }
   return out;
 }
 
 function normalizeAudienceFilterForForm(filter) {
+  const mode = getVisitFilterMode(filter);
   return buildAudienceFilter({
     tags: getAudienceTags(filter),
     lastVisit: filter?.lastVisit || '',
+    visitWindow: mode === 'window'
+      ? normalizeVisitWindowForForm(filter.visitWindow)
+      : null,
+    visitFilterMode: mode,
   });
 }
 
@@ -50,11 +76,13 @@ function formatAudienceTagsLabel(filter) {
 
 function formatAudienceSummary(filter) {
   const tags = formatAudienceTagsLabel(filter);
-  const lastVisit = formatLastVisitLabel(filter?.lastVisit);
-  if (!tags && !lastVisit) return null;
+  const visitWindow = formatVisitWindowLabel(filter?.visitWindow);
+  const lastVisit = !visitWindow ? formatLastVisitLabel(filter?.lastVisit) : null;
+  if (!tags && !lastVisit && !visitWindow) return null;
   const parts = [];
   if (tags) parts.push(`Tags (any): ${tags}`);
-  if (lastVisit) parts.push(`Last visit: ${lastVisit}`);
+  if (visitWindow) parts.push(`Visit window: ${visitWindow}`);
+  else if (lastVisit) parts.push(`Last visit: ${lastVisit}`);
   return parts.join(' · ');
 }
 
@@ -806,31 +834,74 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
   const [audiencePreviewOpen, setAudiencePreviewOpen] = useState(false);
 
   const selectedAudienceTags = getAudienceTags(form.audienceFilter);
+  const visitFilterMode = getVisitFilterMode(form.audienceFilter);
+  const visitWindow = normalizeVisitWindowForForm(form.audienceFilter?.visitWindow);
 
-  const toggleAudienceTag = (tag) => {
+  const updateAudienceFilter = (patch) => {
     setForm((prev) => {
-      const current = getAudienceTags(prev.audienceFilter);
-      const next = current.includes(tag)
-        ? current.filter((t) => t !== tag)
-        : [...current, tag];
+      const mode = patch.visitFilterMode ?? getVisitFilterMode(prev.audienceFilter);
       return {
         ...prev,
         audienceFilter: buildAudienceFilter({
-          tags: next,
-          lastVisit: prev.audienceFilter?.lastVisit || '',
+          tags: patch.tags ?? getAudienceTags(prev.audienceFilter),
+          lastVisit: patch.lastVisit ?? prev.audienceFilter?.lastVisit ?? '',
+          visitWindow: patch.visitWindow
+            ?? (mode === 'window'
+              ? normalizeVisitWindowForForm(prev.audienceFilter?.visitWindow)
+              : null),
+          visitFilterMode: mode,
         }),
       };
     });
   };
 
+  const toggleAudienceTag = (tag) => {
+    const current = getAudienceTags(form.audienceFilter);
+    const next = current.includes(tag)
+      ? current.filter((t) => t !== tag)
+      : [...current, tag];
+    updateAudienceFilter({ tags: next });
+  };
+
+  const setVisitFilterMode = (mode) => {
+    if (mode === 'window') {
+      updateAudienceFilter({
+        visitFilterMode: 'window',
+        visitWindow: normalizeVisitWindowForForm(form.audienceFilter?.visitWindow),
+        lastVisit: '',
+      });
+      return;
+    }
+    if (mode === 'simple') {
+      updateAudienceFilter({
+        visitFilterMode: 'simple',
+        visitWindow: null,
+      });
+      return;
+    }
+    updateAudienceFilter({
+      visitFilterMode: 'none',
+      lastVisit: '',
+      visitWindow: null,
+    });
+  };
+
   const setAudienceLastVisit = (lastVisit) => {
-    setForm((prev) => ({
-      ...prev,
-      audienceFilter: buildAudienceFilter({
-        tags: getAudienceTags(prev.audienceFilter),
-        lastVisit,
-      }),
-    }));
+    updateAudienceFilter({ visitFilterMode: 'simple', lastVisit, visitWindow: null });
+  };
+
+  const setVisitWindowField = (field, value) => {
+    let next = {
+      ...visitWindow,
+      [field]: field === 'source' ? value : parseInt(value, 10),
+    };
+    if (field === 'visitedWithinDays' && next.notVisitedWithinDays >= next.visitedWithinDays) {
+      const valid = NOT_VISITED_WITHIN_OPTIONS.filter((opt) => opt.value < next.visitedWithinDays);
+      next.notVisitedWithinDays = valid.length
+        ? valid[valid.length - 1].value
+        : Math.max(1, next.visitedWithinDays - 1);
+    }
+    updateAudienceFilter({ visitFilterMode: 'window', visitWindow: next, lastVisit: '' });
   };
 
   const showSms = form.channel === 'sms' || form.channel === 'both';
@@ -1204,8 +1275,9 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
               <div className="audience-campaign-block" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)' }}>
                 <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem' }}>Audience</h4>
                 <p className="hint" style={{ marginBottom: '0.75rem' }}>
-                  Optional filters: narrow by tags and/or last visit. Tags match <strong>any</strong> selection.
-                  Leave both empty for everyone who can receive
+                  Optional filters: narrow by tags and/or visit history. Tags match <strong>any</strong> selection.
+                  Use <strong>Visit window</strong> for lapsed customers (e.g. visited in 2 years but not in 3 months).
+                  Leave filters empty for everyone who can receive
                   {form.channel === 'sms' && ' SMS (has phone)'}
                   {form.channel === 'email' && ' email (has address)'}
                   {form.channel === 'both' && ' both SMS and email (has phone and email)'}
@@ -1239,13 +1311,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                       <button
                         type="button"
                         className="btn btn-sm btn-ghost"
-                        onClick={() => setForm((prev) => ({
-                          ...prev,
-                          audienceFilter: buildAudienceFilter({
-                            tags: [],
-                            lastVisit: prev.audienceFilter?.lastVisit || '',
-                          }),
-                        }))}
+                        onClick={() => updateAudienceFilter({ tags: [] })}
                       >
                         Clear tags
                       </button>
@@ -1253,18 +1319,80 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                   )}
                 </div>
                 <div className="form-group" style={{ marginTop: '0.75rem' }}>
-                  <label htmlFor="campaign-last-visit-filter">Filter by last visit</label>
+                  <label htmlFor="campaign-visit-filter-mode">Visit history</label>
                   <select
-                    id="campaign-last-visit-filter"
+                    id="campaign-visit-filter-mode"
                     className="filter-select"
-                    value={form.audienceFilter?.lastVisit || ''}
-                    onChange={(e) => setAudienceLastVisit(e.target.value)}
+                    value={visitFilterMode}
+                    onChange={(e) => setVisitFilterMode(e.target.value)}
                   >
-                    {LAST_VISIT_OPTIONS.map((opt) => (
-                      <option key={opt.value || 'any'} value={opt.value}>{opt.label}</option>
-                    ))}
+                    <option value="none">Any last visit</option>
+                    <option value="simple">Single rule</option>
+                    <option value="window">Visit window (lapsed customers)</option>
                   </select>
                 </div>
+                {visitFilterMode === 'simple' && (
+                  <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                    <label htmlFor="campaign-last-visit-filter">Last visit rule</label>
+                    <select
+                      id="campaign-last-visit-filter"
+                      className="filter-select"
+                      value={form.audienceFilter?.lastVisit || ''}
+                      onChange={(e) => setAudienceLastVisit(e.target.value)}
+                    >
+                      {LAST_VISIT_OPTIONS.filter((opt) => opt.value !== '').map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {visitFilterMode === 'window' && (
+                  <div className="visit-window-fields" style={{ marginTop: '0.75rem' }}>
+                    <div className="form-group">
+                      <label htmlFor="campaign-visited-within">Must have visited within</label>
+                      <select
+                        id="campaign-visited-within"
+                        className="filter-select"
+                        value={visitWindow.visitedWithinDays}
+                        onChange={(e) => setVisitWindowField('visitedWithinDays', e.target.value)}
+                      >
+                        {VISITED_WITHIN_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                      <label htmlFor="campaign-not-visited-within">But not within the last</label>
+                      <select
+                        id="campaign-not-visited-within"
+                        className="filter-select"
+                        value={visitWindow.notVisitedWithinDays}
+                        onChange={(e) => setVisitWindowField('notVisitedWithinDays', e.target.value)}
+                      >
+                        {NOT_VISITED_WITHIN_OPTIONS.filter(
+                          (opt) => opt.value < visitWindow.visitedWithinDays,
+                        ).map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <label className="campaign-tag-option" style={{ marginTop: '0.75rem', display: 'inline-flex' }}>
+                      <input
+                        type="checkbox"
+                        checked={visitWindow.source === 'appointments'}
+                        onChange={(e) => setVisitWindowField(
+                          'source',
+                          e.target.checked ? 'appointments' : 'effective',
+                        )}
+                      />
+                      <span>Use booked appointments only (ignore import notes)</span>
+                    </label>
+                    <p className="hint" style={{ marginTop: '0.5rem' }}>
+                      Example: visited within 2 years but not in the last 3 months targets clients who were
+                      active recently but have gone quiet — not people inactive for years.
+                    </p>
+                  </div>
+                )}
                 <div style={{ marginTop: '0.5rem' }}>
                   <button type="button" className="btn btn-ghost" onClick={() => setAudiencePreviewOpen(true)}>
                     Preview recipients
