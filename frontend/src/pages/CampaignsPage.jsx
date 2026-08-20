@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
-import { LAST_VISIT_OPTIONS, formatLastVisitLabel } from '../utils/lastVisitFilter';
+import { LAST_VISIT_OPTIONS, formatLastVisitLabel, getCampaignLastVisitOptions } from '../utils/lastVisitFilter';
+import { isSluiceTenant } from '../config/sluiceTenant';
 import {
   DEFAULT_VISIT_WINDOW,
   formatVisitWindowLabel,
@@ -813,6 +814,8 @@ const START_MODE = { scratch: 'scratch', copy: 'copy', template: 'template' };
 function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
   const { tenant } = useAuth();
   const clinicTimezone = tenant?.timezone || 'America/New_York';
+  const sluiceTenant = isSluiceTenant(tenant?.id);
+  const campaignLastVisitOptions = getCampaignLastVisitOptions({ isSluice: sluiceTenant });
   const [startMode, setStartMode] = useState(null);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState({
@@ -1340,7 +1343,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                       value={form.audienceFilter?.lastVisit || ''}
                       onChange={(e) => setAudienceLastVisit(e.target.value)}
                     >
-                      {LAST_VISIT_OPTIONS.filter((opt) => opt.value !== '').map((opt) => (
+                      {campaignLastVisitOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>

@@ -3,6 +3,7 @@
  * Campaign audience tag filter tests — run: node scripts/testCampaignAudienceTags.js
  */
 const { normalizeAudienceTags, normalizeAudienceFilter, buildAudienceWhere } = require('../src/services/campaign.service');
+const { SLUICE_TENANT_ID } = require('../src/config/sluiceTenant');
 
 let failed = 0;
 function check(label, actual, expected) {
@@ -43,6 +44,8 @@ check('visit window drops lastVisit', normalizeAudienceFilter({
   visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'effective' },
 });
 check('normalize strips invalid last visit', normalizeAudienceFilter({ lastVisit: 'bogus' }), {});
+check('730d rejected for non-Sluice tenant', normalizeAudienceFilter({ lastVisit: '730d' }, 'other-tenant'), {});
+check('730d allowed for Sluice tenant', normalizeAudienceFilter({ lastVisit: '730d' }, SLUICE_TENANT_ID), { lastVisit: '730d' });
 check('empty filter', normalizeAudienceFilter({}), {});
 
 const single = buildAudienceWhere('tenant-1', { tags: ['vip'] }, 'sms');
@@ -77,6 +80,13 @@ const apptWindow = buildAudienceWhere('tenant-1', {
   visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'appointments' },
 }, 'sms');
 includes('appointments-only window', apptWindow, 'FROM appointments a');
+
+const sluice730 = buildAudienceWhere(SLUICE_TENANT_ID, { lastVisit: '730d' }, 'sms');
+includes('Sluice 730d visited within 2 years', sluice730, "INTERVAL '730 days'");
+includes('Sluice 730d uses effective last visit CTE', sluice730, 'audience_contacts');
+
+const other730 = buildAudienceWhere('other-tenant', { lastVisit: '730d' }, 'sms');
+check('730d ignored for non-Sluice in audience query', other730.fromTable, 'contacts');
 
 const combined = buildAudienceWhere('tenant-1', { tags: ['vip'], lastVisit: '120d' }, 'email');
 includes('combined tags and visit', combined, 'tags @>');

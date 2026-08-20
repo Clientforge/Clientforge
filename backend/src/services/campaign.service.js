@@ -58,7 +58,7 @@ const normalizeAudienceTags = (filter) => {
   return [];
 };
 
-const normalizeAudienceFilter = (raw) => {
+const normalizeAudienceFilter = (raw, tenantId = null) => {
   const out = {};
   const tags = normalizeAudienceTags(raw);
   if (tags.length > 0) out.tags = tags;
@@ -67,7 +67,7 @@ const normalizeAudienceFilter = (raw) => {
     out.visitWindow = visitWindow;
     return out;
   }
-  const lastVisit = normalizeLastVisitPreset(raw?.lastVisit);
+  const lastVisit = normalizeLastVisitPreset(raw?.lastVisit, tenantId);
   if (lastVisit) out.lastVisit = lastVisit;
   return out;
 };
@@ -107,7 +107,7 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
   }
 
   const visitWindow = normalizeVisitWindow(filter.visitWindow);
-  const lastVisit = visitWindow ? null : normalizeLastVisitPreset(filter.lastVisit);
+  const lastVisit = visitWindow ? null : normalizeLastVisitPreset(filter.lastVisit, tenantId);
   if (!lastVisit && !visitWindow) {
     return {
       cteSql: null,
@@ -121,7 +121,7 @@ const buildAudienceWhere = (tenantId, audienceFilter, channel) => {
   if (visitWindow) {
     appendVisitWindowConditions(visitConditions, visitWindow, 'effective_last_at');
   } else {
-    appendLastVisitCondition(visitConditions, lastVisit, 'effective_last_at');
+    appendLastVisitCondition(visitConditions, lastVisit, 'effective_last_at', tenantId);
   }
 
   return {
@@ -350,7 +350,7 @@ const createCampaign = async (tenantId, data) => {
       channel,
       schedule[0]?.message || data.messageBody || '',
       JSON.stringify(schedule),
-      JSON.stringify(normalizeAudienceFilter(data.audienceFilter)),
+      JSON.stringify(normalizeAudienceFilter(data.audienceFilter, tenantId)),
     ],
   );
   return formatCampaign(result.rows[0]);
@@ -378,7 +378,7 @@ const updateCampaign = async (tenantId, campaignId, data) => {
   }
   if (data.audienceFilter !== undefined) {
     sets.push(`audience_filter = $${idx++}`);
-    params.push(JSON.stringify(normalizeAudienceFilter(data.audienceFilter)));
+    params.push(JSON.stringify(normalizeAudienceFilter(data.audienceFilter, tenantId)));
   }
   if (data.status !== undefined) { sets.push(`status = $${idx++}`); params.push(data.status); }
 
@@ -642,7 +642,7 @@ const formatCampaign = (row) => ({
   status: row.status,
   channel: row.channel || 'sms',
   messageBody: row.message_body,
-  audienceFilter: normalizeAudienceFilter(row.audience_filter),
+  audienceFilter: normalizeAudienceFilter(row.audience_filter, row.tenant_id),
   schedule: normalizeSchedule(row.schedule || []).map((wave, i) => ({
     ...wave,
     step: wave.step ?? i + 1,
@@ -726,7 +726,7 @@ const createTemplate = async (tenantId, data) => {
       data.name,
       ['sms', 'email', 'both'].includes(data.channel) ? data.channel : 'sms',
       JSON.stringify(data.schedule || []),
-      JSON.stringify(normalizeAudienceFilter(data.audienceFilter)),
+      JSON.stringify(normalizeAudienceFilter(data.audienceFilter, tenantId)),
     ],
   );
   return formatTemplate(result.rows[0]);
@@ -776,7 +776,7 @@ const formatTemplate = (row) => ({
   name: row.name,
   channel: row.channel || 'sms',
   schedule: row.schedule || [],
-  audienceFilter: normalizeAudienceFilter(row.audience_filter),
+  audienceFilter: normalizeAudienceFilter(row.audience_filter, row.tenant_id),
   createdAt: row.created_at,
 });
 

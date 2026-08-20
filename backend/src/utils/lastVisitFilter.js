@@ -1,3 +1,5 @@
+const { isSluiceTenant } = require('../config/sluiceTenant');
+
 /** Allowed last-visit audience / contact filter presets. */
 const LAST_VISIT_PRESETS = new Set([
   '30d', '60d', '90d', '120d', '180d', '365d',
@@ -8,10 +10,15 @@ const LAST_VISIT_PRESETS = new Set([
   'older90d',
 ]);
 
-const normalizeLastVisitPreset = (value) => {
+/** Positive “visited within” presets allowed only for Sluice Drip Spa campaigns. */
+const SLUICE_TENANT_VISIT_PRESETS = new Set(['730d']);
+
+const normalizeLastVisitPreset = (value, tenantId = null) => {
   if (!value || typeof value !== 'string') return null;
   const v = value.trim();
-  return LAST_VISIT_PRESETS.has(v) ? v : null;
+  if (LAST_VISIT_PRESETS.has(v)) return v;
+  if (SLUICE_TENANT_VISIT_PRESETS.has(v) && isSluiceTenant(tenantId)) return v;
+  return null;
 };
 
 /**
@@ -20,8 +27,8 @@ const normalizeLastVisitPreset = (value) => {
  * @param {string|null|undefined} lastVisit
  * @param {string} [column='last_visit_at'] — use effective_last_at for campaign CTE audiences
  */
-const appendLastVisitCondition = (conditions, lastVisit, column = 'last_visit_at') => {
-  const preset = normalizeLastVisitPreset(lastVisit);
+const appendLastVisitCondition = (conditions, lastVisit, column = 'last_visit_at', tenantId = null) => {
+  const preset = normalizeLastVisitPreset(lastVisit, tenantId);
   if (!preset) return;
 
   if (preset === 'none') {
@@ -41,6 +48,7 @@ const appendLastVisitCondition = (conditions, lastVisit, column = 'last_visit_at
 
 module.exports = {
   LAST_VISIT_PRESETS,
+  SLUICE_TENANT_VISIT_PRESETS,
   normalizeLastVisitPreset,
   appendLastVisitCondition,
 };

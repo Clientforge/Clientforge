@@ -18,12 +18,37 @@ export const LAST_VISIT_OPTIONS = [
   { value: 'none', label: 'No visit on file' },
 ];
 
+/** Sluice Drip Spa only — positive “visited within 2 years”. */
+export const SLUICE_CAMPAIGN_LAST_VISIT_OPTIONS = [
+  { value: '730d', label: 'Visited in last 2 years' },
+];
+
 const LABEL_BY_VALUE = Object.fromEntries(
-  LAST_VISIT_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label]),
+  [
+    ...LAST_VISIT_OPTIONS,
+    ...SLUICE_CAMPAIGN_LAST_VISIT_OPTIONS,
+  ].filter((o) => o.value).map((o) => [o.value, o.label]),
 );
 
 /** @deprecated legacy Contacts preset */
 LABEL_BY_VALUE.older90d = 'Not visited in 90+ days';
+
+/** Campaign single-rule options; Sluice gets extra positive 2-year preset. */
+export function getCampaignLastVisitOptions({ isSluice = false } = {}) {
+  if (!isSluice) {
+    return LAST_VISIT_OPTIONS.filter((opt) => opt.value !== '');
+  }
+  const positive = LAST_VISIT_OPTIONS.filter(
+    (opt) => opt.value && !opt.value.startsWith('not') && opt.value !== 'none',
+  );
+  const sluiceExtra = SLUICE_CAMPAIGN_LAST_VISIT_OPTIONS.filter(
+    (opt) => !positive.some((p) => p.value === opt.value),
+  );
+  const inactive = LAST_VISIT_OPTIONS.filter(
+    (opt) => opt.value.startsWith('not') || opt.value === 'none',
+  );
+  return [...positive, ...sluiceExtra, ...inactive];
+}
 
 export function formatLastVisitLabel(lastVisit) {
   if (!lastVisit) return null;
