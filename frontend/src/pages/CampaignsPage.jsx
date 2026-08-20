@@ -11,6 +11,7 @@ import {
   getVisitFilterMode,
   normalizeVisitWindowForForm,
   NOT_VISITED_WITHIN_OPTIONS,
+  SLUICE_ALL_VISITORS_2YR,
   VISITED_WITHIN_OPTIONS,
 } from '../utils/visitWindowFilter';
 import WinBackRetentionPanel from '../components/WinBackRetentionPanel';
@@ -51,14 +52,16 @@ function buildAudienceFilter({
       notVisitedWithinDays: visitWindow.notVisitedWithinDays,
       source: visitWindow.source === 'appointments' ? 'appointments' : 'effective',
     };
+  } else if (visitFilterMode === 'visited2yr') {
+    out.lastVisit = '730d';
   } else if (visitFilterMode === 'simple' && lastVisit) {
     out.lastVisit = lastVisit;
   }
   return out;
 }
 
-function normalizeAudienceFilterForForm(filter) {
-  const mode = getVisitFilterMode(filter);
+function normalizeAudienceFilterForForm(filter, sluiceCampaign = false) {
+  const mode = getVisitFilterMode(filter, { sluiceCampaign });
   return buildAudienceFilter({
     tags: getAudienceTags(filter),
     lastVisit: filter?.lastVisit || '',
@@ -67,6 +70,14 @@ function normalizeAudienceFilterForForm(filter) {
       : null,
     visitFilterMode: mode,
   });
+}
+
+function defaultAudienceFilter(initialAudience, sluiceCampaign) {
+  if (initialAudience) return normalizeAudienceFilterForForm(initialAudience, sluiceCampaign);
+  if (sluiceCampaign) {
+    return buildAudienceFilter({ visitFilterMode: 'visited2yr', lastVisit: '730d' });
+  }
+  return {};
 }
 
 function formatAudienceTagsLabel(filter) {
@@ -132,7 +143,7 @@ export default function CampaignsPage() {
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
   const handleLaunchWinBackCampaign = (audienceFilter) => {
-    setCreateAudience(normalizeAudienceFilterForForm(audienceFilter));
+    setCreateAudience(normalizeAudienceFilterForForm(audienceFilter, isSluiceTenant(tenant)));
     setShowCreate(true);
   };
 
@@ -814,15 +825,16 @@ const START_MODE = { scratch: 'scratch', copy: 'copy', template: 'template' };
 function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
   const { tenant } = useAuth();
   const clinicTimezone = tenant?.timezone || 'America/New_York';
-  const sluiceTenant = isSluiceTenant(tenant?.id);
-  const campaignLastVisitOptions = getCampaignLastVisitOptions({ isSluice: sluiceTenant });
+  const sluiceTenant = isSluiceTenant(tenant);
+  const campaignLastVisitOptions = getCampaignLastVisitOptions({ isSluice: sluiceTenant })
+    .filter((opt) => opt.value !== SLUICE_ALL_VISITORS_2YR);
   const [startMode, setStartMode] = useState(null);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState({
     name: '',
     channel: 'sms',
     schedule: [],
-    audienceFilter: initialAudience ? normalizeAudienceFilterForForm(initialAudience) : {},
+    audienceFilter: defaultAudienceFilter(initialAudience, sluiceTenant),
   });
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -837,12 +849,13 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
   const [audiencePreviewOpen, setAudiencePreviewOpen] = useState(false);
 
   const selectedAudienceTags = getAudienceTags(form.audienceFilter);
-  const visitFilterMode = getVisitFilterMode(form.audienceFilter);
+  const visitFilterMode = getVisitFilterMode(form.audienceFilter, { sluiceCampaign: sluiceTenant });
   const visitWindow = normalizeVisitWindowForForm(form.audienceFilter?.visitWindow);
 
   const updateAudienceFilter = (patch) => {
     setForm((prev) => {
-      const mode = patch.visitFilterMode ?? getVisitFilterMode(prev.audienceFilter);
+      const mode = patch.visitFilterMode
+        ?? getVisitFilterMode(prev.audienceFilter, { sluiceCampaign: sluiceTenant });
       return {
         ...prev,
         audienceFilter: buildAudienceFilter({
@@ -867,6 +880,14 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
   };
 
   const setVisitFilterMode = (mode) => {
+    if (mode === 'visited2yr') {
+      updateAudienceFilter({
+        visitFilterMode: 'visited2yr',
+        lastVisit: SLUICE_ALL_VISITORS_2YR,
+        visitWindow: null,
+      });
+      return;
+    }
     if (mode === 'window') {
       updateAudienceFilter({
         visitFilterMode: 'window',
@@ -929,9 +950,9 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
     setWizardStep(2);
     setForm((prev) => ({
       ...prev,
-      audienceFilter: normalizeAudienceFilterForForm(initialAudience),
+      audienceFilter: normalizeAudienceFilterForForm(initialAudience, sluiceTenant),
     }));
-  }, [initialAudience]);
+  }, [initialAudience, sluiceTenant]);
 
   const loadCampaigns = async () => {
     try {
@@ -956,7 +977,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
         name: `${c.name} (Copy)`,
         channel: c.channel || 'sms',
         schedule: (c.schedule || []).map((w, i) => withDefaultSendTime({ ...w, step: i + 1 })),
-        audienceFilter: normalizeAudienceFilterForForm(c.audienceFilter),
+        audienceFilter: normalizeAudienceFilterForForm(c.audienceFilter, sluiceTenant),
       });
       setStartMode(START_MODE.copy);
       setWizardStep(2);
@@ -969,7 +990,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
       name: template.name,
       channel: template.channel || 'sms',
       schedule: (template.schedule || []).map((w, i) => withDefaultSendTime({ ...w, step: i + 1 })),
-      audienceFilter: normalizeAudienceFilterForForm(template.audienceFilter),
+      audienceFilter: normalizeAudienceFilterForForm(template.audienceFilter, sluiceTenant),
     });
     setStartMode(START_MODE.template);
     setWizardStep(2);
@@ -1279,8 +1300,17 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                 <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem' }}>Audience</h4>
                 <p className="hint" style={{ marginBottom: '0.75rem' }}>
                   Optional filters: narrow by tags and/or visit history. Tags match <strong>any</strong> selection.
-                  Use <strong>Visit window</strong> for lapsed customers (e.g. visited in 2 years but not in 3 months).
-                  Leave filters empty for everyone who can receive
+                  {sluiceTenant ? (
+                    <>
+                      {' '}For Sluice, choose <strong>All visitors in last 2 years</strong> to include recent
+                      visitors. Use <strong>Lapsed only</strong> to exclude anyone who visited in the last 3 months.
+                    </>
+                  ) : (
+                    <>
+                      {' '}Use <strong>Visit window</strong> for lapsed customers (e.g. visited in 2 years but not in 3 months).
+                    </>
+                  )}
+                  {' '}Leave filters empty for everyone who can receive
                   {form.channel === 'sms' && ' SMS (has phone)'}
                   {form.channel === 'email' && ' email (has address)'}
                   {form.channel === 'both' && ' both SMS and email (has phone and email)'}
@@ -1330,10 +1360,22 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                     onChange={(e) => setVisitFilterMode(e.target.value)}
                   >
                     <option value="none">Any last visit</option>
-                    <option value="simple">Single rule</option>
-                    <option value="window">Visit window (lapsed customers)</option>
+                    {sluiceTenant && (
+                      <option value="visited2yr">All visitors in last 2 years (includes recent)</option>
+                    )}
+                    <option value="simple">Other visit rule…</option>
+                    <option value="window">
+                      {sluiceTenant
+                        ? 'Lapsed only — visited in 2 years, not in last 3 months'
+                        : 'Visit window (lapsed customers)'}
+                    </option>
                   </select>
                 </div>
+                {visitFilterMode === 'visited2yr' && (
+                  <p className="hint" style={{ marginTop: '0.5rem' }}>
+                    Includes everyone with a visit in the last 2 years — including clients who came in the last 3 months.
+                  </p>
+                )}
                 {visitFilterMode === 'simple' && (
                   <div className="form-group" style={{ marginTop: '0.75rem' }}>
                     <label htmlFor="campaign-last-visit-filter">Last visit rule</label>
@@ -1391,8 +1433,8 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                       <span>Use booked appointments only (ignore import notes)</span>
                     </label>
                     <p className="hint" style={{ marginTop: '0.5rem' }}>
-                      Example: visited within 2 years but not in the last 3 months targets clients who were
-                      active recently but have gone quiet — not people inactive for years.
+                      Lapsed clients only: visited within the outer window but not recently (e.g. 2 years ago
+                      up to 3 months ago). Recent visitors are excluded.
                     </p>
                   </div>
                 )}

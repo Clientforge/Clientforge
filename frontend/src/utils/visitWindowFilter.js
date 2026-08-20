@@ -22,8 +22,12 @@ export const DEFAULT_VISIT_WINDOW = {
   source: 'effective',
 };
 
-export function getVisitFilterMode(filter) {
+/** Sluice campaign preset — all visitors with a visit in the last 730 days. */
+export const SLUICE_ALL_VISITORS_2YR = '730d';
+
+export function getVisitFilterMode(filter, { sluiceCampaign = false } = {}) {
   if (filter?.visitWindow) return 'window';
+  if (sluiceCampaign && filter?.lastVisit === SLUICE_ALL_VISITORS_2YR) return 'visited2yr';
   if (filter?.lastVisit) return 'simple';
   return 'none';
 }
