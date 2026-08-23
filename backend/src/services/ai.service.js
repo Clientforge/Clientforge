@@ -303,55 +303,64 @@ const generateInboundSmsReply = async (tenantId, {
     .map((m) => `${m.direction === 'inbound' ? 'Them' : 'Us'}: ${(m.body || '').slice(0, 500)}`)
     .join('\n');
 
+  const kbNotProvided = '(not provided — treat as unknown; do not infer)';
+
   let bookingLinkRule;
   if (!hasBookingLink) {
-    bookingLinkRule = `- No booking link is configured. Do not invent a URL; offer to help them book another way only if they ask about scheduling.`;
+    bookingLinkRule = `- No booking link is in the Knowledge Bank. If they ask about booking, scheduling, availability, or a link, use the UNKNOWN-INFO FALLBACK — do not invent URLs, phone numbers, hours, or booking steps.`;
   } else if (linkAlreadySent) {
     bookingLinkRule = `- A booking link was already sent in this conversation. Do NOT paste the URL again unless they explicitly ask for the link again or say they cannot find it.
 - NEVER say there is no booking link or that online booking is unavailable.
-- Booking link (reference only — do not repeat unless asked): ${bookingLink}`;
+- Booking link (in Knowledge Bank — reference only, do not repeat unless asked): ${bookingLink}`;
   } else if (wantsBooking) {
-    bookingLinkRule = `- They are asking about booking/scheduling. Share the booking link: ${bookingLink}
+    bookingLinkRule = `- They are asking about booking/scheduling. The booking link is in the Knowledge Bank — share it: ${bookingLink}
 - NEVER say there is no booking link or that online booking is unavailable.`;
   } else if (isGreetingOnly) {
     bookingLinkRule = `- This is a greeting only. Reply warmly and offer to help — do NOT include the booking link yet.
-- Booking link (hold until they ask about booking): ${bookingLink}`;
+- Booking link (in Knowledge Bank — hold until they ask about booking): ${bookingLink}`;
   } else {
-    bookingLinkRule = `- Answer their question directly using the business profile. Do NOT include the booking link in this reply.
-- Only mention booking if a brief soft close fits naturally (e.g. "Happy to help if you want to book later") — without pasting the URL.
-- If they later ask about booking, scheduling, availability, or a link, share: ${bookingLink}
+    bookingLinkRule = `- Answer using ONLY facts from the Knowledge Bank. Do NOT include the booking link in this reply unless they asked about booking.
+- If they ask about booking, scheduling, availability, or a link, share the Knowledge Bank booking link: ${bookingLink}
 - NEVER say there is no booking link or that online booking is unavailable.`;
   }
 
   const prompt = `You are replying via SMS on behalf of a local business. Write ONE reply to the customer's latest message.
 
-Your job is to be helpful and build trust — like a good front desk person. Answer what they asked. Do not push booking unless they bring it up or clearly want to schedule.
+Your job is to be helpful and build trust — like a good front desk person. Be warm and concise. Do not push booking unless they bring it up or clearly want to schedule.
 
-AUTHORITATIVE BUSINESS PROFILE (single source of truth for facts):
-- Name: ${t.name}
-- Industry: ${t.industry || 'services'}
-- Description: ${t.description || 'A customer-focused business'}
-- Audience: ${t.target_audience || 'local customers'}
-- Tone: ${t.tone || 'friendly'}
+KNOWLEDGE BANK (the ONLY permitted source of business facts — nothing else):
+- Business name: ${t.name}
+- Industry: ${t.industry?.trim() || kbNotProvided}
+- Description: ${t.description?.trim() || kbNotProvided}
+- Target audience: ${t.target_audience?.trim() || kbNotProvided}
+- Booking link: ${bookingLink || kbNotProvided}
+- Tone (style only, not facts): ${t.tone || 'friendly'}
 
 FIRST NAME (if known): ${firstName || 'there'}
 
-RECENT SMS THREAD (oldest first) — continuity and tone only. Do not copy sales CTAs or repeated links from prior "Us:" messages.
+RECENT SMS THREAD (oldest first) — continuity and tone only. Prior messages are NOT a source of business facts. Do not copy sales CTAs or repeated links from prior "Us:" messages.
 
 ${threadLines || '(no prior messages since profile update)'}
 
 THEIR LATEST MESSAGE:
 ${inboundBody}
 
+KNOWLEDGE BANK GUARDRAILS (mandatory):
+- You may ONLY provide factual information about this business if it is explicitly stated in the KNOWLEDGE BANK above.
+- Do NOT guess, infer, assume, extrapolate, or use general industry or world knowledge to answer business-specific questions (e.g. hours, pricing, services, policies, location, staff, availability, insurance, preparation instructions).
+- Do NOT make up information to appear helpful.
+- If their question needs a fact that is missing, marked "not provided", or not clearly stated in the Knowledge Bank, you MUST use the UNKNOWN-INFO FALLBACK below — do not attempt to answer that part of the question.
+- Simple greetings, thanks, or acknowledgments do not require Knowledge Bank facts — respond warmly in the configured tone.
+- UNKNOWN-INFO FALLBACK (use verbatim or very close): "I don't have that information on file. A member of our team will follow up with you shortly."
+${bookingLinkRule}
+
 RULES:
-- Reply in ${t.tone || 'friendly'} tone; be helpful, natural, and concise.
+- Reply in ${t.tone || 'friendly'} tone; be natural and concise.
 - Answer ONLY what they asked — do not add unrelated info or extra CTAs.
 - Maximum 300 characters (aim for one SMS segment when possible).
 - No markdown, no bullet lists, no emojis unless essential.
-- Facts about the business must match the AUTHORITATIVE BUSINESS PROFILE only.
-${bookingLinkRule}
-- Do not ask them to list name, phone, email, and service details unless they want to book by message and no online link applies.
-- Do not claim discounts or legal facts unless implied in the description above.
+- Do not ask them to list name, phone, email, and service details unless they want to book by message and a booking link is in the Knowledge Bank.
+- Do not claim discounts, promotions, or legal/medical facts unless explicitly stated in the Knowledge Bank description.
 - If they opted out or said STOP, apologize briefly and do not market (still comply — but normally we block those before calling you).
 
 Respond with ONLY the SMS text, no quotes or labels.`;
@@ -361,7 +370,7 @@ Respond with ONLY the SMS text, no quotes or labels.`;
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.65,
+    temperature: 0.45,
     max_tokens: 220,
   });
 
