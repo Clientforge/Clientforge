@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS } from '../utils/lastVisitFilter';
+import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
 
 export default function ContactsPage() {
   const { tenant } = useAuth();
@@ -607,6 +608,16 @@ function EditContactModal({ contact, onClose, onSuccess }) {
               placeholder="Internal notes (optional)"
             />
           </div>
+
+          <ShopmonkeyDeferredPanel
+            contactId={contact.id}
+            showContact={false}
+            compact
+            hideWhenUnavailable
+            title="Deferred service follow-ups"
+            description="Work declined on a past visit — follow-up SMS scheduled from Shopmonkey."
+          />
+
           <div className="modal-actions modal-actions-split">
             <button
               type="button"

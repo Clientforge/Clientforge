@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const shopmonkeyService = require('../services/shopmonkey.service');
+const shopmonkeyDeferredService = require('../services/shopmonkey-deferred.service');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 const db = require('../db/connection');
 
@@ -62,13 +63,45 @@ router.post('/test', async (req, res, next) => {
   }
 });
 
+router.get('/deferred-services/summary', async (req, res, next) => {
+  try {
+    const summary = await shopmonkeyDeferredService.getDeferredSummary(req.tenantId);
+    res.json(summary);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/deferred-services', async (req, res, next) => {
+  try {
+    const { contactId, status, page, limit } = req.query || {};
+    const result = await shopmonkeyDeferredService.listDeferredServices(req.tenantId, {
+      contactId: contactId || undefined,
+      status: status || undefined,
+      page,
+      limit,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/', async (req, res, next) => {
   try {
-    const { webhooksEnabled, webhookSecret, locationId } = req.body || {};
+    const {
+      webhooksEnabled,
+      webhookSecret,
+      locationId,
+      deferredFollowupEnabled,
+      deferredFollowupDays,
+    } = req.body || {};
     const status = await shopmonkeyService.updateSettings(req.tenantId, {
       webhooksEnabled,
       webhookSecret,
       locationId,
+      deferredFollowupEnabled,
+      deferredFollowupDays,
     });
     res.json(status);
   } catch (err) {

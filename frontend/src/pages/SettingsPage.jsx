@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
 
 const TIMEZONES = [
   'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
@@ -1073,11 +1074,15 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
   const [locationId, setLocationId] = useState(sm.locationId || '');
   const [webhookSecret, setWebhookSecret] = useState('');
   const [webhooksEnabled, setWebhooksEnabled] = useState(sm.webhooksEnabled !== false);
+  const [deferredFollowupEnabled, setDeferredFollowupEnabled] = useState(sm.deferredFollowupEnabled !== false);
+  const [deferredFollowupDays, setDeferredFollowupDays] = useState(sm.deferredFollowupDays || 3);
 
   useEffect(() => {
     setLocationId(sm.locationId || '');
     setWebhooksEnabled(sm.webhooksEnabled !== false);
-  }, [sm.locationId, sm.webhooksEnabled]);
+    setDeferredFollowupEnabled(sm.deferredFollowupEnabled !== false);
+    setDeferredFollowupDays(sm.deferredFollowupDays || 3);
+  }, [sm.locationId, sm.webhooksEnabled, sm.deferredFollowupEnabled, sm.deferredFollowupDays]);
 
   if (!sm.available) return null;
 
@@ -1138,6 +1143,8 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
         webhooksEnabled,
         webhookSecret: webhookSecret.trim() || undefined,
         locationId: locationId.trim() || null,
+        deferredFollowupEnabled,
+        deferredFollowupDays: Number(deferredFollowupDays) || 3,
       });
       setWebhookSecret('');
       await onReload();
@@ -1203,6 +1210,27 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
                 <span>Process Shopmonkey webhooks</span>
               </label>
             </div>
+            <div className="field field-checkbox">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={deferredFollowupEnabled}
+                  onChange={(e) => setDeferredFollowupEnabled(e.target.checked)}
+                />
+                <span>Send deferred service follow-up SMS</span>
+              </label>
+            </div>
+            <div className="field">
+              <label>Deferred follow-up delay (days after RO complete)</label>
+              <input
+                type="number"
+                min={1}
+                max={90}
+                value={deferredFollowupDays}
+                onChange={(e) => setDeferredFollowupDays(e.target.value)}
+                disabled={!deferredFollowupEnabled}
+              />
+            </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
               <button type="submit" className="btn-primary" disabled={busy === 'save'}>
                 {busy === 'save' ? 'Saving…' : 'Save'}
@@ -1215,6 +1243,11 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
               </button>
             </div>
           </form>
+
+          <ShopmonkeyDeferredPanel
+            enabled={sm.connected}
+            description="Declined or recommended work from completed repair orders. A follow-up SMS is scheduled automatically."
+          />
         </>
       ) : (
         <form onSubmit={connect} style={{ marginTop: 16 }}>

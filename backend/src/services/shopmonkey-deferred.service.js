@@ -303,6 +303,129 @@ async function syncDeferredServicesForCompletedOrder({
   };
 }
 
+const STATUS_LABELS = {
+  pending: 'Detected',
+  followup_scheduled: 'Follow-up scheduled',
+  followup_sent: 'Follow-up sent',
+};
+
+function formatDeferredRow(row) {
+  const contactName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.phone || 'Unknown';
+  return {
+    id: row.id,
+    contactId: row.contact_id,
+    contactName,
+    phone: row.phone || null,
+    serviceName: row.service_name,
+    vehicleLabel: row.vehicle_label || null,
+    deferredAt: row.deferred_at || null,
+    status: row.status,
+    statusLabel: STATUS_LABELS[row.status] || row.status,
+    followupScheduledAt: row.followup_scheduled_at || null,
+    followupJobStatus: row.followup_job_status || null,
+    followupMessage: row.followup_message || null,
+    shopmonkeyOrderId: row.shopmonkey_order_id || null,
+    createdAt: row.created_at,
+  };
+}
+
+async function listDeferredServices(tenantId, {
+  contactId,
+  status,
+  page = 1,
+  limit = 25,
+} = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 25, 1), 100);
+  const safePage = Math.max(Number(page) || 1, 1);
+  const offset = (safePage - 1) * safeLimit;
+
+  const conditions = ['d.tenant_id = $1'];
+  const params = [tenantId];
+  let idx = 2;
+
+  if (contactId) {
+    conditions.push(`d.contact_id = $${idx++}`);
+    params.push(contactId);
+  }
+
+  if (status) {
+    conditions.push(`d.status = $${idx++}`);
+    params.push(status);
+  }
+
+  const where = conditions.join(' AND ');
+
+  const [rowsResult, countResult] = await Promise.all([
+    db.query(
+      `SELECT d.*,
+              c.first_name, c.last_name, c.phone,
+              j.scheduled_at AS followup_scheduled_at,
+              j.status AS followup_job_status,
+              j.message_body AS followup_message
+       FROM shopmonkey_deferred_services d
+       JOIN contacts c ON c.id = d.contact_id
+       LEFT JOIN LATERAL (
+         SELECT scheduled_at, status, message_body
+         FROM appointment_workflow_jobs
+         WHERE tenant_id = d.tenant_id
+           AND contact_id = d.contact_id
+           AND appointment_id = d.appointment_id
+           AND job_type = $${idx}
+           AND status = 'pending'
+         ORDER BY scheduled_at ASC
+         LIMIT 1
+       ) j ON true
+       WHERE ${where}
+       ORDER BY COALESCE(d.deferred_at, d.created_at) DESC
+       LIMIT $${idx + 1} OFFSET $${idx + 2}`,
+      [...params, JOB_TYPE, safeLimit, offset],
+    ),
+    db.query(
+      `SELECT COUNT(*)::int AS total FROM shopmonkey_deferred_services d WHERE ${where}`,
+      params,
+    ),
+  ]);
+
+  const total = countResult.rows[0]?.total || 0;
+
+  return {
+    items: rowsResult.rows.map(formatDeferredRow),
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total,
+      totalPages: Math.ceil(total / safeLimit) || 1,
+    },
+  };
+}
+
+async function getDeferredSummary(tenantId) {
+  const [countsResult, settings] = await Promise.all([
+    db.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE status IN ('pending', 'followup_scheduled'))::int AS active,
+         COUNT(*) FILTER (WHERE status = 'followup_scheduled')::int AS scheduled,
+         COUNT(*) FILTER (WHERE status = 'followup_sent')::int AS sent
+       FROM shopmonkey_deferred_services
+       WHERE tenant_id = $1`,
+      [tenantId],
+    ),
+    getDeferredSettings(tenantId),
+  ]);
+
+  const row = countsResult.rows[0] || {};
+
+  return {
+    total: row.total || 0,
+    active: row.active || 0,
+    scheduled: row.scheduled || 0,
+    sent: row.sent || 0,
+    followupEnabled: settings.enabled,
+    followupDays: settings.followupDays,
+  };
+}
+
 async function markFollowupSent(tenantId, contactId, appointmentId) {
   await db.query(
     `UPDATE shopmonkey_deferred_services
@@ -318,9 +441,12 @@ async function markFollowupSent(tenantId, contactId, appointmentId) {
 module.exports = {
   JOB_TYPE,
   DEFAULT_FOLLOWUP_MESSAGE,
+  STATUS_LABELS,
   isDeferredFollowupEnabled,
   fetchDeferredServicesForCustomer,
   syncDeferredServicesForCompletedOrder,
+  listDeferredServices,
+  getDeferredSummary,
   markFollowupSent,
   formatServiceList,
   renderTemplate,

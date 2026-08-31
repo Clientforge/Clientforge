@@ -61,6 +61,7 @@ const JOB_TYPE_LABELS = {
   rebooking_followup_2: 'Rebooking (follow-up 2)',
   cancellation: 'Cancellation',
   reschedule: 'Reschedule',
+  deferred_service_followup: 'Deferred service follow-up',
 };
 
 const listAppointmentRecords = async (tenantId, { page = 1, limit = 20, status, search } = {}) => {

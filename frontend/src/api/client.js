@@ -18,7 +18,9 @@ const request = async (endpoint, options = {}) => {
       localStorage.removeItem('tenant');
       window.location.href = '/login';
     }
-    throw new Error(data.error || 'Request failed');
+    const err = new Error(data.error || 'Request failed');
+    err.status = res.status;
+    throw err;
   }
 
   return data;
