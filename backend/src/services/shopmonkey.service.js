@@ -10,6 +10,8 @@ const {
   normalizeCustomerContact,
   orderIsComplete,
   normalizeShopmonkeyWebhook,
+  normalizeOrderServiceList,
+  buildOrderServiceContext,
 } = require('../adapters/shopmonkey.adapter');
 
 const API_BASE = 'https://api.shopmonkey.cloud/v3';
@@ -297,6 +299,37 @@ async function syncCustomerFromWebhook(tenantId, customer) {
   return { action: 'customer_synced', contactId };
 }
 
+async function fetchOrderServices(apiKey, orderId) {
+  const result = await shopmonkeyFetch(`/order/${orderId}/service`, apiKey);
+  return normalizeOrderServiceList(result);
+}
+
+async function enrichOrderWithServices(order, apiKey) {
+  if (!apiKey || !order?.orderId) return order;
+
+  try {
+    const services = await fetchOrderServices(apiKey, order.orderId);
+    const context = buildOrderServiceContext(order.rawPayload || order, services);
+    return {
+      ...order,
+      serviceName: context.serviceName,
+      vehicleLabel: context.vehicleLabel,
+      performedServices: context.performedServices,
+      rawPayload: context.rawPayload,
+    };
+  } catch (err) {
+    console.warn('[SHOPMONKEY] Failed to fetch order services', order.orderId, err.message);
+    const vehicleLabel = order.vehicleLabel || null;
+    return {
+      ...order,
+      rawPayload: {
+        ...(order.rawPayload || {}),
+        shopmonkeyVehicleLabel: vehicleLabel,
+      },
+    };
+  }
+}
+
 async function upsertCompletedOrderAppointment(tenantId, contactId, order) {
   const contactRow = await db.query(
     'SELECT first_name, last_name, phone, email FROM contacts WHERE id = $1',
@@ -361,18 +394,19 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     return { action: 'order_recorded', contactId, complete: false };
   }
 
-  const result = await upsertCompletedOrderAppointment(tenantId, contactId, order);
+  const enrichedOrder = await enrichOrderWithServices(order, apiKey);
+  const result = await upsertCompletedOrderAppointment(tenantId, contactId, enrichedOrder);
 
   const tenantName = await getTenantName(tenantId);
   const deferred = await shopmonkeyDeferredService.syncDeferredServicesForCompletedOrder({
     tenantId,
     tenantName,
     contactId,
-    customerId: order.customerId,
-    orderId: order.orderId,
+    customerId: enrichedOrder.customerId,
+    orderId: enrichedOrder.orderId,
     appointmentId: result.appointmentId,
     apiKey,
-    completedAt: order.scheduledAt,
+    completedAt: enrichedOrder.scheduledAt,
   });
 
   return {
@@ -380,6 +414,9 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     contactId,
     appointmentId: result.appointmentId,
     eventType: result.eventType,
+    serviceName: enrichedOrder.serviceName,
+    vehicleLabel: enrichedOrder.vehicleLabel || null,
+    performedServiceCount: enrichedOrder.performedServices?.length || 0,
     deferred,
   };
 }
@@ -497,6 +534,50 @@ async function handleWebhook(tenantId, rawBody, headers, body) {
   }
 }
 
+async function refreshAppointmentServiceNames(tenantId) {
+  const apiKey = await getApiKey(tenantId);
+  if (!apiKey) {
+    throw Object.assign(new Error('Shopmonkey is not connected'), { statusCode: 400, isOperational: true });
+  }
+
+  const result = await db.query(
+    `SELECT id, external_id, raw_payload, service_name
+     FROM appointments
+     WHERE tenant_id = $1 AND provider = 'shopmonkey' AND status = 'completed'
+     ORDER BY scheduled_at DESC`,
+    [tenantId],
+  );
+
+  let updated = 0;
+  for (const row of result.rows) {
+    const orderId = String(row.external_id || '').replace(/^shopmonkey:order:/, '');
+    if (!orderId) continue;
+
+    try {
+      const services = await fetchOrderServices(apiKey, orderId);
+      const orderPayload = row.raw_payload && typeof row.raw_payload === 'object'
+        ? row.raw_payload
+        : {};
+      const context = buildOrderServiceContext(orderPayload, services);
+
+      await db.query(
+        `UPDATE appointments
+         SET service_name = $2,
+             raw_payload = $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [row.id, context.serviceName, JSON.stringify(context.rawPayload)],
+      );
+
+      if (context.serviceName !== row.service_name) updated += 1;
+    } catch (err) {
+      console.warn('[SHOPMONKEY] Refresh failed for appointment', row.id, err.message);
+    }
+  }
+
+  return { scanned: result.rows.length, updated };
+}
+
 async function testConnection(tenantId) {
   const apiKey = await getApiKey(tenantId);
   if (!apiKey) {
@@ -516,4 +597,7 @@ module.exports = {
   testConnection,
   verifyApiKey,
   orderIsComplete,
+  refreshAppointmentServiceNames,
+  fetchOrderServices,
+  enrichOrderWithServices,
 };

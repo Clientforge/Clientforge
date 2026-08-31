@@ -275,27 +275,35 @@ const updateBookingEmailAliases = async (tenantId, aliases) => {
   return getBookingEmailSetup(tenantId);
 };
 
-const mapAppointmentRow = (row) => ({
-  id: row.id,
-  externalId: row.external_id,
-  provider: row.provider,
-  status: row.status,
-  scheduledAt: row.scheduled_at,
-  timezone: row.timezone,
-  serviceName: row.service_name,
-  matchedServiceId: row.matched_service_id,
-  matchedServiceName: row.matched_service_name || null,
-  matchedReturnIntervalDays: row.matched_return_interval_days ?? null,
-  durationMinutes: row.duration_minutes,
-  createdAt: row.created_at,
-  contactId: row.contact_id,
-  contactName: [row.first_name, row.last_name].filter(Boolean).join(' ') || 'Unknown',
-  contactPhone: row.phone,
-  contactEmail: row.email,
-  jobCount: row.job_count ?? 0,
-  sentCount: row.sent_count ?? 0,
-  pendingCount: row.pending_count ?? 0,
-});
+const mapAppointmentRow = (row) => {
+  const rawPayload = row.raw_payload && typeof row.raw_payload === 'object'
+    ? row.raw_payload
+    : null;
+
+  return {
+    id: row.id,
+    externalId: row.external_id,
+    provider: row.provider,
+    status: row.status,
+    scheduledAt: row.scheduled_at,
+    timezone: row.timezone,
+    serviceName: row.service_name,
+    vehicleLabel: rawPayload?.shopmonkeyVehicleLabel || rawPayload?.generatedVehicleName || null,
+    shopmonkeyServices: rawPayload?.shopmonkeyServices || [],
+    matchedServiceId: row.matched_service_id,
+    matchedServiceName: row.matched_service_name || null,
+    matchedReturnIntervalDays: row.matched_return_interval_days ?? null,
+    durationMinutes: row.duration_minutes,
+    createdAt: row.created_at,
+    contactId: row.contact_id,
+    contactName: [row.first_name, row.last_name].filter(Boolean).join(' ') || 'Unknown',
+    contactPhone: row.phone,
+    contactEmail: row.email,
+    jobCount: row.job_count ?? 0,
+    sentCount: row.sent_count ?? 0,
+    pendingCount: row.pending_count ?? 0,
+  };
+};
 
 const mapJobRow = (row) => ({
   id: row.id,

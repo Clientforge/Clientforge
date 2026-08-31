@@ -1134,6 +1134,19 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
     }
   };
 
+  const refreshServiceNames = async () => {
+    setBusy('refresh');
+    setMsg('');
+    try {
+      const result = await api.post('/integrations/shopmonkey/refresh-service-names');
+      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.`);
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const saveSettings = async (e) => {
     e.preventDefault();
     setBusy('save');
@@ -1237,6 +1250,9 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
               </button>
               <button type="button" className="btn-sm" onClick={testConnection} disabled={!!busy}>
                 {busy === 'test' ? 'Testing…' : 'Test API key'}
+              </button>
+              <button type="button" className="btn-sm" onClick={refreshServiceNames} disabled={!!busy}>
+                {busy === 'refresh' ? 'Refreshing…' : 'Refresh service names'}
               </button>
               <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
                 Disconnect

@@ -240,6 +240,15 @@ function AppointmentTimeline({ detail, onRefresh }) {
       <div className="timeline-meta">
         <div><span className="muted">When</span> {formatDateTime(appointment.scheduledAt, appointment.timezone)}</div>
         <div><span className="muted">Service</span> {appointment.serviceName || '—'}</div>
+        {appointment.vehicleLabel && (
+          <div><span className="muted">Vehicle</span> {appointment.vehicleLabel}</div>
+        )}
+        {appointment.shopmonkeyServices?.length > 1 && (
+          <div>
+            <span className="muted">Line items</span>{' '}
+            {appointment.shopmonkeyServices.map((s) => s.name).join(', ')}
+          </div>
+        )}
         {appointment.matchedServiceName && (
           <div>
             <span className="muted">Matched</span>{' '}

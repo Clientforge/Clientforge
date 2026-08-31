@@ -54,10 +54,78 @@ const orderIsComplete = (order) => {
   return false;
 };
 
+const extractOrderVehicleLabel = (order) => {
+  if (!order) return null;
+  const label = order.generatedVehicleName || order.vehicle?.generatedName || null;
+  return label ? String(label).trim() : null;
+};
+
+const isPerformedOrderService = (service) => {
+  if (!service?.name || !String(service.name).trim()) return false;
+  if (service.hidden === true) return false;
+  const status = String(service.authorizationStatus || '').toLowerCase();
+  if (status.includes('declin')) return false;
+  return true;
+};
+
+const normalizeOrderServiceItem = (item) => {
+  if (!item?.id || !item?.name) return null;
+  return {
+    id: String(item.id),
+    name: String(item.name).trim(),
+    authorizationStatus: item.authorizationStatus || null,
+    completed: item.completed === true,
+    recommended: item.recommended === true,
+    hidden: item.hidden === true,
+    rawPayload: item,
+  };
+};
+
+const normalizeOrderServiceList = (response) => {
+  const rows = Array.isArray(response?.data)
+    ? response.data
+    : (Array.isArray(response) ? response : []);
+  return rows.map(normalizeOrderServiceItem).filter(Boolean);
+};
+
+const formatOrderServiceName = (services, order = {}) => {
+  const names = (services || [])
+    .map((s) => s.name)
+    .filter(Boolean);
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  if (names.length > 2) return `${names[0]}, ${names[1]}, and others`;
+
+  const fallback = order.name || order.coalescedName || order.generatedName || null;
+  return fallback ? String(fallback).trim() : 'Service visit';
+};
+
+const buildOrderServiceContext = (order, services = []) => {
+  const performed = services.filter(isPerformedOrderService);
+  const vehicleLabel = extractOrderVehicleLabel(order);
+  const serviceName = formatOrderServiceName(performed, order);
+
+  return {
+    serviceName,
+    vehicleLabel,
+    performedServices: performed,
+    rawPayload: {
+      ...order,
+      shopmonkeyVehicleLabel: vehicleLabel,
+      shopmonkeyServices: performed.map((s) => ({
+        id: s.id,
+        name: s.name,
+        authorizationStatus: s.authorizationStatus,
+      })),
+    },
+  };
+};
+
 const normalizeOrderEvent = (order, operation) => {
   if (!order?.id) return null;
   const complete = orderIsComplete(order);
   const scheduledAt = order.completedDate || order.invoicedDate || order.orderCreatedDate || order.createdDate;
+  const vehicleLabel = extractOrderVehicleLabel(order);
 
   return {
     kind: 'order',
@@ -66,7 +134,8 @@ const normalizeOrderEvent = (order, operation) => {
     customerId: order.customerId || null,
     vehicleId: order.vehicleId || null,
     isComplete: complete,
-    serviceName: order.name || order.coalescedName || order.generatedVehicleName || 'Service visit',
+    serviceName: formatOrderServiceName([], order),
+    vehicleLabel,
     scheduledAt,
     revenueCents: order.totalCostCents ?? order.paidCostCents ?? null,
     externalId: `${PROVIDER}:order:${order.id}`,
@@ -178,6 +247,12 @@ module.exports = {
   normalizeShopmonkeyWebhook,
   normalizeCustomerContact,
   orderIsComplete,
+  extractOrderVehicleLabel,
+  isPerformedOrderService,
+  normalizeOrderServiceItem,
+  normalizeOrderServiceList,
+  formatOrderServiceName,
+  buildOrderServiceContext,
   normalizeDeferredServiceItem,
   normalizeDeferredServiceList,
   shouldIncludeDeferredService,

@@ -63,6 +63,15 @@ router.post('/test', async (req, res, next) => {
   }
 });
 
+router.post('/refresh-service-names', async (req, res, next) => {
+  try {
+    const result = await shopmonkeyService.refreshAppointmentServiceNames(req.tenantId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/deferred-services/summary', async (req, res, next) => {
   try {
     const summary = await shopmonkeyDeferredService.getDeferredSummary(req.tenantId);
