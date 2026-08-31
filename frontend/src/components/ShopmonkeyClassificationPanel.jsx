@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import api from '../api';
+import { api } from '../api/client';
 
 function formatIntervalDays(days) {
   if (days === 60) return '2 months';
