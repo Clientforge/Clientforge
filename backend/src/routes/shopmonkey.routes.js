@@ -129,6 +129,19 @@ router.get('/service-mappings', async (req, res, next) => {
   }
 });
 
+router.put('/master-categories', async (req, res, next) => {
+  try {
+    const { categories, maintenanceReminderEnabled } = req.body || {};
+    const result = await autoShopClassification.updateMasterCategories(req.tenantId, {
+      categories,
+      maintenanceReminderEnabled,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/', async (req, res, next) => {
   try {
     const {
@@ -136,12 +149,14 @@ router.put('/', async (req, res, next) => {
       webhookSecret,
       locationId,
       deferredFollowupEnabled,
+      maintenanceReminderEnabled,
     } = req.body || {};
     const status = await shopmonkeyService.updateSettings(req.tenantId, {
       webhooksEnabled,
       webhookSecret,
       locationId,
       deferredFollowupEnabled,
+      maintenanceReminderEnabled,
     });
     res.json(status);
   } catch (err) {

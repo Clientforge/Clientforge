@@ -66,6 +66,8 @@ const mapCategoryRow = (row) => ({
   name: row.name,
   followUpIntervalDays: row.follow_up_interval_days,
   sortOrder: row.sort_order ?? 0,
+  reminderEnabled: row.reminder_enabled !== false,
+  reminderMessage: row.reminder_message || '',
 });
 
 const mapMappingRow = (row) => ({
@@ -391,13 +393,95 @@ async function listMasterCategories(tenantId) {
   }
   await ensureMasterCategories(tenantId);
   const result = await db.query(
-    `SELECT id, slug, name, follow_up_interval_days, sort_order
+    `SELECT id, slug, name, follow_up_interval_days, sort_order,
+            reminder_enabled, reminder_message
      FROM auto_shop_master_categories
      WHERE tenant_id = $1
      ORDER BY sort_order ASC, name ASC`,
     [tenantId],
   );
   return { categories: result.rows.map(mapCategoryRow), enabled: true };
+}
+
+async function updateMasterCategories(tenantId, { categories = [], maintenanceReminderEnabled } = {}) {
+  if (!(await isClassificationEnabled(tenantId))) {
+    throw Object.assign(new Error('Service classification is not enabled for this account'), {
+      statusCode: 403,
+      isOperational: true,
+    });
+  }
+
+  await ensureMasterCategories(tenantId);
+
+  if (maintenanceReminderEnabled !== undefined) {
+    await db.query(
+      `UPDATE tenant_shopmonkey_connections
+       SET maintenance_reminder_enabled = $2, updated_at = NOW()
+       WHERE tenant_id = $1`,
+      [tenantId, !!maintenanceReminderEnabled],
+    );
+  }
+
+  for (const cat of categories) {
+    if (!cat?.id) continue;
+    const interval = cat.followUpIntervalDays == null || cat.followUpIntervalDays === ''
+      ? null
+      : Number(cat.followUpIntervalDays);
+    if (interval != null && (!Number.isFinite(interval) || interval <= 0)) {
+      throw Object.assign(new Error(`Invalid interval for ${cat.name || 'category'}`), {
+        statusCode: 400,
+        isOperational: true,
+      });
+    }
+
+    const sets = ['updated_at = NOW()'];
+    const params = [tenantId, cat.id];
+    let idx = 3;
+
+    if (interval != null) {
+      sets.push(`follow_up_interval_days = $${idx++}`);
+      params.push(interval);
+    }
+    if (cat.reminderEnabled !== undefined) {
+      sets.push(`reminder_enabled = $${idx++}`);
+      params.push(cat.reminderEnabled !== false);
+    }
+    if (cat.reminderMessage !== undefined) {
+      sets.push(`reminder_message = $${idx++}`);
+      params.push(cat.reminderMessage || null);
+    }
+
+    if (sets.length === 1) continue;
+
+    await db.query(
+      `UPDATE auto_shop_master_categories SET ${sets.join(', ')} WHERE tenant_id = $1 AND id = $2`,
+      params,
+    );
+  }
+
+  return listMasterCategories(tenantId);
+}
+
+async function getAutoShopServicesForAutomations(tenantId) {
+  const tenantRow = await db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]);
+  const tenantName = tenantRow.rows[0]?.name || '';
+  if (!(await isClassificationEnabled(tenantId, tenantName))) {
+    return null;
+  }
+
+  const categoriesResult = await listMasterCategories(tenantId);
+  const settings = await db.query(
+    `SELECT maintenance_reminder_enabled
+     FROM tenant_shopmonkey_connections
+     WHERE tenant_id = $1`,
+    [tenantId],
+  );
+
+  return {
+    mode: 'auto_shop',
+    maintenanceReminderEnabled: settings.rows[0]?.maintenance_reminder_enabled !== false,
+    categories: categoriesResult.categories,
+  };
 }
 
 async function listServiceMappings(tenantId, { page = 1, limit = 50 } = {}) {
@@ -449,5 +533,7 @@ module.exports = {
   ensureMasterCategories,
   listMasterCategories,
   listServiceMappings,
+  updateMasterCategories,
+  getAutoShopServicesForAutomations,
   isClassificationEnabled,
 };

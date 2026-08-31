@@ -1,38 +1,20 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 
-const TEMPLATE_VARS = ['{firstName}', '{lastName}', '{serviceName}', '{businessName}', '{bookingLink}'];
+const TEMPLATE_VARS = ['{firstName}', '{categoryName}', '{serviceList}', '{serviceName}', '{businessName}', '{bookingLink}'];
 
-function countAliases(service) {
-  const text = service.aliasesText ?? (service.aliases || []).join(', ');
-  if (!text.trim()) return 0;
-  return text.split(',').map((a) => a.trim()).filter(Boolean).length;
+function daysToLabel(days) {
+  if (days === 60) return '2 months (60 days)';
+  if (days === 90) return '3 months (90 days)';
+  if (days === 180) return '6 months (180 days)';
+  return `${days} days`;
 }
-
-function countEnabledFollowUps(service) {
-  return (service.followUpCampaigns || []).filter((step) => step.enabled !== false && step.intervalDays).length;
-}
-
-const emptyService = () => ({
-  name: '',
-  aliases: [],
-  aliasesText: '',
-  returnIntervalDays: 28,
-  rebookingEnabled: true,
-  rebookMessage: '',
-  followUpCampaigns: [],
-  notes: '',
-});
-
-const emptyFollowUpStep = () => ({
-  id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-  enabled: true,
-  intervalDays: 28,
-  message: 'Hi {firstName}! Ready to schedule your next {serviceName} at {businessName}? {bookingLink}',
-});
 
 export default function ServicesPanel() {
+  const [mode, setMode] = useState('standard');
   const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [maintenanceReminderEnabled, setMaintenanceReminderEnabled] = useState(true);
   const [serviceFollowupCampaignsEnabled, setServiceFollowupCampaignsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,12 +26,19 @@ export default function ServicesPanel() {
     setError('');
     try {
       const data = await api.get('/automations/services');
-      setServiceFollowupCampaignsEnabled(!!data.serviceFollowupCampaignsEnabled);
-      setServices((data.services || []).map((s) => ({
-        ...s,
-        aliasesText: (s.aliases || []).join(', '),
-        followUpCampaigns: Array.isArray(s.followUpCampaigns) ? s.followUpCampaigns : [],
-      })));
+      if (data.mode === 'auto_shop') {
+        setMode('auto_shop');
+        setCategories(data.categories || []);
+        setMaintenanceReminderEnabled(data.maintenanceReminderEnabled !== false);
+      } else {
+        setMode('standard');
+        setServiceFollowupCampaignsEnabled(!!data.serviceFollowupCampaignsEnabled);
+        setServices((data.services || []).map((s) => ({
+          ...s,
+          aliasesText: (s.aliases || []).join(', '),
+          followUpCampaigns: Array.isArray(s.followUpCampaigns) ? s.followUpCampaigns : [],
+        })));
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,6 +47,150 @@ export default function ServicesPanel() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const updateCategory = (idx, field, value) => {
+    setCategories((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  };
+
+  const saveAutoShop = async () => {
+    setSaving(true);
+    setError('');
+    setSaved(false);
+    try {
+      const data = await api.put('/automations/services', {
+        mode: 'auto_shop',
+        maintenanceReminderEnabled,
+        categories: categories.map((cat) => ({
+          id: cat.id,
+          followUpIntervalDays: cat.followUpIntervalDays,
+          reminderEnabled: cat.reminderEnabled !== false,
+          reminderMessage: cat.reminderMessage || '',
+        })),
+      });
+      setCategories(data.categories || []);
+      setMaintenanceReminderEnabled(data.maintenanceReminderEnabled !== false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="page-loader">Loading services...</div>;
+
+  if (mode === 'auto_shop') {
+    return (
+      <div className="settings-card">
+        <div className="automation-section-header">
+          <div>
+            <h3>Master service categories</h3>
+            <p className="settings-desc">
+              Shopmonkey repair lines are classified into these categories on completed visits.
+              One maintenance reminder SMS is scheduled per category at the interval below.
+              Variables: {TEMPLATE_VARS.map((v) => <code key={v}>{v}</code>)}
+            </p>
+          </div>
+          {saved && <span className="save-badge">Saved</span>}
+        </div>
+
+        {error && <div className="error-msg">{error}</div>}
+
+        <div className="field field-checkbox" style={{ marginBottom: 16 }}>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={maintenanceReminderEnabled}
+              onChange={(e) => setMaintenanceReminderEnabled(e.target.checked)}
+            />
+            <span>Send maintenance reminder SMS after completed visits</span>
+          </label>
+        </div>
+
+        <div className="services-list">
+          {categories.map((cat, idx) => (
+            <div key={cat.id} className="service-row schedule-step">
+              <div className="step-header">
+                <span className="step-number">{cat.name}</span>
+                <label className="toggle-label step-toggle">
+                  <input
+                    type="checkbox"
+                    checked={cat.reminderEnabled !== false}
+                    onChange={(e) => updateCategory(idx, 'reminderEnabled', e.target.checked)}
+                    disabled={!maintenanceReminderEnabled}
+                  />
+                  <span className="toggle-slider" />
+                  Reminder SMS
+                </label>
+              </div>
+              <div className="field-row">
+                <div className="field" style={{ maxWidth: 160 }}>
+                  <label>Reminder after (days)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={cat.followUpIntervalDays ?? ''}
+                    onChange={(e) => updateCategory(idx, 'followUpIntervalDays', e.target.value)}
+                    disabled={!maintenanceReminderEnabled || cat.reminderEnabled === false}
+                  />
+                  <p className="field-hint">{daysToLabel(Number(cat.followUpIntervalDays) || 0)}</p>
+                </div>
+              </div>
+              <div className="field">
+                <label>Custom SMS message (optional)</label>
+                <textarea
+                  rows={2}
+                  value={cat.reminderMessage || ''}
+                  onChange={(e) => updateCategory(idx, 'reminderMessage', e.target.value)}
+                  placeholder="Hi {firstName}! Based on your recent visit to {businessName}, it's time to schedule your next {categoryName} service ({serviceList}). Book here: {bookingLink}"
+                  disabled={!maintenanceReminderEnabled || cat.reminderEnabled === false}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="settings-actions">
+          <button type="button" className="btn-primary" onClick={saveAutoShop} disabled={saving}>
+            {saving ? 'Saving...' : 'Save categories'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard med-spa / booking-email services panel (unchanged below)
+  const emptyService = () => ({
+    name: '',
+    aliases: [],
+    aliasesText: '',
+    returnIntervalDays: 28,
+    rebookingEnabled: true,
+    rebookMessage: '',
+    followUpCampaigns: [],
+    notes: '',
+  });
+
+  const emptyFollowUpStep = () => ({
+    id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    enabled: true,
+    intervalDays: 28,
+    message: 'Hi {firstName}! Ready to schedule your next {serviceName} at {businessName}? {bookingLink}',
+  });
+
+  const countAliases = (service) => {
+    const text = service.aliasesText ?? (service.aliases || []).join(', ');
+    if (!text.trim()) return 0;
+    return text.split(',').map((a) => a.trim()).filter(Boolean).length;
+  };
+
+  const countEnabledFollowUps = (service) =>
+    (service.followUpCampaigns || []).filter((step) => step.enabled !== false && step.intervalDays).length;
 
   const updateService = (idx, field, value) => {
     setServices((prev) => {
@@ -150,8 +283,6 @@ export default function ServicesPanel() {
       setSaving(false);
     }
   };
-
-  if (loading) return <div className="page-loader">Loading services...</div>;
 
   return (
     <div className="settings-card">
@@ -318,18 +449,16 @@ export default function ServicesPanel() {
                   )}
                 </div>
               ) : (
-                <>
-                  <div className="field">
-                    <label>Custom rebook message (optional)</label>
-                    <textarea
-                      rows={2}
-                      value={s.rebookMessage || ''}
-                      onChange={(e) => updateService(idx, 'rebookMessage', e.target.value)}
-                      placeholder="Hi {firstName}! Time for your {serviceName} at {businessName}: {bookingLink}"
-                      disabled={s.rebookingEnabled === false}
-                    />
-                  </div>
-                </>
+                <div className="field">
+                  <label>Custom rebook message (optional)</label>
+                  <textarea
+                    rows={2}
+                    value={s.rebookMessage || ''}
+                    onChange={(e) => updateService(idx, 'rebookMessage', e.target.value)}
+                    placeholder="Hi {firstName}! Time for your {serviceName} at {businessName}: {bookingLink}"
+                    disabled={s.rebookingEnabled === false}
+                  />
+                </div>
               )}
             </div>
           ))}

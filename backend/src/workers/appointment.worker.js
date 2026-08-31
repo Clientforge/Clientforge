@@ -4,6 +4,7 @@ const emailService = require('../services/email.service');
 const compliance = require('../services/compliance.service');
 const rebookingCampaign = require('../services/rebooking-campaign.service');
 const shopmonkeyDeferredService = require('../services/shopmonkey-deferred.service');
+const autoShopMaintenance = require('../services/auto-shop-maintenance.service');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
 
@@ -80,6 +81,25 @@ const processDueAppointmentJobs = async () => {
           );
           console.log(
             `[APPT-WORKER] Cancelled deferred sequence ${job.id} — contact booked a new appointment`,
+          );
+          continue;
+        }
+      }
+
+      if (autoShopMaintenance.isMaintenanceReminderJobType(job.job_type)) {
+        const booked = await rebookingCampaign.hasFutureBooking(
+          job.tenant_id,
+          job.contact_id,
+          { excludeAppointmentId: job.appointment_id },
+        );
+        if (booked) {
+          await autoShopMaintenance.cancelMaintenanceReminderJobs(
+            job.tenant_id,
+            job.contact_id,
+            job.appointment_id,
+          );
+          console.log(
+            `[APPT-WORKER] Skipped maintenance reminder ${job.id} — contact has a future appointment`,
           );
           continue;
         }

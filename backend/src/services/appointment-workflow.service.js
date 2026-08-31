@@ -6,6 +6,7 @@ const compliance = require('./compliance.service');
 const automationService = require('./appointment-automation.service');
 const tenantService = require('./tenant-service.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
+const autoShopMaintenance = require('./auto-shop-maintenance.service');
 const {
   DEFAULT_FOLLOWUP_MESSAGE,
   coercePositiveInt,
@@ -89,6 +90,7 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
 
   if (eventType === 'booking.created') {
     await rebookingCampaign.cancelRebookingJobsForContact(tenantId, contactId);
+    await autoShopMaintenance.cancelMaintenanceReminderJobsForContact(tenantId, contactId);
     await scheduleAutomationSteps(
       tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars,
       { categories: bookingCategories },

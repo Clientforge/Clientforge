@@ -7,6 +7,7 @@ const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
 const shopmonkeyDeferredService = require('./shopmonkey-deferred.service');
 const autoShopClassification = require('./auto-shop-classification.service');
+const autoShopMaintenance = require('./auto-shop-maintenance.service');
 const {
   normalizeCustomerContact,
   orderIsComplete,
@@ -40,6 +41,7 @@ function formatConnection(row) {
     deferredFollowupSchedule: shopmonkeyDeferredService.normalizeFollowupSchedule(
       row.deferred_followup_schedule,
     ),
+    maintenanceReminderEnabled: row.maintenance_reminder_enabled !== false,
   };
 }
 
@@ -139,6 +141,7 @@ async function updateSettings(tenantId, {
   webhookSecret,
   locationId,
   deferredFollowupEnabled,
+  maintenanceReminderEnabled,
 }) {
   const row = await getConnection(tenantId);
   if (!row) {
@@ -164,6 +167,10 @@ async function updateSettings(tenantId, {
   if (deferredFollowupEnabled !== undefined) {
     sets.push(`deferred_followup_enabled = $${idx++}`);
     params.push(!!deferredFollowupEnabled);
+  }
+  if (maintenanceReminderEnabled !== undefined) {
+    sets.push(`maintenance_reminder_enabled = $${idx++}`);
+    params.push(!!maintenanceReminderEnabled);
   }
 
   await db.query(
@@ -401,6 +408,16 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     services: enrichedOrder.performedServices || [],
   });
 
+  const maintenance = await autoShopMaintenance.scheduleMaintenanceReminders({
+    tenantId,
+    tenantName,
+    contactId,
+    appointmentId: result.appointmentId,
+    orderId: enrichedOrder.orderId,
+    classifications: classification.services || [],
+    referenceAt: enrichedOrder.scheduledAt,
+  });
+
   const deferred = await shopmonkeyDeferredService.syncDeferredServicesForCompletedOrder({
     tenantId,
     tenantName,
@@ -421,6 +438,7 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     vehicleLabel: enrichedOrder.vehicleLabel || null,
     performedServiceCount: enrichedOrder.performedServices?.length || 0,
     classification,
+    maintenance,
     deferred,
   };
 }
@@ -545,7 +563,7 @@ async function refreshAppointmentServiceNames(tenantId) {
   }
 
   const result = await db.query(
-    `SELECT id, external_id, raw_payload, service_name
+    `SELECT id, external_id, raw_payload, service_name, scheduled_at, completed_at
      FROM appointments
      WHERE tenant_id = $1 AND provider = 'shopmonkey' AND status = 'completed'
      ORDER BY scheduled_at DESC`,
@@ -554,6 +572,7 @@ async function refreshAppointmentServiceNames(tenantId) {
 
   let updated = 0;
   let classified = 0;
+  let maintenanceScheduled = 0;
   const tenantName = await getTenantName(tenantId);
 
   for (const row of result.rows) {
@@ -592,13 +611,27 @@ async function refreshAppointmentServiceNames(tenantId) {
           services: context.performedServices || [],
         });
         classified += classResult.classified || 0;
+
+        if (classResult.services?.length) {
+          const maintenanceResult = await autoShopMaintenance.scheduleMaintenanceReminders({
+            tenantId,
+            tenantName,
+            contactId,
+            appointmentId: row.id,
+            orderId,
+            classifications: classResult.services,
+            referenceAt: row.scheduled_at || row.completed_at,
+            forceReschedule: true,
+          });
+          if (maintenanceResult.scheduled) maintenanceScheduled += maintenanceResult.jobCount || 0;
+        }
       }
     } catch (err) {
       console.warn('[SHOPMONKEY] Refresh failed for appointment', row.id, err.message);
     }
   }
 
-  return { scanned: result.rows.length, updated, classified };
+  return { scanned: result.rows.length, updated, classified, maintenanceScheduled };
 }
 
 async function testConnection(tenantId) {

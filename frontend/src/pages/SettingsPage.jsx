@@ -1076,13 +1076,15 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
   const [webhookSecret, setWebhookSecret] = useState('');
   const [webhooksEnabled, setWebhooksEnabled] = useState(sm.webhooksEnabled !== false);
   const [deferredFollowupEnabled, setDeferredFollowupEnabled] = useState(sm.deferredFollowupEnabled !== false);
+  const [maintenanceReminderEnabled, setMaintenanceReminderEnabled] = useState(sm.maintenanceReminderEnabled !== false);
   const deferredFollowupSchedule = sm.deferredFollowupSchedule || [7, 14, 30, 60];
 
   useEffect(() => {
     setLocationId(sm.locationId || '');
     setWebhooksEnabled(sm.webhooksEnabled !== false);
     setDeferredFollowupEnabled(sm.deferredFollowupEnabled !== false);
-  }, [sm.locationId, sm.webhooksEnabled, sm.deferredFollowupEnabled, sm.deferredFollowupSchedule]);
+    setMaintenanceReminderEnabled(sm.maintenanceReminderEnabled !== false);
+  }, [sm.locationId, sm.webhooksEnabled, sm.deferredFollowupEnabled, sm.maintenanceReminderEnabled, sm.deferredFollowupSchedule]);
 
   if (!sm.available) return null;
 
@@ -1140,7 +1142,8 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
     try {
       const result = await api.post('/integrations/shopmonkey/refresh-service-names');
       const classifiedNote = result.classified != null ? ` Classified ${result.classified} service line(s).` : '';
-      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.${classifiedNote}`);
+      const maintenanceNote = result.maintenanceScheduled != null ? ` Scheduled ${result.maintenanceScheduled} maintenance reminder(s).` : '';
+      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.${classifiedNote}${maintenanceNote}`);
     } catch (err) {
       setMsg(err.message);
     } finally {
@@ -1175,6 +1178,7 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
         webhookSecret: webhookSecret.trim() || undefined,
         locationId: locationId.trim() || null,
         deferredFollowupEnabled,
+        maintenanceReminderEnabled,
       });
       setWebhookSecret('');
       await onReload();
@@ -1248,6 +1252,16 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
                   onChange={(e) => setDeferredFollowupEnabled(e.target.checked)}
                 />
                 <span>Send deferred service follow-up SMS</span>
+              </label>
+            </div>
+            <div className="field field-checkbox">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={maintenanceReminderEnabled}
+                  onChange={(e) => setMaintenanceReminderEnabled(e.target.checked)}
+                />
+                <span>Send maintenance reminder SMS (by master category)</span>
               </label>
             </div>
             <div className="field">

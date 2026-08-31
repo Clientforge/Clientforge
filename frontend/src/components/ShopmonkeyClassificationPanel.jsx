@@ -53,8 +53,8 @@ export default function ShopmonkeyClassificationPanel({ enabled = true }) {
     <div className="integration-block" style={{ marginTop: 24 }}>
       <h4>Service classification</h4>
       <p className="settings-desc">
-        Shopmonkey service lines are mapped to master categories. Each category sets a maintenance follow-up interval
-        (Phase 2 will schedule reminders from these — not active yet).
+        Shopmonkey service lines are mapped to master categories on completed visits.
+        Maintenance reminder SMS uses the intervals configured in Automations → Services.
       </p>
 
       {loading && <p className="settings-desc">Loading…</p>}

@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const appointmentWorkflowService = require('./appointment-workflow.service');
 const { formatJobTypeLabel } = require('./service-followup-campaign.service');
+const { isMaintenanceReminderJobType, slugFromJobType } = require('./auto-shop-maintenance.service');
 const { inboxEmail } = require('./bookingEmailIngest.service');
 const { normalizeBusinessName } = require('./bookingEmailParse.service');
 
@@ -309,10 +310,20 @@ const mapAppointmentRow = (row) => {
   };
 };
 
+const maintenanceJobTypeLabel = (jobType) => {
+  if (!isMaintenanceReminderJobType(jobType)) return null;
+  const slug = slugFromJobType(jobType);
+  if (!slug) return 'Maintenance reminder';
+  return `Maintenance reminder (${slug.replace(/_/g, ' ')})`;
+};
+
 const mapJobRow = (row) => ({
   id: row.id,
   jobType: row.job_type,
-  jobTypeLabel: JOB_TYPE_LABELS[row.job_type] || formatJobTypeLabel(row.job_type) || row.job_type,
+  jobTypeLabel: JOB_TYPE_LABELS[row.job_type]
+    || maintenanceJobTypeLabel(row.job_type)
+    || formatJobTypeLabel(row.job_type)
+    || row.job_type,
   channel: row.channel,
   messageBody: row.message_body,
   emailSubject: row.email_subject,

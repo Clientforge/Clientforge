@@ -5,6 +5,7 @@ const appointmentWorkflowService = require('../services/appointment-workflow.ser
 const birthdayCampaignService = require('../services/birthday-campaign.service');
 const dashboardService = require('../services/automation-dashboard.service');
 const tenantService = require('../services/tenant-service.service');
+const autoShopClassification = require('../services/auto-shop-classification.service');
 const aiService = require('../services/ai.service');
 const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
 
@@ -169,15 +170,27 @@ router.put('/birthday', async (req, res, next) => {
 
 router.get('/services', async (req, res, next) => {
   try {
+    const autoShop = await autoShopClassification.getAutoShopServicesForAutomations(req.tenantId);
+    if (autoShop) {
+      return res.json(autoShop);
+    }
     const result = await tenantService.listServicesWithMeta(req.tenantId);
-    res.json(result);
+    res.json({ mode: 'standard', ...result });
   } catch (err) { next(err); }
 });
 
 router.put('/services', async (req, res, next) => {
   try {
+    if (req.body?.mode === 'auto_shop' || Array.isArray(req.body?.categories)) {
+      const result = await autoShopClassification.updateMasterCategories(req.tenantId, {
+        categories: req.body.categories || [],
+        maintenanceReminderEnabled: req.body.maintenanceReminderEnabled,
+      });
+      const autoShop = await autoShopClassification.getAutoShopServicesForAutomations(req.tenantId);
+      return res.json(autoShop || result);
+    }
     const result = await tenantService.replaceServices(req.tenantId, req.body.services);
-    res.json(result);
+    res.json({ mode: 'standard', ...result });
   } catch (err) { next(err); }
 });
 
