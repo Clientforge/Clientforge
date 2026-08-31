@@ -3,6 +3,7 @@ const smsService = require('../services/sms.service');
 const emailService = require('../services/email.service');
 const compliance = require('../services/compliance.service');
 const rebookingCampaign = require('../services/rebooking-campaign.service');
+const shopmonkeyDeferredService = require('../services/shopmonkey-deferred.service');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
 
@@ -65,6 +66,24 @@ const processDueAppointmentJobs = async () => {
         }
       }
 
+      if (job.job_type === shopmonkeyDeferredService.JOB_TYPE) {
+        const booked = await rebookingCampaign.hasFutureBooking(
+          job.tenant_id,
+          job.contact_id,
+          { excludeAppointmentId: job.appointment_id },
+        );
+        if (booked) {
+          await db.query(
+            `UPDATE appointment_workflow_jobs SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
+            [job.id],
+          );
+          console.log(
+            `[APPT-WORKER] Skipped deferred follow-up ${job.id} — contact booked a new appointment`,
+          );
+          continue;
+        }
+      }
+
       if (job.channel === 'sms') {
         if (!job.phone || !job.message_body) {
           await db.query(
@@ -105,6 +124,15 @@ const processDueAppointmentJobs = async () => {
         `UPDATE appointment_workflow_jobs SET status = 'sent', sent_at = NOW() WHERE id = $1`,
         [job.id],
       );
+
+      if (job.job_type === shopmonkeyDeferredService.JOB_TYPE) {
+        await shopmonkeyDeferredService.markFollowupSent(
+          job.tenant_id,
+          job.contact_id,
+          job.appointment_id,
+        );
+      }
+
       sentCount++;
     } catch (err) {
       console.error(`[APPT-WORKER] Failed job ${job.id}:`, err.message);

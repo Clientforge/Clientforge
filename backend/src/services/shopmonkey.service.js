@@ -5,6 +5,7 @@ const { encrypt, decrypt } = require('../utils/tokenCrypto');
 const { normalizePhone } = require('./lead.service');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const shopmonkeyDeferredService = require('./shopmonkey-deferred.service');
 const {
   normalizeCustomerContact,
   orderIsComplete,
@@ -314,6 +315,11 @@ async function upsertCompletedOrderAppointment(tenantId, contactId, order) {
   return result;
 }
 
+async function getTenantName(tenantId) {
+  const result = await db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]);
+  return result.rows[0]?.name || '';
+}
+
 async function syncOrderFromWebhook(tenantId, order, apiKey) {
   const contactId = await resolveContactForShopmonkeyRecord(tenantId, order.customerId, apiKey);
   if (!contactId) {
@@ -338,12 +344,24 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
 
   const result = await upsertCompletedOrderAppointment(tenantId, contactId, order);
 
+  const tenantName = await getTenantName(tenantId);
+  const deferred = await shopmonkeyDeferredService.syncDeferredServicesForCompletedOrder({
+    tenantId,
+    tenantName,
+    contactId,
+    customerId: order.customerId,
+    orderId: order.orderId,
+    appointmentId: result.appointmentId,
+    apiKey,
+    completedAt: order.scheduledAt,
+  });
+
   return {
     action: 'order_completed',
     contactId,
     appointmentId: result.appointmentId,
     eventType: result.eventType,
-    note: 'Post-service/review automations wired in Phase 2',
+    deferred,
   };
 }
 

@@ -7,7 +7,14 @@
 const {
   normalizeShopmonkeyWebhook,
   orderIsComplete,
+  normalizeDeferredServiceItem,
+  normalizeDeferredServiceList,
 } = require('../src/adapters/shopmonkey.adapter');
+const {
+  formatServiceList,
+  renderTemplate,
+  DEFAULT_FOLLOWUP_MESSAGE,
+} = require('../src/services/shopmonkey-deferred.service');
 
 let failed = 0;
 const check = (label, ok) => {
@@ -77,6 +84,38 @@ check('orderIsComplete helper', orderIsComplete(orderDone.data));
 
 const a = normalizeShopmonkeyWebhook(appt);
 check('appointment webhook parses', a?.table === 'appointment' && a.appointment?.externalId === 'shopmonkey:appointment:appt-1');
+
+const deferredItem = {
+  id: 'def-1',
+  name: 'Front brake pads',
+  orderId: 'ord-1',
+  deferredDate: '2026-01-15T20:00:00.000Z',
+  totalCents: 28500,
+  order: { customerId: 'cust-1', generatedVehicleName: '2019 Honda Accord' },
+};
+
+const normalizedDeferred = normalizeDeferredServiceItem(deferredItem);
+check(
+  'deferred service normalizes',
+  normalizedDeferred?.shopmonkeyDeferredId === 'def-1'
+    && normalizedDeferred.serviceName === 'Front brake pads',
+);
+
+const deferredList = normalizeDeferredServiceList({ data: [deferredItem, { id: 'x', excludedFromDeferred: true }] }, { orderId: 'ord-1' });
+check('deferred list filters by order', deferredList.length === 1);
+
+check('service list formats two items', formatServiceList([
+  { serviceName: 'Brake pads' },
+  { serviceName: 'Rotors' },
+]) === 'Brake pads and Rotors');
+
+const rendered = renderTemplate(DEFAULT_FOLLOWUP_MESSAGE, {
+  firstName: 'Jane',
+  businessName: 'Southlake Autocare',
+  serviceList: 'Brake pads',
+  bookingLink: 'https://book.example.com',
+});
+check('deferred message renders', rendered.includes('Jane') && rendered.includes('Brake pads'));
 
 if (failed) {
   console.error(`\n${failed} test(s) failed`);

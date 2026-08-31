@@ -128,9 +128,57 @@ const normalizeShopmonkeyWebhook = (body) => {
   return { table: tableNorm, operation, skipped: true };
 };
 
+const shouldIncludeDeferredService = (item) => {
+  if (!item?.id) return false;
+  if (item.excludedFromDeferred === true) return false;
+  if (item.hidden === true) return false;
+  if (!item.name || !String(item.name).trim()) return false;
+  return true;
+};
+
+const normalizeDeferredServiceItem = (item) => {
+  if (!shouldIncludeDeferredService(item)) return null;
+
+  const deferredAt = item.deferredDate || item.createdDate || item.updatedDate || null;
+  const vehicleLabel = item.order?.generatedVehicleName
+    || item.order?.generatedCustomerName
+    || null;
+
+  return {
+    shopmonkeyDeferredId: String(item.id),
+    shopmonkeyOrderId: item.orderId ? String(item.orderId) : null,
+    shopmonkeyCustomerId: item.order?.customerId ? String(item.order.customerId) : null,
+    serviceName: String(item.name).trim(),
+    vehicleLabel,
+    deferredAt,
+    deferredReason: item.deferredReason || item.authorizationStatus || null,
+    totalCents: Number.isFinite(item.totalCents) ? item.totalCents : null,
+    externalId: `${PROVIDER}:deferred:${item.id}`,
+    rawPayload: item,
+  };
+};
+
+const normalizeDeferredServiceList = (response, { orderId } = {}) => {
+  const rows = Array.isArray(response?.data)
+    ? response.data
+    : (Array.isArray(response) ? response : []);
+
+  const normalized = rows
+    .map(normalizeDeferredServiceItem)
+    .filter(Boolean);
+
+  if (!orderId) return normalized;
+
+  const orderKey = String(orderId);
+  return normalized.filter((row) => row.shopmonkeyOrderId === orderKey);
+};
+
 module.exports = {
   PROVIDER,
   normalizeShopmonkeyWebhook,
   normalizeCustomerContact,
   orderIsComplete,
+  normalizeDeferredServiceItem,
+  normalizeDeferredServiceList,
+  shouldIncludeDeferredService,
 };
