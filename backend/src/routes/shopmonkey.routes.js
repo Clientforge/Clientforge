@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const shopmonkeyService = require('../services/shopmonkey.service');
 const shopmonkeyDeferredService = require('../services/shopmonkey-deferred.service');
+const autoShopClassification = require('../services/auto-shop-classification.service');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 const db = require('../db/connection');
 
@@ -103,6 +104,25 @@ router.post('/deferred-services/reschedule-sequences', async (req, res, next) =>
       orderId: orderId || undefined,
       contactId: contactId || undefined,
     });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/master-categories', async (req, res, next) => {
+  try {
+    const result = await autoShopClassification.listMasterCategories(req.tenantId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/service-mappings', async (req, res, next) => {
+  try {
+    const { page, limit } = req.query || {};
+    const result = await autoShopClassification.listServiceMappings(req.tenantId, { page, limit });
     res.json(result);
   } catch (err) {
     next(err);

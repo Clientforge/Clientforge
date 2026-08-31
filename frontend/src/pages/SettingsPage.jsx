@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
+import ShopmonkeyClassificationPanel from '../components/ShopmonkeyClassificationPanel';
 
 const TIMEZONES = [
   'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
@@ -1138,7 +1139,8 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
     setMsg('');
     try {
       const result = await api.post('/integrations/shopmonkey/refresh-service-names');
-      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.`);
+      const classifiedNote = result.classified != null ? ` Classified ${result.classified} service line(s).` : '';
+      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.${classifiedNote}`);
     } catch (err) {
       setMsg(err.message);
     } finally {
@@ -1288,6 +1290,8 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
             rescheduleBusy={busy === 'reschedule'}
             description="Declined or recommended work from completed repair orders. A 4-step SMS sequence runs at 7, 14, 30, and 60 days."
           />
+
+          <ShopmonkeyClassificationPanel enabled={sm.connected} />
         </>
       ) : (
         <form onSubmit={connect} style={{ marginTop: 16 }}>

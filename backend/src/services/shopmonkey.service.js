@@ -6,6 +6,7 @@ const { normalizePhone } = require('./lead.service');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
 const shopmonkeyDeferredService = require('./shopmonkey-deferred.service');
+const autoShopClassification = require('./auto-shop-classification.service');
 const {
   normalizeCustomerContact,
   orderIsComplete,
@@ -392,6 +393,14 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
   const result = await upsertCompletedOrderAppointment(tenantId, contactId, enrichedOrder);
 
   const tenantName = await getTenantName(tenantId);
+  const classification = await autoShopClassification.classifyVisitServices(tenantId, {
+    tenantName,
+    appointmentId: result.appointmentId,
+    contactId,
+    orderId: enrichedOrder.orderId,
+    services: enrichedOrder.performedServices || [],
+  });
+
   const deferred = await shopmonkeyDeferredService.syncDeferredServicesForCompletedOrder({
     tenantId,
     tenantName,
@@ -411,6 +420,7 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     serviceName: enrichedOrder.serviceName,
     vehicleLabel: enrichedOrder.vehicleLabel || null,
     performedServiceCount: enrichedOrder.performedServices?.length || 0,
+    classification,
     deferred,
   };
 }
@@ -543,6 +553,9 @@ async function refreshAppointmentServiceNames(tenantId) {
   );
 
   let updated = 0;
+  let classified = 0;
+  const tenantName = await getTenantName(tenantId);
+
   for (const row of result.rows) {
     const orderId = String(row.external_id || '').replace(/^shopmonkey:order:/, '');
     if (!orderId) continue;
@@ -564,12 +577,28 @@ async function refreshAppointmentServiceNames(tenantId) {
       );
 
       if (context.serviceName !== row.service_name) updated += 1;
+
+      const contactRow = await db.query(
+        'SELECT contact_id FROM appointments WHERE id = $1',
+        [row.id],
+      );
+      const contactId = contactRow.rows[0]?.contact_id;
+      if (contactId) {
+        const classResult = await autoShopClassification.classifyVisitServices(tenantId, {
+          tenantName,
+          appointmentId: row.id,
+          contactId,
+          orderId,
+          services: context.performedServices || [],
+        });
+        classified += classResult.classified || 0;
+      }
     } catch (err) {
       console.warn('[SHOPMONKEY] Refresh failed for appointment', row.id, err.message);
     }
   }
 
-  return { scanned: result.rows.length, updated };
+  return { scanned: result.rows.length, updated, classified };
 }
 
 async function testConnection(tenantId) {
