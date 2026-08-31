@@ -39,8 +39,10 @@ function StatusBadge({ status, statusLabel }) {
   );
 }
 
-export function ShopmonkeyDeferredSummary({ summary, followupDays }) {
+export function ShopmonkeyDeferredSummary({ summary }) {
   if (!summary) return null;
+
+  const schedule = summary.followupSchedule || [7, 14, 30, 60];
 
   return (
     <div className="stats-row" style={{ marginTop: 12, marginBottom: 12 }}>
@@ -50,15 +52,15 @@ export function ShopmonkeyDeferredSummary({ summary, followupDays }) {
       </div>
       <div className="mini-stat">
         <span className="mini-stat-value">{summary.scheduled || 0}</span>
-        <span className="mini-stat-label">Follow-ups scheduled</span>
+        <span className="mini-stat-label">Sequences active</span>
       </div>
       <div className="mini-stat">
         <span className="mini-stat-value">{summary.sent || 0}</span>
-        <span className="mini-stat-label">Follow-ups sent</span>
+        <span className="mini-stat-label">Sequences complete</span>
       </div>
       <div className="mini-stat">
-        <span className="mini-stat-value">{followupDays ?? summary.followupDays ?? 3}d</span>
-        <span className="mini-stat-label">After RO complete</span>
+        <span className="mini-stat-value">{schedule.length}</span>
+        <span className="mini-stat-label">Steps ({schedule.join('/') }d)</span>
       </div>
     </div>
   );
@@ -191,7 +193,7 @@ export default function ShopmonkeyDeferredPanel({
       {error && <p className="field-hint" style={{ marginTop: 8 }}>{error}</p>}
 
       {!contactId && summary && (
-        <ShopmonkeyDeferredSummary summary={summary} followupDays={summary.followupDays} />
+        <ShopmonkeyDeferredSummary summary={summary} />
       )}
 
       {loading && items.length === 0 ? (

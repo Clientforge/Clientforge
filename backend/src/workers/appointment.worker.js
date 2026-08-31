@@ -66,19 +66,20 @@ const processDueAppointmentJobs = async () => {
         }
       }
 
-      if (job.job_type === shopmonkeyDeferredService.JOB_TYPE) {
+      if (shopmonkeyDeferredService.isDeferredFollowupJobType(job.job_type)) {
         const booked = await rebookingCampaign.hasFutureBooking(
           job.tenant_id,
           job.contact_id,
           { excludeAppointmentId: job.appointment_id },
         );
         if (booked) {
-          await db.query(
-            `UPDATE appointment_workflow_jobs SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
-            [job.id],
+          await shopmonkeyDeferredService.cancelDeferredFollowupJobs(
+            job.tenant_id,
+            job.contact_id,
+            job.appointment_id,
           );
           console.log(
-            `[APPT-WORKER] Skipped deferred follow-up ${job.id} — contact booked a new appointment`,
+            `[APPT-WORKER] Cancelled deferred sequence ${job.id} — contact booked a new appointment`,
           );
           continue;
         }
@@ -125,11 +126,12 @@ const processDueAppointmentJobs = async () => {
         [job.id],
       );
 
-      if (job.job_type === shopmonkeyDeferredService.JOB_TYPE) {
-        await shopmonkeyDeferredService.markFollowupSent(
+      if (shopmonkeyDeferredService.isDeferredFollowupJobType(job.job_type)) {
+        await shopmonkeyDeferredService.markFollowupStepSent(
           job.tenant_id,
           job.contact_id,
           job.appointment_id,
+          job.job_type,
         );
       }
 

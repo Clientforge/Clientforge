@@ -103,14 +103,12 @@ router.put('/', async (req, res, next) => {
       webhookSecret,
       locationId,
       deferredFollowupEnabled,
-      deferredFollowupDays,
     } = req.body || {};
     const status = await shopmonkeyService.updateSettings(req.tenantId, {
       webhooksEnabled,
       webhookSecret,
       locationId,
       deferredFollowupEnabled,
-      deferredFollowupDays,
     });
     res.json(status);
   } catch (err) {

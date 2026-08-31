@@ -4,10 +4,44 @@ const { normalizeDeferredServiceList } = require('../adapters/shopmonkey.adapter
 const appointmentService = require('./appointment.service');
 
 const API_BASE = 'https://api.shopmonkey.cloud/v3';
+
+/** @deprecated legacy single-step job type */
 const JOB_TYPE = 'deferred_service_followup';
 
-const DEFAULT_FOLLOWUP_MESSAGE =
-  'Hi {firstName}! On your recent visit to {businessName}, we noted {serviceList} still needs attention. Schedule when you\'re ready: {bookingLink}';
+const DEFAULT_FOLLOWUP_SCHEDULE = [7, 14, 30, 60];
+
+const DEFAULT_FOLLOWUP_MESSAGES = [
+  'Hi {firstName}! On your recent visit to {businessName}, we noted {serviceList} still needs attention. When you\'re ready to schedule: {bookingLink}',
+  'Hi {firstName}, friendly reminder from {businessName} — {serviceList} is still on our recommended list from your last visit. Book here: {bookingLink}',
+  'Hi {firstName}, checking in from {businessName}. We still have {serviceList} flagged from your visit. Schedule when it works for you: {bookingLink}',
+  'Hi {firstName}, last reminder from {businessName} about {serviceList} from your recent visit. We\'d love to get this taken care of: {bookingLink}',
+];
+
+const DEFERRED_JOB_TYPE_SQL = `(job_type = 'deferred_service_followup' OR job_type LIKE 'deferred_service_followup_%')`;
+
+function jobTypeForStep(stepIndex) {
+  return `deferred_service_followup_${stepIndex + 1}`;
+}
+
+function isDeferredFollowupJobType(jobType) {
+  if (!jobType) return false;
+  if (jobType === JOB_TYPE) return true;
+  return /^deferred_service_followup_\d+$/.test(String(jobType));
+}
+
+function isFinalDeferredFollowupJobType(jobType, scheduleLength = DEFAULT_FOLLOWUP_SCHEDULE.length) {
+  if (jobType === JOB_TYPE) return true;
+  return jobType === jobTypeForStep(scheduleLength - 1);
+}
+
+function normalizeFollowupSchedule(raw) {
+  const source = Array.isArray(raw) ? raw : DEFAULT_FOLLOWUP_SCHEDULE;
+  const days = source
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => Math.round(value));
+  return days.length > 0 ? days : [...DEFAULT_FOLLOWUP_SCHEDULE];
+}
 
 async function shopmonkeyFetch(path, apiKey) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -42,17 +76,16 @@ async function getTenantContext(tenantId) {
 
 async function getDeferredSettings(tenantId) {
   const result = await db.query(
-    `SELECT deferred_followup_enabled, deferred_followup_days
+    `SELECT deferred_followup_enabled, deferred_followup_schedule
      FROM tenant_shopmonkey_connections
      WHERE tenant_id = $1`,
     [tenantId],
   );
   const row = result.rows[0];
+  const schedule = normalizeFollowupSchedule(row?.deferred_followup_schedule);
   return {
     enabled: row?.deferred_followup_enabled !== false,
-    followupDays: Number.isFinite(row?.deferred_followup_days) && row.deferred_followup_days > 0
-      ? row.deferred_followup_days
-      : 3,
+    followupSchedule: schedule,
   };
 }
 
@@ -70,6 +103,11 @@ function formatServiceList(services) {
 
 function renderTemplate(template, vars) {
   return String(template).replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
+}
+
+function messageForStep(stepIndex, vars) {
+  const template = DEFAULT_FOLLOWUP_MESSAGES[stepIndex] || DEFAULT_FOLLOWUP_MESSAGES[0];
+  return renderTemplate(template, vars);
 }
 
 async function fetchDeferredServicesForCustomer(apiKey, customerId, { orderId } = {}) {
@@ -120,29 +158,29 @@ async function upsertDeferredServiceRow({
   return result.rows[0] || null;
 }
 
-async function cancelPendingFollowupJobs(tenantId, contactId, appointmentId) {
+async function cancelDeferredFollowupJobs(tenantId, contactId, appointmentId) {
   await db.query(
     `UPDATE appointment_workflow_jobs
      SET status = 'cancelled', cancelled_at = NOW()
      WHERE tenant_id = $1
        AND contact_id = $2
        AND appointment_id = $3
-       AND job_type = $4
+       AND ${DEFERRED_JOB_TYPE_SQL}
        AND status = 'pending'`,
-    [tenantId, contactId, appointmentId, JOB_TYPE],
+    [tenantId, contactId, appointmentId],
   );
 }
 
-async function hasPendingFollowupJob(tenantId, contactId, appointmentId) {
+async function hasPendingFollowupJobs(tenantId, contactId, appointmentId) {
   const result = await db.query(
     `SELECT id FROM appointment_workflow_jobs
      WHERE tenant_id = $1
        AND contact_id = $2
        AND appointment_id = $3
-       AND job_type = $4
+       AND ${DEFERRED_JOB_TYPE_SQL}
        AND status = 'pending'
      LIMIT 1`,
-    [tenantId, contactId, appointmentId, JOB_TYPE],
+    [tenantId, contactId, appointmentId],
   );
   return !!result.rows[0];
 }
@@ -154,13 +192,14 @@ async function scheduleDeferredFollowup({
   orderId,
   services,
   referenceAt,
-  followupDays,
+  followupSchedule,
 }) {
   if (!appointmentId || !services?.length) {
     return { scheduled: false, reason: 'missing_context' };
   }
 
-  const alreadyScheduled = await hasPendingFollowupJob(tenantId, contactId, appointmentId);
+  const schedule = normalizeFollowupSchedule(followupSchedule);
+  const alreadyScheduled = await hasPendingFollowupJobs(tenantId, contactId, appointmentId);
   if (alreadyScheduled) {
     return { scheduled: false, reason: 'already_scheduled' };
   }
@@ -190,24 +229,42 @@ async function scheduleDeferredFollowup({
     bookingLink: bookingLink || businessName,
   };
 
-  const messageBody = renderTemplate(DEFAULT_FOLLOWUP_MESSAGE, vars);
-
   const base = referenceAt ? new Date(referenceAt) : new Date();
-  const scheduledAt = new Date(base.getTime() + followupDays * 24 * 60 * 60 * 1000);
+  if (Number.isNaN(base.getTime())) {
+    return { scheduled: false, reason: 'invalid_reference_date' };
+  }
 
-  await cancelPendingFollowupJobs(tenantId, contactId, appointmentId);
+  await cancelDeferredFollowupJobs(tenantId, contactId, appointmentId);
 
-  await appointmentService.scheduleWorkflowJob(
-    tenantId,
-    appointmentId,
-    contactId,
-    JOB_TYPE,
-    {
+  const scheduledJobs = [];
+  for (let stepIndex = 0; stepIndex < schedule.length; stepIndex += 1) {
+    const days = schedule[stepIndex];
+    const scheduledAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+    if (scheduledAt <= new Date()) continue;
+
+    await appointmentService.scheduleWorkflowJob(
+      tenantId,
+      appointmentId,
+      contactId,
+      jobTypeForStep(stepIndex),
+      {
+        scheduledAt: scheduledAt.toISOString(),
+        channel: 'sms',
+        messageBody: messageForStep(stepIndex, vars),
+      },
+    );
+
+    scheduledJobs.push({
+      step: stepIndex + 1,
+      daysAfterVisit: days,
       scheduledAt: scheduledAt.toISOString(),
-      channel: 'sms',
-      messageBody,
-    },
-  );
+      jobType: jobTypeForStep(stepIndex),
+    });
+  }
+
+  if (scheduledJobs.length === 0) {
+    return { scheduled: false, reason: 'all_steps_in_past' };
+  }
 
   await db.query(
     `UPDATE shopmonkey_deferred_services
@@ -221,13 +278,15 @@ async function scheduleDeferredFollowup({
 
   return {
     scheduled: true,
-    scheduledAt: scheduledAt.toISOString(),
     serviceCount: services.length,
+    stepsScheduled: scheduledJobs.length,
+    schedule,
+    jobs: scheduledJobs,
   };
 }
 
 /**
- * Pull deferred lines for this completed RO and schedule a follow-up SMS (Southlake only).
+ * Pull deferred lines for this completed RO and schedule follow-up SMS steps (Southlake only).
  */
 async function syncDeferredServicesForCompletedOrder({
   tenantId,
@@ -292,7 +351,7 @@ async function syncDeferredServicesForCompletedOrder({
     orderId,
     services: pendingForOrder,
     referenceAt: completedAt,
-    followupDays: settings.followupDays,
+    followupSchedule: settings.followupSchedule,
   });
 
   return {
@@ -306,7 +365,7 @@ async function syncDeferredServicesForCompletedOrder({
 const STATUS_LABELS = {
   pending: 'Detected',
   followup_scheduled: 'Follow-up scheduled',
-  followup_sent: 'Follow-up sent',
+  followup_sent: 'Sequence complete',
 };
 
 function formatDeferredRow(row) {
@@ -370,15 +429,15 @@ async function listDeferredServices(tenantId, {
          WHERE tenant_id = d.tenant_id
            AND contact_id = d.contact_id
            AND appointment_id = d.appointment_id
-           AND job_type = $${idx}
+           AND ${DEFERRED_JOB_TYPE_SQL}
            AND status = 'pending'
          ORDER BY scheduled_at ASC
          LIMIT 1
        ) j ON true
        WHERE ${where}
        ORDER BY COALESCE(d.deferred_at, d.created_at) DESC
-       LIMIT $${idx + 1} OFFSET $${idx + 2}`,
-      [...params, JOB_TYPE, safeLimit, offset],
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, safeLimit, offset],
     ),
     db.query(
       `SELECT COUNT(*)::int AS total FROM shopmonkey_deferred_services d WHERE ${where}`,
@@ -422,11 +481,16 @@ async function getDeferredSummary(tenantId) {
     scheduled: row.scheduled || 0,
     sent: row.sent || 0,
     followupEnabled: settings.enabled,
-    followupDays: settings.followupDays,
+    followupSchedule: settings.followupSchedule,
   };
 }
 
-async function markFollowupSent(tenantId, contactId, appointmentId) {
+async function markFollowupStepSent(tenantId, contactId, appointmentId, jobType) {
+  const settings = await getDeferredSettings(tenantId);
+  if (!isFinalDeferredFollowupJobType(jobType, settings.followupSchedule.length)) {
+    return { completed: false };
+  }
+
   await db.query(
     `UPDATE shopmonkey_deferred_services
      SET status = 'followup_sent', updated_at = NOW()
@@ -436,18 +500,27 @@ async function markFollowupSent(tenantId, contactId, appointmentId) {
        AND ($3::uuid IS NULL OR appointment_id = $3)`,
     [tenantId, contactId, appointmentId || null],
   );
+
+  return { completed: true };
 }
 
 module.exports = {
   JOB_TYPE,
-  DEFAULT_FOLLOWUP_MESSAGE,
+  DEFAULT_FOLLOWUP_SCHEDULE,
+  DEFAULT_FOLLOWUP_MESSAGES,
   STATUS_LABELS,
+  jobTypeForStep,
+  isDeferredFollowupJobType,
+  isFinalDeferredFollowupJobType,
+  normalizeFollowupSchedule,
   isDeferredFollowupEnabled,
   fetchDeferredServicesForCustomer,
   syncDeferredServicesForCompletedOrder,
   listDeferredServices,
   getDeferredSummary,
-  markFollowupSent,
+  cancelDeferredFollowupJobs,
+  markFollowupStepSent,
   formatServiceList,
   renderTemplate,
+  messageForStep,
 };

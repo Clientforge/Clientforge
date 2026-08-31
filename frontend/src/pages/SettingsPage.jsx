@@ -1075,14 +1075,13 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
   const [webhookSecret, setWebhookSecret] = useState('');
   const [webhooksEnabled, setWebhooksEnabled] = useState(sm.webhooksEnabled !== false);
   const [deferredFollowupEnabled, setDeferredFollowupEnabled] = useState(sm.deferredFollowupEnabled !== false);
-  const [deferredFollowupDays, setDeferredFollowupDays] = useState(sm.deferredFollowupDays || 3);
+  const deferredFollowupSchedule = sm.deferredFollowupSchedule || [7, 14, 30, 60];
 
   useEffect(() => {
     setLocationId(sm.locationId || '');
     setWebhooksEnabled(sm.webhooksEnabled !== false);
     setDeferredFollowupEnabled(sm.deferredFollowupEnabled !== false);
-    setDeferredFollowupDays(sm.deferredFollowupDays || 3);
-  }, [sm.locationId, sm.webhooksEnabled, sm.deferredFollowupEnabled, sm.deferredFollowupDays]);
+  }, [sm.locationId, sm.webhooksEnabled, sm.deferredFollowupEnabled, sm.deferredFollowupSchedule]);
 
   if (!sm.available) return null;
 
@@ -1157,7 +1156,6 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
         webhookSecret: webhookSecret.trim() || undefined,
         locationId: locationId.trim() || null,
         deferredFollowupEnabled,
-        deferredFollowupDays: Number(deferredFollowupDays) || 3,
       });
       setWebhookSecret('');
       await onReload();
@@ -1234,15 +1232,19 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
               </label>
             </div>
             <div className="field">
-              <label>Deferred follow-up delay (days after RO complete)</label>
-              <input
-                type="number"
-                min={1}
-                max={90}
-                value={deferredFollowupDays}
-                onChange={(e) => setDeferredFollowupDays(e.target.value)}
-                disabled={!deferredFollowupEnabled}
-              />
+              <label>Deferred follow-up schedule (days after visit)</label>
+              <p className="settings-desc" style={{ margin: '4px 0 0' }}>
+                {deferredFollowupSchedule.map((days, index) => (
+                  <span key={days}>
+                    {index > 0 ? ' · ' : ''}
+                    Step {index + 1}: day {days}
+                    {index === deferredFollowupSchedule.length - 1 ? ' (final)' : ''}
+                  </span>
+                ))}
+              </p>
+              <p className="field-hint" style={{ marginTop: 6 }}>
+                One combined SMS per step listing all deferred services from that visit.
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
               <button type="submit" className="btn-primary" disabled={busy === 'save'}>

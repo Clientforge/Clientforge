@@ -18,7 +18,13 @@ const {
 const {
   formatServiceList,
   renderTemplate,
-  DEFAULT_FOLLOWUP_MESSAGE,
+  DEFAULT_FOLLOWUP_MESSAGES,
+  DEFAULT_FOLLOWUP_SCHEDULE,
+  jobTypeForStep,
+  isDeferredFollowupJobType,
+  isFinalDeferredFollowupJobType,
+  messageForStep,
+  normalizeFollowupSchedule,
 } = require('../src/services/shopmonkey-deferred.service');
 
 let failed = 0;
@@ -138,13 +144,24 @@ check('service list formats two items', formatServiceList([
   { serviceName: 'Rotors' },
 ]) === 'Brake pads and Rotors');
 
-const rendered = renderTemplate(DEFAULT_FOLLOWUP_MESSAGE, {
+const rendered = renderTemplate(DEFAULT_FOLLOWUP_MESSAGES[0], {
   firstName: 'Jane',
   businessName: 'Southlake Autocare',
   serviceList: 'Brake pads',
   bookingLink: 'https://book.example.com',
 });
 check('deferred message renders', rendered.includes('Jane') && rendered.includes('Brake pads'));
+
+check('follow-up schedule defaults', normalizeFollowupSchedule(null).join(',') === '7,14,30,60');
+check('step 1 job type', jobTypeForStep(0) === 'deferred_service_followup_1');
+check('deferred job type detected', isDeferredFollowupJobType('deferred_service_followup_3'));
+check('final step detected', isFinalDeferredFollowupJobType('deferred_service_followup_4', 4));
+check('step 4 message differs', messageForStep(3, {
+  firstName: 'Jane',
+  businessName: 'Southlake Autocare',
+  serviceList: 'Brake pads',
+  bookingLink: 'https://book.example.com',
+}).includes('last reminder'));
 
 if (failed) {
   console.error(`\n${failed} test(s) failed`);

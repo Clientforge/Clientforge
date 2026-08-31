@@ -36,9 +36,9 @@ function formatConnection(row) {
     webhookUrl: webhookUrlForTenant(row.tenant_id),
     hasWebhookSecret: !!row.webhook_secret,
     deferredFollowupEnabled: row.deferred_followup_enabled !== false,
-    deferredFollowupDays: Number.isFinite(row.deferred_followup_days) && row.deferred_followup_days > 0
-      ? row.deferred_followup_days
-      : 3,
+    deferredFollowupSchedule: shopmonkeyDeferredService.normalizeFollowupSchedule(
+      row.deferred_followup_schedule,
+    ),
   };
 }
 
@@ -138,7 +138,6 @@ async function updateSettings(tenantId, {
   webhookSecret,
   locationId,
   deferredFollowupEnabled,
-  deferredFollowupDays,
 }) {
   const row = await getConnection(tenantId);
   if (!row) {
@@ -164,11 +163,6 @@ async function updateSettings(tenantId, {
   if (deferredFollowupEnabled !== undefined) {
     sets.push(`deferred_followup_enabled = $${idx++}`);
     params.push(!!deferredFollowupEnabled);
-  }
-  if (deferredFollowupDays !== undefined) {
-    const days = Number(deferredFollowupDays);
-    sets.push(`deferred_followup_days = $${idx++}`);
-    params.push(Number.isFinite(days) && days > 0 ? Math.round(days) : 3);
   }
 
   await db.query(
