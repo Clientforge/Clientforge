@@ -171,6 +171,8 @@ export default function ShopmonkeyDeferredPanel({
   title = 'Deferred service follow-ups',
   description,
   hideWhenUnavailable = false,
+  onReschedule,
+  rescheduleBusy = false,
 }) {
   const { summary, items, loading, error, available, reload } = useShopmonkeyDeferred({ contactId, enabled });
 
@@ -184,9 +186,16 @@ export default function ShopmonkeyDeferredPanel({
           {description && <p className="settings-desc" style={{ margin: 0 }}>{description}</p>}
         </div>
         {!compact && (
-          <button type="button" className="btn-sm" onClick={reload} disabled={loading}>
-            {loading ? 'Loading…' : 'Refresh'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {onReschedule && !contactId && (
+              <button type="button" className="btn-sm" onClick={onReschedule} disabled={rescheduleBusy}>
+                {rescheduleBusy ? 'Scheduling…' : 'Reschedule sequences'}
+              </button>
+            )}
+            <button type="button" className="btn-sm" onClick={reload} disabled={loading}>
+              {loading ? 'Loading…' : 'Refresh'}
+            </button>
+          </div>
         )}
       </div>
 

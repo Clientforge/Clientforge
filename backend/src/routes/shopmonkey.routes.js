@@ -96,6 +96,19 @@ router.get('/deferred-services', async (req, res, next) => {
   }
 });
 
+router.post('/deferred-services/reschedule-sequences', async (req, res, next) => {
+  try {
+    const { orderId, contactId } = req.body || {};
+    const result = await shopmonkeyDeferredService.rescheduleDeferredSequences(req.tenantId, {
+      orderId: orderId || undefined,
+      contactId: contactId || undefined,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/', async (req, res, next) => {
   try {
     const {

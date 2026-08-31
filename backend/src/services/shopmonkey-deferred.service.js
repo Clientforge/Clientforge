@@ -193,15 +193,18 @@ async function scheduleDeferredFollowup({
   services,
   referenceAt,
   followupSchedule,
+  forceReschedule = false,
 }) {
   if (!appointmentId || !services?.length) {
     return { scheduled: false, reason: 'missing_context' };
   }
 
   const schedule = normalizeFollowupSchedule(followupSchedule);
-  const alreadyScheduled = await hasPendingFollowupJobs(tenantId, contactId, appointmentId);
-  if (alreadyScheduled) {
-    return { scheduled: false, reason: 'already_scheduled' };
+  if (!forceReschedule) {
+    const alreadyScheduled = await hasPendingFollowupJobs(tenantId, contactId, appointmentId);
+    if (alreadyScheduled) {
+      return { scheduled: false, reason: 'already_scheduled' };
+    }
   }
 
   const [tenant, contactRow] = await Promise.all([
@@ -504,6 +507,140 @@ async function markFollowupStepSent(tenantId, contactId, appointmentId, jobType)
   return { completed: true };
 }
 
+async function getDeferredOrderGroups(tenantId, { orderId, contactId } = {}) {
+  const conditions = [
+    'd.tenant_id = $1',
+    'd.appointment_id IS NOT NULL',
+    "d.status IN ('pending', 'followup_scheduled', 'followup_sent')",
+  ];
+  const params = [tenantId];
+  let idx = 2;
+
+  if (orderId) {
+    conditions.push(`d.shopmonkey_order_id = $${idx++}`);
+    params.push(String(orderId));
+  }
+  if (contactId) {
+    conditions.push(`d.contact_id = $${idx++}`);
+    params.push(contactId);
+  }
+
+  const result = await db.query(
+    `SELECT
+       d.contact_id,
+       d.appointment_id,
+       d.shopmonkey_order_id,
+       MIN(d.deferred_at) AS deferred_at,
+       json_agg(
+         json_build_object(
+           'serviceName', d.service_name,
+           'shopmonkeyOrderId', d.shopmonkey_order_id
+         )
+         ORDER BY d.service_name
+       ) AS services
+     FROM shopmonkey_deferred_services d
+     WHERE ${conditions.join(' AND ')}
+     GROUP BY d.contact_id, d.appointment_id, d.shopmonkey_order_id
+     ORDER BY MIN(d.deferred_at) DESC NULLS LAST`,
+    params,
+  );
+
+  return result.rows.map((row) => ({
+    contactId: row.contact_id,
+    appointmentId: row.appointment_id,
+    orderId: row.shopmonkey_order_id,
+    deferredAt: row.deferred_at,
+    services: Array.isArray(row.services) ? row.services : [],
+  }));
+}
+
+async function resolveVisitReferenceAt(tenantId, appointmentId, deferredAt) {
+  const apptResult = await db.query(
+    `SELECT scheduled_at, completed_at
+     FROM appointments
+     WHERE id = $1 AND tenant_id = $2`,
+    [appointmentId, tenantId],
+  );
+  const appt = apptResult.rows[0];
+  return appt?.completed_at || appt?.scheduled_at || deferredAt || new Date().toISOString();
+}
+
+/**
+ * Re-schedule the 4-step deferred SMS sequence for existing visits (e.g. after upgrading from single-step).
+ */
+async function rescheduleDeferredSequences(tenantId, { orderId, contactId } = {}) {
+  const settings = await getDeferredSettings(tenantId);
+  if (!settings.enabled) {
+    throw Object.assign(new Error('Deferred follow-up is disabled'), { statusCode: 400, isOperational: true });
+  }
+
+  const groups = await getDeferredOrderGroups(tenantId, { orderId, contactId });
+  if (groups.length === 0) {
+    return { groups: 0, rescheduled: 0, skipped: 0, results: [] };
+  }
+
+  const results = [];
+  let rescheduled = 0;
+  let skipped = 0;
+
+  for (const group of groups) {
+    if (!group.services?.length) {
+      skipped += 1;
+      results.push({ orderId: group.orderId, scheduled: false, reason: 'no_services' });
+      continue;
+    }
+
+    const referenceAt = await resolveVisitReferenceAt(
+      tenantId,
+      group.appointmentId,
+      group.deferredAt,
+    );
+
+    await cancelDeferredFollowupJobs(tenantId, group.contactId, group.appointmentId);
+
+    await db.query(
+      `UPDATE shopmonkey_deferred_services
+       SET status = 'pending', updated_at = NOW()
+       WHERE tenant_id = $1
+         AND contact_id = $2
+         AND shopmonkey_order_id = $3
+         AND status IN ('pending', 'followup_scheduled', 'followup_sent')`,
+      [tenantId, group.contactId, group.orderId],
+    );
+
+    const followup = await scheduleDeferredFollowup({
+      tenantId,
+      contactId: group.contactId,
+      appointmentId: group.appointmentId,
+      orderId: group.orderId,
+      services: group.services,
+      referenceAt,
+      followupSchedule: settings.followupSchedule,
+      forceReschedule: true,
+    });
+
+    if (followup.scheduled) {
+      rescheduled += 1;
+    } else {
+      skipped += 1;
+    }
+
+    results.push({
+      orderId: group.orderId,
+      contactId: group.contactId,
+      appointmentId: group.appointmentId,
+      ...followup,
+    });
+  }
+
+  return {
+    groups: groups.length,
+    rescheduled,
+    skipped,
+    results,
+  };
+}
+
 module.exports = {
   JOB_TYPE,
   DEFAULT_FOLLOWUP_SCHEDULE,
@@ -520,6 +657,8 @@ module.exports = {
   getDeferredSummary,
   cancelDeferredFollowupJobs,
   markFollowupStepSent,
+  rescheduleDeferredSequences,
+  getDeferredOrderGroups,
   formatServiceList,
   renderTemplate,
   messageForStep,

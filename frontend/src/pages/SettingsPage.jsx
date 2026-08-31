@@ -1146,6 +1146,23 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
     }
   };
 
+  const rescheduleDeferredSequences = async () => {
+    if (!confirm('Re-schedule deferred follow-up sequences? Pending steps will be replaced with the 7/14/30/60 day schedule from each visit date.')) {
+      return;
+    }
+    setBusy('reschedule');
+    setMsg('');
+    try {
+      const result = await api.post('/integrations/shopmonkey/deferred-services/reschedule-sequences');
+      setMsg(`Re-scheduled ${result.rescheduled} of ${result.groups} deferred visit(s).`);
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const saveSettings = async (e) => {
     e.preventDefault();
     setBusy('save');
@@ -1256,6 +1273,9 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
               <button type="button" className="btn-sm" onClick={refreshServiceNames} disabled={!!busy}>
                 {busy === 'refresh' ? 'Refreshing…' : 'Refresh service names'}
               </button>
+              <button type="button" className="btn-sm" onClick={rescheduleDeferredSequences} disabled={!!busy || !deferredFollowupEnabled}>
+                {busy === 'reschedule' ? 'Scheduling…' : 'Reschedule deferred sequences'}
+              </button>
               <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
                 Disconnect
               </button>
@@ -1264,7 +1284,9 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
 
           <ShopmonkeyDeferredPanel
             enabled={sm.connected}
-            description="Declined or recommended work from completed repair orders. A follow-up SMS is scheduled automatically."
+            onReschedule={rescheduleDeferredSequences}
+            rescheduleBusy={busy === 'reschedule'}
+            description="Declined or recommended work from completed repair orders. A 4-step SMS sequence runs at 7, 14, 30, and 60 days."
           />
         </>
       ) : (
