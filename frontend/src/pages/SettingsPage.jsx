@@ -977,6 +977,8 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <hr className="settings-divider" />
 
+      <ShopmonkeySection settings={settings} onReload={onReload} copyToClipboard={copyToClipboard} copying={copying} />
+
       <SquareSection settings={settings} onReload={onReload} copyToClipboard={copyToClipboard} copying={copying} />
 
       <hr className="settings-divider" />
@@ -1059,6 +1061,193 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
     "email": "jane@example.com",
     "source": "website_form"
   }'`}</pre>
+    </div>
+  );
+}
+
+function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
+  const sm = settings.integration?.shopmonkey || {};
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [locationId, setLocationId] = useState(sm.locationId || '');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [webhooksEnabled, setWebhooksEnabled] = useState(sm.webhooksEnabled !== false);
+
+  useEffect(() => {
+    setLocationId(sm.locationId || '');
+    setWebhooksEnabled(sm.webhooksEnabled !== false);
+  }, [sm.locationId, sm.webhooksEnabled]);
+
+  if (!sm.available) return null;
+
+  const connect = async (e) => {
+    e.preventDefault();
+    setBusy('connect');
+    setMsg('');
+    try {
+      await api.post('/integrations/shopmonkey/connect', {
+        apiKey: apiKey.trim(),
+        locationId: locationId.trim() || null,
+        webhookSecret: webhookSecret.trim() || null,
+      });
+      setApiKey('');
+      setWebhookSecret('');
+      await onReload();
+      setMsg('Shopmonkey connected');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Shopmonkey? Customer and order sync will stop.')) return;
+    setBusy('disconnect');
+    setMsg('');
+    try {
+      await api.post('/integrations/shopmonkey/disconnect');
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const testConnection = async () => {
+    setBusy('test');
+    setMsg('');
+    try {
+      await api.post('/integrations/shopmonkey/test');
+      setMsg('API key verified');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const saveSettings = async (e) => {
+    e.preventDefault();
+    setBusy('save');
+    setMsg('');
+    try {
+      await api.put('/integrations/shopmonkey', {
+        webhooksEnabled,
+        webhookSecret: webhookSecret.trim() || undefined,
+        locationId: locationId.trim() || null,
+      });
+      setWebhookSecret('');
+      await onReload();
+      setMsg('Shopmonkey settings saved');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <div className="integration-block">
+      <h3>Shopmonkey</h3>
+      <p className="settings-desc">
+        Connect Shopmonkey to sync customers and completed repair orders into Clients.
+        Register the webhook URL below in Shopmonkey (Settings → Webhooks) for Customer, Order, and Appointment events.
+      </p>
+
+      {sm.webhookUrl && (
+        <div className="integration-block" style={{ marginTop: 12 }}>
+          <label>Tenant Webhook URL (Shopmonkey → this account only)</label>
+          <div className="key-row">
+            <code className="key-value" style={{ fontSize: 12 }}>{sm.webhookUrl}</code>
+            <button type="button" className="btn-sm" onClick={() => copyToClipboard(sm.webhookUrl, 'shopmonkey-wh')}>
+              {copying === 'shopmonkey-wh' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sm.connected ? (
+        <>
+          <div className="field" style={{ marginTop: 16 }}>
+            <label>Status</label>
+            <p className="settings-desc" style={{ margin: 0 }}>
+              Connected{sm.shopName ? ` — ${sm.shopName}` : ''}.
+              {sm.lastWebhookAt ? ` Last webhook: ${new Date(sm.lastWebhookAt).toLocaleString()}.` : ' No webhooks received yet.'}
+              {sm.lastWebhookError ? ` Last error: ${sm.lastWebhookError}` : ''}
+            </p>
+          </div>
+          <form onSubmit={saveSettings}>
+            <div className="field">
+              <label>Location ID (optional)</label>
+              <input value={locationId} onChange={(e) => setLocationId(e.target.value)} placeholder="Shopmonkey location ID" />
+            </div>
+            <div className="field">
+              <label>Webhook signing secret</label>
+              <input
+                type="password"
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+                placeholder={sm.hasWebhookSecret ? '•••••••• (unchanged if blank)' : 'From Shopmonkey webhook setup'}
+              />
+            </div>
+            <div className="field field-checkbox">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={webhooksEnabled}
+                  onChange={(e) => setWebhooksEnabled(e.target.checked)}
+                />
+                <span>Process Shopmonkey webhooks</span>
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <button type="submit" className="btn-primary" disabled={busy === 'save'}>
+                {busy === 'save' ? 'Saving…' : 'Save'}
+              </button>
+              <button type="button" className="btn-sm" onClick={testConnection} disabled={!!busy}>
+                {busy === 'test' ? 'Testing…' : 'Test API key'}
+              </button>
+              <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
+                Disconnect
+              </button>
+            </div>
+          </form>
+        </>
+      ) : (
+        <form onSubmit={connect} style={{ marginTop: 16 }}>
+          <div className="field">
+            <label>Shopmonkey API key</label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="From Shopmonkey → Settings → Integration → API Keys"
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Location ID (optional)</label>
+            <input value={locationId} onChange={(e) => setLocationId(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Webhook signing secret (optional)</label>
+            <input
+              type="password"
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+              placeholder="Set when you register the webhook in Shopmonkey"
+            />
+          </div>
+          <button type="submit" className="btn-primary" disabled={busy === 'connect'}>
+            {busy === 'connect' ? 'Connecting…' : 'Connect Shopmonkey'}
+          </button>
+        </form>
+      )}
+
+      {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
     </div>
   );
 }

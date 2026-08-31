@@ -5,6 +5,8 @@ const tenantPhoneService = require('./tenant-phone.service');
 const smsProviderService = require('./sms-provider.service');
 const googleCalendarService = require('./googleCalendar.service');
 const squareService = require('./square.service');
+const shopmonkeyService = require('./shopmonkey.service');
+const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 const instagramService = require('./instagram.service');
 const { normalizePhone } = require('./lead.service');
 
@@ -74,6 +76,17 @@ const getSettings = async (tenantId) => {
     // ignore
   }
 
+  let shopmonkey = { connected: false, configured: true, available: isShopmonkeyTenant(tenantId, t.name) };
+  try {
+    const smStatus = await shopmonkeyService.getStatus(tenantId);
+    shopmonkey = {
+      ...smStatus,
+      available: isShopmonkeyTenant(tenantId, t.name) || !!smStatus.connected,
+    };
+  } catch {
+    // ignore
+  }
+
   return {
     business: {
       name: t.name,
@@ -110,6 +123,7 @@ const getSettings = async (tenantId) => {
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
       googleCalendar,
       square,
+      shopmonkey,
       instagram,
       metaWebhookUrl: instagramService.webhookUrl(),
     },
