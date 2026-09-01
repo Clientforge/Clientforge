@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
 import {
-  WORKFLOW_TABS, CHANNELS, TEMPLATE_VARS, emptyConfig, newStepId,
-  parseOffset, toOffsetMinutes, formatOffsetLabel,
+  WORKFLOW_TABS, AUTO_SHOP_WORKFLOW_TABS, CHANNELS, TEMPLATE_VARS, emptyConfig, newStepId,
+  parseOffset, toOffsetMinutes, formatOffsetLabel, formatServiceCompletionOffsetLabel,
 } from './shared';
 
 export default function WorkflowsPanel() {
   const [tab, setTab] = useState('confirmations');
+  const [workflowMode, setWorkflowMode] = useState('standard');
   const [config, setConfig] = useState(emptyConfig());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,7 +25,11 @@ export default function WorkflowsPanel() {
     setError('');
     try {
       const data = await api.get('/automations/appointments');
+      setWorkflowMode(data.workflowMode || 'standard');
       setConfig({ ...emptyConfig(), ...data });
+      if (data.workflowMode === 'auto_shop') {
+        setTab('postAppointment');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -71,7 +76,7 @@ export default function WorkflowsPanel() {
     const defaults = {
       confirmations: { offset_minutes: 0, message: 'Hi {firstName}! Your appointment with {businessName} is confirmed for {appointmentDate} at {appointmentTime}.' },
       reminders: { offset_minutes: -1440, message: 'Hi {firstName}! Reminder: appointment with {businessName} on {appointmentDate} at {appointmentTime}.' },
-      postAppointment: { offset_minutes: 1440, message: 'Hi {firstName}! Hope your visit to {businessName} went well.' },
+      postAppointment: { offset_minutes: workflowMode === 'auto_shop' ? 30 : 1440, message: 'Hi {firstName}! Hope your visit to {businessName} went well.' },
       reviewRequests: { offset_minutes: 2880, message: 'Hi {firstName}! We\'d love a quick review: {reviewLink}' },
       rebooking: { offset_minutes: 43200, message: 'Hi {firstName}! Ready to book again with {businessName}? {bookingLink}' },
     };
@@ -155,14 +160,26 @@ export default function WorkflowsPanel() {
 
   if (loading) return <div className="page-loader">Loading workflows...</div>;
 
+  const workflowTabs = workflowMode === 'auto_shop' ? AUTO_SHOP_WORKFLOW_TABS : WORKFLOW_TABS;
   const section = config[tab] || { enabled: true, steps: [] };
+  const useCompletionOffsets = workflowMode === 'auto_shop'
+    && (tab === 'postAppointment' || tab === 'reviewRequests');
+  const tabDescription = workflowMode === 'auto_shop' && tab === 'postAppointment'
+    ? 'Runs when a repair order is marked complete in Shopmonkey — not when an appointment is booked. Timing is measured from checkout/completion.'
+    : null;
 
   return (
     <>
       {saved && <div className="automation-inline-saved"><span className="save-badge">Saved</span></div>}
 
+      {workflowMode === 'auto_shop' && (
+        <p className="settings-desc" style={{ marginBottom: 12 }}>
+          Auto shop mode: post-service messages trigger on completed repair orders. Pre-visit confirmations and reminders are disabled because Shopmonkey appointment data is not used for automations.
+        </p>
+      )}
+
       <div className="settings-tabs automation-tabs">
-        {WORKFLOW_TABS.map((t) => (
+        {workflowTabs.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -180,10 +197,14 @@ export default function WorkflowsPanel() {
         <div className="followup-header-row">
           <div className="automation-section-header" style={{ marginBottom: 0, flex: 1 }}>
             <div>
-              <h3>{WORKFLOW_TABS.find((t) => t.key === tab)?.label}</h3>
+              <h3>{workflowTabs.find((t) => t.key === tab)?.label}</h3>
               <p className="settings-desc">
-                Use template variables:{' '}
-                {TEMPLATE_VARS.map((v) => <code key={v}>{v}</code>)}
+                {tabDescription || (
+                  <>
+                    Use template variables:{' '}
+                    {TEMPLATE_VARS.map((v) => <code key={v}>{v}</code>)}
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -234,6 +255,7 @@ export default function WorkflowsPanel() {
                   step={step}
                   idx={idx}
                   showImmediate={tab === 'confirmations'}
+                  formatOffset={useCompletionOffsets ? formatServiceCompletionOffsetLabel : formatOffsetLabel}
                   delayLabel={
                     tab === 'rebooking'
                       ? (idx === 0
@@ -309,14 +331,15 @@ export default function WorkflowsPanel() {
   );
 }
 
-function StepEditor({ step, idx, showImmediate, delayLabel, hideOffset, onUpdate, onUpdateOffset, onRemove, canRemove }) {
+function StepEditor({ step, idx, showImmediate, formatOffset, delayLabel, hideOffset, onUpdate, onUpdateOffset, onRemove, canRemove }) {
   const offset = parseOffset(step.offset_minutes ?? 0);
+  const formatLabel = formatOffset || formatOffsetLabel;
 
   return (
     <div className="schedule-step">
       <div className="step-header">
         <span className="step-number">Step {idx + 1}</span>
-        <span className="step-delay">{delayLabel || formatOffsetLabel(step.offset_minutes ?? 0)}</span>
+        <span className="step-delay">{delayLabel || formatLabel(step.offset_minutes ?? 0)}</span>
         <label className="toggle-label step-toggle">
           <input type="checkbox" checked={step.enabled !== false} onChange={(e) => onUpdate('enabled', e.target.checked)} />
           <span className="toggle-slider" />

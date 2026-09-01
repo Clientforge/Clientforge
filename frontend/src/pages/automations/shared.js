@@ -70,6 +70,18 @@ export const toOffsetMinutes = ({ direction, value, unit }) => {
   return direction === 'before' ? -mins : mins;
 };
 
+export const AUTO_SHOP_WORKFLOW_TABS = [
+  { key: 'postAppointment', label: 'Post-Service Completion' },
+  { key: 'reviewRequests', label: 'Review Requests' },
+];
+
+export const formatServiceCompletionOffsetLabel = (minutes) => {
+  if (minutes === 0) return 'Immediately after service completion';
+  const { direction, value, unit } = parseOffset(minutes);
+  const unitLabel = value === 1 ? unit.slice(0, -1) : unit;
+  return `${value} ${unitLabel} ${direction === 'before' ? 'before service completion' : 'after service completion'}`;
+};
+
 export const formatOffsetLabel = (minutes) => {
   if (minutes === 0) return 'Immediately on booking';
   const { direction, value, unit } = parseOffset(minutes);

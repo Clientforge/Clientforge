@@ -294,6 +294,19 @@ async function classifyShopmonkeyService(tenantId, rawName, { tenantName } = {})
   };
 }
 
+function excludeDeferredFromClassifications(classifications = [], deferredServiceNames = []) {
+  if (!deferredServiceNames.length) return classifications;
+
+  const deferredNorms = new Set(
+    deferredServiceNames.map((name) => normalizeServiceName(name)).filter(Boolean),
+  );
+  if (deferredNorms.size === 0) return classifications;
+
+  return classifications.filter((item) => {
+    const norm = normalizeServiceName(item.serviceName);
+    return norm && !deferredNorms.has(norm);
+  });
+}
 async function persistVisitClassification(tenantId, {
   appointmentId,
   contactId,
@@ -530,6 +543,7 @@ module.exports = {
   scoreFuzzyMatch,
   classifyShopmonkeyService,
   classifyVisitServices,
+  excludeDeferredFromClassifications,
   ensureMasterCategories,
   listMasterCategories,
   listServiceMappings,

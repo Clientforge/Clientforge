@@ -400,6 +400,22 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
   const result = await upsertCompletedOrderAppointment(tenantId, contactId, enrichedOrder);
 
   const tenantName = await getTenantName(tenantId);
+  const completedAt = enrichedOrder.scheduledAt;
+
+  let deferredServiceNames = [];
+  if (enrichedOrder.customerId && enrichedOrder.orderId && apiKey) {
+    try {
+      const deferredItems = await shopmonkeyDeferredService.fetchDeferredServicesForCustomer(
+        apiKey,
+        enrichedOrder.customerId,
+        { orderId: enrichedOrder.orderId },
+      );
+      deferredServiceNames = deferredItems.map((item) => item.serviceName).filter(Boolean);
+    } catch (err) {
+      console.warn('[SHOPMONKEY] Failed to fetch deferred services for maintenance filter', err.message);
+    }
+  }
+
   const classification = await autoShopClassification.classifyVisitServices(tenantId, {
     tenantName,
     appointmentId: result.appointmentId,
@@ -408,14 +424,26 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     services: enrichedOrder.performedServices || [],
   });
 
+  const maintenanceClassifications = autoShopClassification.excludeDeferredFromClassifications(
+    classification.services || [],
+    deferredServiceNames,
+  );
+
+  const postService = await appointmentWorkflowService.dispatchPostServiceCompletionWorkflows(tenantId, {
+    contactId,
+    appointmentId: result.appointmentId,
+    checkedOutAt: completedAt,
+    primaryServiceName: enrichedOrder.serviceName,
+  });
+
   const maintenance = await autoShopMaintenance.scheduleMaintenanceReminders({
     tenantId,
     tenantName,
     contactId,
     appointmentId: result.appointmentId,
     orderId: enrichedOrder.orderId,
-    classifications: classification.services || [],
-    referenceAt: enrichedOrder.scheduledAt,
+    classifications: maintenanceClassifications,
+    referenceAt: completedAt,
   });
 
   const deferred = await shopmonkeyDeferredService.syncDeferredServicesForCompletedOrder({
@@ -438,6 +466,7 @@ async function syncOrderFromWebhook(tenantId, order, apiKey) {
     vehicleLabel: enrichedOrder.vehicleLabel || null,
     performedServiceCount: enrichedOrder.performedServices?.length || 0,
     classification,
+    postService,
     maintenance,
     deferred,
   };
@@ -476,7 +505,10 @@ async function syncAppointmentFromWebhook(tenantId, appointment, apiKey) {
     existingContactId: contactId,
   });
 
-  await appointmentWorkflowService.dispatchWorkflows(tenantId, result);
+  // Post-service automations fire on completed repair orders only — not appointment webhooks.
+  if (appointment.eventType === 'booking.cancelled') {
+    await appointmentWorkflowService.dispatchWorkflows(tenantId, result);
+  }
 
   return {
     action: 'appointment_synced',
@@ -573,6 +605,7 @@ async function refreshAppointmentServiceNames(tenantId) {
   let updated = 0;
   let classified = 0;
   let maintenanceScheduled = 0;
+  let postServiceScheduled = 0;
   const tenantName = await getTenantName(tenantId);
 
   for (const row of result.rows) {
@@ -603,6 +636,21 @@ async function refreshAppointmentServiceNames(tenantId) {
       );
       const contactId = contactRow.rows[0]?.contact_id;
       if (contactId) {
+        let deferredServiceNames = [];
+        try {
+          const deferredItems = await shopmonkeyDeferredService.fetchDeferredServicesForCustomer(
+            apiKey,
+            (await db.query(
+              'SELECT shopmonkey_customer_id FROM contacts WHERE id = $1',
+              [contactId],
+            )).rows[0]?.shopmonkey_customer_id,
+            { orderId },
+          );
+          deferredServiceNames = deferredItems.map((item) => item.serviceName).filter(Boolean);
+        } catch (err) {
+          console.warn('[SHOPMONKEY] Refresh deferred filter failed', row.id, err.message);
+        }
+
         const classResult = await autoShopClassification.classifyVisitServices(tenantId, {
           tenantName,
           appointmentId: row.id,
@@ -612,14 +660,30 @@ async function refreshAppointmentServiceNames(tenantId) {
         });
         classified += classResult.classified || 0;
 
-        if (classResult.services?.length) {
+        const maintenanceClassifications = autoShopClassification.excludeDeferredFromClassifications(
+          classResult.services || [],
+          deferredServiceNames,
+        );
+
+        const postServiceResult = await appointmentWorkflowService.dispatchPostServiceCompletionWorkflows(
+          tenantId,
+          {
+            contactId,
+            appointmentId: row.id,
+            checkedOutAt: row.completed_at || row.scheduled_at,
+            primaryServiceName: context.serviceName,
+          },
+        );
+        postServiceScheduled += postServiceResult.postVisitJobs || 0;
+
+        if (maintenanceClassifications.length) {
           const maintenanceResult = await autoShopMaintenance.scheduleMaintenanceReminders({
             tenantId,
             tenantName,
             contactId,
             appointmentId: row.id,
             orderId,
-            classifications: classResult.services,
+            classifications: maintenanceClassifications,
             referenceAt: row.scheduled_at || row.completed_at,
             forceReschedule: true,
           });
@@ -631,7 +695,7 @@ async function refreshAppointmentServiceNames(tenantId) {
     }
   }
 
-  return { scanned: result.rows.length, updated, classified, maintenanceScheduled };
+  return { scanned: result.rows.length, updated, classified, maintenanceScheduled, postServiceScheduled };
 }
 
 async function testConnection(tenantId) {

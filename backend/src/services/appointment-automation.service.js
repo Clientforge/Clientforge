@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const { v4: uuidv4 } = require('uuid');
+const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 
 const CATEGORY_KEYS = [
   'confirmations',
@@ -281,8 +282,18 @@ const getConfigForTenant = async (tenantId) => {
 };
 
 const getAutomations = async (tenantId) => {
-  const config = await getConfigForTenant(tenantId);
-  return toApiConfig(config);
+  const result = await db.query(
+    `SELECT appointment_automation_config, name FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404, isOperational: true });
+  }
+  const config = normalizeConfig(result.rows[0].appointment_automation_config);
+  return {
+    ...toApiConfig(config),
+    workflowMode: isShopmonkeyTenant(tenantId, result.rows[0].name) ? 'auto_shop' : 'standard',
+  };
 };
 
 const updateAutomations = async (tenantId, updates) => {

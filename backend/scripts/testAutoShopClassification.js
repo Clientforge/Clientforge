@@ -8,6 +8,7 @@ const {
   classifyByKeywords,
   classifyByFuzzy,
   scoreFuzzyMatch,
+  excludeDeferredFromClassifications,
   DEFAULT_CATEGORY_SLUG,
   MASTER_CATEGORIES,
 } = require('../src/services/auto-shop-classification.service');
@@ -55,5 +56,13 @@ assert('10 master categories defined', MASTER_CATEGORIES.length === 10);
 assert('intervals include 60/90/180 days', MASTER_CATEGORIES.some((c) => c.followUpIntervalDays === 60)
   && MASTER_CATEGORIES.some((c) => c.followUpIntervalDays === 90)
   && MASTER_CATEGORIES.some((c) => c.followUpIntervalDays === 180));
+
+assert('exclude deferred from maintenance list', excludeDeferredFromClassifications(
+  [
+    { serviceName: 'Tune-up', slug: 'diagnostics_inspections' },
+    { serviceName: 'Oil Change', slug: 'routine_maintenance' },
+  ],
+  ['Tune-up'],
+).length === 1);
 
 process.exit(failed > 0 ? 1 : 0);

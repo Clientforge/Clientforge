@@ -15,12 +15,17 @@ const {
 const PRE_VISIT_CATEGORIES = ['confirmations', 'reminders'];
 const POST_VISIT_CATEGORIES = ['post_appointment', 'review_requests'];
 
+const isShopmonkeyAutoShopMode = (appointment) => appointment?.provider === 'shopmonkey';
+
 const isOptimantraCheckoutMode = (tenant, appointment) => (
   !!tenant?.optimantra_checkout_automations
   && appointment?.provider === 'optimantra'
 );
 
 const categoriesForBookingDispatch = (tenant, appointment) => {
+  if (isShopmonkeyAutoShopMode(appointment)) {
+    return [];
+  }
   if (isOptimantraCheckoutMode(tenant, appointment)) {
     return PRE_VISIT_CATEGORIES;
   }
@@ -29,6 +34,7 @@ const categoriesForBookingDispatch = (tenant, appointment) => {
 
 const shouldScheduleRebookingOnBooking = (tenant, appointment) => (
   !isOptimantraCheckoutMode(tenant, appointment)
+  && !isShopmonkeyAutoShopMode(appointment)
 );
 
 /**
@@ -102,9 +108,17 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
 };
 
 /**
- * Post-visit workflows after OptiMantra superbill checkout.
+ * Post-visit workflows after checkout / service completion.
+ * OptiMantra: superbill checkout. Shopmonkey: completed repair order.
  */
-const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, checkedOutAt, primaryServiceName }) => {
+const dispatchPostVisitWorkflows = async (tenantId, {
+  contactId,
+  appointmentId,
+  checkedOutAt,
+  primaryServiceName,
+  scheduleRebooking = true,
+  requireOptimantraCheckout = true,
+}) => {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
       `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
@@ -125,13 +139,17 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
   const appointment = appointmentRow.rows[0];
 
   if (!tenant || !contact || !appointment) {
-    console.warn('[APPT-WORKFLOW] Checkout dispatch missing context — skipping');
+    console.warn('[APPT-WORKFLOW] Post-visit dispatch missing context — skipping');
     return { jobsScheduled: 0 };
   }
 
-  if (!tenant.optimantra_checkout_automations) {
+  if (requireOptimantraCheckout && !tenant.optimantra_checkout_automations) {
     console.log('[APPT-WORKFLOW] Checkout workflows skipped — optimantra_checkout_automations off');
     return { jobsScheduled: 0, skipped: 'checkout_mode_disabled' };
+  }
+
+  if (!requireOptimantraCheckout && !isShopmonkeyAutoShopMode(appointment)) {
+    return { jobsScheduled: 0, skipped: 'not_shopmonkey_appointment' };
   }
 
   if (contact.unsubscribed) {
@@ -181,22 +199,27 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
     },
   );
 
-  const rebookingResult = await scheduleRebooking(
-    tenantId,
-    appointmentId,
-    contactId,
-    contact,
-    tenant,
-    appointmentForTemplates,
-    config,
-    vars,
-    { referenceTime },
-  );
+  let rebookingJobs = 0;
+  let rebookingResult = { scheduledCount: 0, skipReason: null };
+  if (scheduleRebooking) {
+    rebookingResult = await scheduleRebooking(
+      tenantId,
+      appointmentId,
+      contactId,
+      contact,
+      tenant,
+      appointmentForTemplates,
+      config,
+      vars,
+      { referenceTime },
+    );
+    rebookingJobs = rebookingResult.scheduledCount || 0;
+  }
 
-  const rebookingJobs = rebookingResult.scheduledCount || 0;
   const jobsScheduled = automationJobs + rebookingJobs;
+  const logLabel = requireOptimantraCheckout ? 'Checkout' : 'Post-service completion';
   console.log(
-    `[APPT-WORKFLOW] Checkout scheduled ${jobsScheduled} job(s) for appointment ${appointmentId}`
+    `[APPT-WORKFLOW] ${logLabel} scheduled ${jobsScheduled} job(s) for appointment ${appointmentId}`
     + (rebookingResult.skipReason ? ` (rebooking skipped: ${rebookingResult.skipReason})` : ''),
   );
 
@@ -209,6 +232,18 @@ const dispatchCheckoutWorkflows = async (tenantId, { contactId, appointmentId, c
     rebookingOffsetDays: rebookingResult.offsetDays || null,
   };
 };
+
+const dispatchCheckoutWorkflows = async (tenantId, params) => dispatchPostVisitWorkflows(tenantId, {
+  ...params,
+  scheduleRebooking: true,
+  requireOptimantraCheckout: true,
+});
+
+const dispatchPostServiceCompletionWorkflows = async (tenantId, params) => dispatchPostVisitWorkflows(tenantId, {
+  ...params,
+  scheduleRebooking: false,
+  requireOptimantraCheckout: false,
+});
 
 const scheduleAutomationSteps = async (
   tenantId,
@@ -781,9 +816,11 @@ const redeployUpcomingBookingWorkflows = async (tenantId, { dryRun = false } = {
 module.exports = {
   dispatchWorkflows,
   dispatchCheckoutWorkflows,
+  dispatchPostServiceCompletionWorkflows,
   redeployBookingWorkflowsForAppointment,
   redeployUpcomingBookingWorkflows,
   isOptimantraCheckoutMode,
+  isShopmonkeyAutoShopMode,
   PRE_VISIT_CATEGORIES,
   POST_VISIT_CATEGORIES,
   planRebookingCampaign,

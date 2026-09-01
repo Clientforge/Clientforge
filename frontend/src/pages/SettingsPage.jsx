@@ -1143,7 +1143,8 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
       const result = await api.post('/integrations/shopmonkey/refresh-service-names');
       const classifiedNote = result.classified != null ? ` Classified ${result.classified} service line(s).` : '';
       const maintenanceNote = result.maintenanceScheduled != null ? ` Scheduled ${result.maintenanceScheduled} maintenance reminder(s).` : '';
-      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.${classifiedNote}${maintenanceNote}`);
+      const postServiceNote = result.postServiceScheduled != null ? ` Scheduled ${result.postServiceScheduled} post-service message(s).` : '';
+      setMsg(`Refreshed ${result.updated} of ${result.scanned} completed visit(s) from Shopmonkey.${classifiedNote}${maintenanceNote}${postServiceNote}`);
     } catch (err) {
       setMsg(err.message);
     } finally {
