@@ -131,6 +131,7 @@ async function upsertDeferredServiceRow({
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, NOW())
      ON CONFLICT (tenant_id, shopmonkey_deferred_id) DO UPDATE SET
        appointment_id = COALESCE(EXCLUDED.appointment_id, shopmonkey_deferred_services.appointment_id),
+       shopmonkey_order_id = COALESCE(EXCLUDED.shopmonkey_order_id, shopmonkey_deferred_services.shopmonkey_order_id),
        service_name = EXCLUDED.service_name,
        vehicle_label = COALESCE(EXCLUDED.vehicle_label, shopmonkey_deferred_services.vehicle_label),
        deferred_at = COALESCE(EXCLUDED.deferred_at, shopmonkey_deferred_services.deferred_at),
@@ -185,6 +186,74 @@ async function hasPendingFollowupJobs(tenantId, contactId, appointmentId) {
   return !!result.rows[0];
 }
 
+async function loadDeferredServicesForOrder(tenantId, contactId, orderId, appointmentId = null) {
+  if (!orderId && !appointmentId) return [];
+
+  const result = await db.query(
+    `SELECT service_name, shopmonkey_order_id, status
+     FROM shopmonkey_deferred_services
+     WHERE tenant_id = $1
+       AND contact_id = $2
+       AND status IN ('pending', 'followup_scheduled')
+       AND (
+         ($3::text IS NOT NULL AND shopmonkey_order_id = $3)
+         OR (
+           $4::uuid IS NOT NULL
+           AND appointment_id = $4
+           AND ($3::text IS NULL OR shopmonkey_order_id IS NULL OR shopmonkey_order_id = $3)
+         )
+       )
+     ORDER BY service_name ASC`,
+    [tenantId, contactId, orderId ? String(orderId) : null, appointmentId || null],
+  );
+
+  return result.rows.map((row) => ({
+    serviceName: row.service_name,
+    shopmonkeyOrderId: row.shopmonkey_order_id,
+    status: row.status,
+  }));
+}
+
+function normalizeServicesForScheduling(services = []) {
+  const seen = new Set();
+  const normalized = [];
+  for (const service of services) {
+    const name = String(service?.serviceName || '').trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push({
+      serviceName: name,
+      shopmonkeyOrderId: service.shopmonkeyOrderId || null,
+    });
+  }
+  return normalized;
+}
+
+async function markDeferredServicesScheduled(tenantId, contactId, orderId, appointmentId = null) {
+  if (!orderId && !appointmentId) return 0;
+
+  const result = await db.query(
+    `UPDATE shopmonkey_deferred_services
+     SET status = 'followup_scheduled', updated_at = NOW()
+     WHERE tenant_id = $1
+       AND contact_id = $2
+       AND status IN ('pending', 'followup_scheduled')
+       AND (
+         ($3::text IS NOT NULL AND shopmonkey_order_id = $3)
+         OR (
+           $4::uuid IS NOT NULL
+           AND appointment_id = $4
+           AND ($3::text IS NULL OR shopmonkey_order_id IS NULL OR shopmonkey_order_id = $3)
+         )
+       )`,
+    [tenantId, contactId, orderId ? String(orderId) : null, appointmentId || null],
+  );
+
+  return result.rowCount;
+}
+
 async function scheduleDeferredFollowup({
   tenantId,
   contactId,
@@ -196,6 +265,11 @@ async function scheduleDeferredFollowup({
   forceReschedule = false,
 }) {
   if (!appointmentId || !services?.length) {
+    return { scheduled: false, reason: 'missing_context' };
+  }
+
+  const servicesForMessage = normalizeServicesForScheduling(services);
+  if (servicesForMessage.length === 0) {
     return { scheduled: false, reason: 'missing_context' };
   }
 
@@ -222,7 +296,7 @@ async function scheduleDeferredFollowup({
 
   const businessName = tenant?.name || 'our shop';
   const bookingLink = (tenant?.booking_link || '').trim();
-  const serviceList = formatServiceList(services);
+  const serviceList = formatServiceList(servicesForMessage);
   const firstName = contact.first_name || 'there';
 
   const vars = {
@@ -269,19 +343,17 @@ async function scheduleDeferredFollowup({
     return { scheduled: false, reason: 'all_steps_in_past' };
   }
 
-  await db.query(
-    `UPDATE shopmonkey_deferred_services
-     SET status = 'followup_scheduled', updated_at = NOW()
-     WHERE tenant_id = $1
-       AND contact_id = $2
-       AND shopmonkey_order_id = $3
-       AND status = 'pending'`,
-    [tenantId, contactId, orderId || services[0]?.shopmonkeyOrderId || null],
+  await markDeferredServicesScheduled(
+    tenantId,
+    contactId,
+    orderId || servicesForMessage[0]?.shopmonkeyOrderId || null,
+    appointmentId,
   );
 
   return {
     scheduled: true,
-    serviceCount: services.length,
+    serviceCount: servicesForMessage.length,
+    serviceList,
     stepsScheduled: scheduledJobs.length,
     schedule,
     jobs: scheduledJobs,
@@ -338,12 +410,32 @@ async function syncDeferredServicesForCompletedOrder({
     if (row) stored.push({ ...item, rowId: row.id, status: row.status });
   }
 
-  const pendingForOrder = stored.filter((s) => s.status === 'pending');
-  if (pendingForOrder.length === 0) {
+  const allServices = await loadDeferredServicesForOrder(tenantId, contactId, orderId, appointmentId);
+  if (allServices.length === 0) {
     return {
       action: 'deferred_already_handled',
       orderId,
       deferredCount: items.length,
+    };
+  }
+
+  const hasPending = allServices.some((s) => s.status === 'pending');
+  const hasJobs = await hasPendingFollowupJobs(tenantId, contactId, appointmentId);
+
+  if (!hasPending && hasJobs) {
+    return {
+      action: 'deferred_already_handled',
+      orderId,
+      deferredCount: allServices.length,
+      serviceList: formatServiceList(allServices),
+    };
+  }
+
+  if (!hasPending && !hasJobs) {
+    return {
+      action: 'deferred_already_handled',
+      orderId,
+      deferredCount: allServices.length,
     };
   }
 
@@ -352,15 +444,17 @@ async function syncDeferredServicesForCompletedOrder({
     contactId,
     appointmentId,
     orderId,
-    services: pendingForOrder,
+    services: allServices,
     referenceAt: completedAt,
     followupSchedule: settings.followupSchedule,
+    forceReschedule: hasJobs,
   });
 
   return {
     action: 'deferred_synced',
     orderId,
-    deferredCount: items.length,
+    deferredCount: allServices.length,
+    serviceList: formatServiceList(allServices),
     followup,
   };
 }
@@ -659,6 +753,9 @@ module.exports = {
   markFollowupStepSent,
   rescheduleDeferredSequences,
   getDeferredOrderGroups,
+  normalizeServicesForScheduling,
+  loadDeferredServicesForOrder,
+  markDeferredServicesScheduled,
   formatServiceList,
   renderTemplate,
   messageForStep,

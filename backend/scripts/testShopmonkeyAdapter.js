@@ -25,6 +25,7 @@ const {
   isFinalDeferredFollowupJobType,
   messageForStep,
   normalizeFollowupSchedule,
+  normalizeServicesForScheduling,
 } = require('../src/services/shopmonkey-deferred.service');
 
 let failed = 0;
@@ -139,10 +140,39 @@ check(
 const deferredList = normalizeDeferredServiceList({ data: [deferredItem, { id: 'x', excludedFromDeferred: true }] }, { orderId: 'ord-1' });
 check('deferred list filters by order', deferredList.length === 1);
 
+const nestedOrderDeferred = normalizeDeferredServiceItem({
+  id: 'def-2',
+  name: 'Transmission Service',
+  order: { id: 'ord-1', customerId: 'cust-1' },
+});
+check(
+  'deferred service uses nested order id',
+  nestedOrderDeferred?.shopmonkeyOrderId === 'ord-1',
+);
+
+const nestedOrderList = normalizeDeferredServiceList(
+  {
+    data: [{
+      id: 'def-2',
+      name: 'Transmission Service',
+      order: { id: 'ord-1', customerId: 'cust-1' },
+    }],
+  },
+  { orderId: 'ord-1' },
+);
+check('deferred list matches nested order id', nestedOrderList.length === 1);
+
 check('service list formats two items', formatServiceList([
   { serviceName: 'Brake pads' },
   { serviceName: 'Rotors' },
 ]) === 'Brake pads and Rotors');
+
+const deduped = normalizeServicesForScheduling([
+  { serviceName: 'Tune Up', shopmonkeyOrderId: 'ord-1' },
+  { serviceName: 'tune up', shopmonkeyOrderId: 'ord-1' },
+  { serviceName: 'Engine Diagnostic', shopmonkeyOrderId: 'ord-1' },
+]);
+check('scheduling list dedupes service names', deduped.length === 2);
 
 const rendered = renderTemplate(DEFAULT_FOLLOWUP_MESSAGES[0], {
   firstName: 'Jane',

@@ -215,7 +215,9 @@ const normalizeDeferredServiceItem = (item) => {
 
   return {
     shopmonkeyDeferredId: String(item.id),
-    shopmonkeyOrderId: item.orderId ? String(item.orderId) : null,
+    shopmonkeyOrderId: item.orderId
+      ? String(item.orderId)
+      : (item.order?.id ? String(item.order.id) : null),
     shopmonkeyCustomerId: item.order?.customerId ? String(item.order.customerId) : null,
     serviceName: String(item.name).trim(),
     vehicleLabel,
