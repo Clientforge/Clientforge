@@ -118,6 +118,7 @@ const dispatchPostVisitWorkflows = async (tenantId, {
   primaryServiceName,
   scheduleRebooking = true,
   requireOptimantraCheckout = true,
+  forceReschedule = false,
 }) => {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
@@ -156,19 +157,6 @@ const dispatchPostVisitWorkflows = async (tenantId, {
     return { jobsScheduled: 0, skipped: 'unsubscribed' };
   }
 
-  await db.query(
-    `UPDATE appointment_workflow_jobs
-     SET status = 'cancelled', cancelled_at = NOW()
-     WHERE appointment_id = $1
-       AND tenant_id = $2
-       AND status = 'pending'
-       AND (
-         job_type IN ('post_visit', 'review_request', 'rebooking', 'rebooking_initial')
-         OR job_type LIKE 'rebooking_followup_%'
-       )`,
-    [appointmentId, tenantId],
-  );
-
   const appointmentForTemplates = {
     ...appointment,
     service_name: primaryServiceName || appointment.service_name,
@@ -182,6 +170,60 @@ const dispatchPostVisitWorkflows = async (tenantId, {
   });
 
   const referenceTime = checkedOutAt || new Date().toISOString();
+
+  const plannedAutomationJobs = planAutomationSteps(
+    appointmentForTemplates,
+    config,
+    vars,
+    {
+      skipImmediate: true,
+      referenceTime,
+      categories: POST_VISIT_CATEGORIES,
+    },
+  );
+
+  if (!forceReschedule) {
+    const alreadySent = await hasSentPostVisitJobs(tenantId, appointmentId);
+    if (alreadySent) {
+      console.log(`[APPT-WORKFLOW] Post-visit already sent for appointment ${appointmentId} — skipping`);
+      return {
+        jobsScheduled: 0,
+        skipped: 'already_sent',
+        postVisitJobs: 0,
+        rebookingJobs: 0,
+        rebookingSkipped: true,
+        rebookingSkipReason: 'already_sent',
+        rebookingOffsetDays: null,
+      };
+    }
+
+    const pendingJobs = await loadPendingPostVisitJobs(tenantId, appointmentId);
+    if (plannedPostVisitJobsMatch(pendingJobs, plannedAutomationJobs)) {
+      console.log(`[APPT-WORKFLOW] Post-visit jobs unchanged for appointment ${appointmentId} — skipping`);
+      return {
+        jobsScheduled: 0,
+        skipped: 'already_scheduled',
+        postVisitJobs: 0,
+        rebookingJobs: 0,
+        rebookingSkipped: true,
+        rebookingSkipReason: 'already_scheduled',
+        rebookingOffsetDays: null,
+      };
+    }
+  }
+
+  await db.query(
+    `UPDATE appointment_workflow_jobs
+     SET status = 'cancelled', cancelled_at = NOW()
+     WHERE appointment_id = $1
+       AND tenant_id = $2
+       AND status = 'pending'
+       AND (
+         job_type IN ('post_visit', 'review_request', 'rebooking', 'rebooking_initial')
+         OR job_type LIKE 'rebooking_followup_%'
+       )`,
+    [appointmentId, tenantId],
+  );
 
   const automationJobs = await scheduleAutomationSteps(
     tenantId,
@@ -245,24 +287,19 @@ const dispatchPostServiceCompletionWorkflows = async (tenantId, params) => dispa
   requireOptimantraCheckout: false,
 });
 
-const scheduleAutomationSteps = async (
-  tenantId,
-  appointmentId,
-  contactId,
-  contact,
-  tenant,
+function planAutomationSteps(
   appointment,
   config,
   vars,
   { skipImmediate = false, referenceTime, categories } = {},
-) => {
+) {
   const appointmentTime = referenceTime
     ? new Date(referenceTime)
     : new Date(appointment.scheduled_at);
   const categoryKeys = categories
     || automationService.CATEGORY_KEYS.filter((key) => key !== 'rebooking');
 
-  let scheduledCount = 0;
+  const planned = [];
 
   for (const category of categoryKeys) {
     if (category === 'rebooking') continue;
@@ -284,23 +321,116 @@ const scheduleAutomationSteps = async (
       for (const channel of channels) {
         if (step.offset_minutes === 0) {
           if (skipImmediate) continue;
-          await deliverMessage(tenantId, contactId, contact, tenant, {
+          planned.push({
+            jobType,
             channel,
-            body,
+            messageBody: body,
             emailSubject,
-            messageType: jobType,
+            scheduledAt: new Date().toISOString(),
+            deliverImmediately: true,
           });
         } else {
-          await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, jobType, {
-            scheduledAt: runAt.toISOString(),
+          planned.push({
+            jobType,
             channel,
             messageBody: body,
             emailSubject: channel === 'email' ? emailSubject : null,
+            scheduledAt: runAt.toISOString(),
+            deliverImmediately: false,
           });
-          scheduledCount += 1;
         }
       }
     }
+  }
+
+  return planned;
+}
+
+function plannedPostVisitJobsMatch(existingRows, plannedJobs) {
+  if (plannedJobs.length === 0) return existingRows.length === 0;
+  if (existingRows.length !== plannedJobs.length) return false;
+
+  for (const planned of plannedJobs) {
+    const existing = existingRows.find(
+      (row) => row.job_type === planned.jobType && row.channel === planned.channel,
+    );
+    if (!existing) return false;
+    if (String(existing.message_body || '') !== String(planned.messageBody || '')) return false;
+
+    const delta = Math.abs(
+      new Date(existing.scheduled_at).getTime() - new Date(planned.scheduledAt).getTime(),
+    );
+    if (delta > 60 * 1000) return false;
+  }
+
+  return true;
+}
+
+async function loadPendingPostVisitJobs(tenantId, appointmentId) {
+  const result = await db.query(
+    `SELECT job_type, channel, message_body, scheduled_at
+     FROM appointment_workflow_jobs
+     WHERE tenant_id = $1
+       AND appointment_id = $2
+       AND status = 'pending'
+       AND job_type IN ('post_visit', 'review_request')
+     ORDER BY job_type ASC, channel ASC`,
+    [tenantId, appointmentId],
+  );
+  return result.rows;
+}
+
+async function hasSentPostVisitJobs(tenantId, appointmentId) {
+  const result = await db.query(
+    `SELECT id
+     FROM appointment_workflow_jobs
+     WHERE tenant_id = $1
+       AND appointment_id = $2
+       AND status = 'sent'
+       AND job_type IN ('post_visit', 'review_request')
+     LIMIT 1`,
+    [tenantId, appointmentId],
+  );
+  return result.rows.length > 0;
+}
+
+const scheduleAutomationSteps = async (
+  tenantId,
+  appointmentId,
+  contactId,
+  contact,
+  tenant,
+  appointment,
+  config,
+  vars,
+  { skipImmediate = false, referenceTime, categories } = {},
+) => {
+  const planned = planAutomationSteps(appointment, config, vars, {
+    skipImmediate,
+    referenceTime,
+    categories,
+  });
+
+  let scheduledCount = 0;
+
+  for (const job of planned) {
+    if (job.deliverImmediately) {
+      await deliverMessage(tenantId, contactId, contact, tenant, {
+        channel: job.channel,
+        body: job.messageBody,
+        emailSubject: job.emailSubject,
+        messageType: job.jobType,
+      });
+      continue;
+    }
+
+    await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, job.jobType, {
+      scheduledAt: job.scheduledAt,
+      channel: job.channel,
+      messageBody: job.messageBody,
+      emailSubject: job.emailSubject,
+    });
+    scheduledCount += 1;
   }
 
   return scheduledCount;
@@ -823,6 +953,8 @@ module.exports = {
   isShopmonkeyAutoShopMode,
   PRE_VISIT_CATEGORIES,
   POST_VISIT_CATEGORIES,
+  planAutomationSteps,
+  plannedPostVisitJobsMatch,
   planRebookingCampaign,
   pickRebookingMessage,
   coercePositiveInt,

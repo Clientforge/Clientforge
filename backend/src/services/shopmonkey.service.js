@@ -605,7 +605,6 @@ async function refreshAppointmentServiceNames(tenantId) {
   let updated = 0;
   let classified = 0;
   let maintenanceScheduled = 0;
-  let postServiceScheduled = 0;
   const tenantName = await getTenantName(tenantId);
 
   for (const row of result.rows) {
@@ -665,17 +664,6 @@ async function refreshAppointmentServiceNames(tenantId) {
           deferredServiceNames,
         );
 
-        const postServiceResult = await appointmentWorkflowService.dispatchPostServiceCompletionWorkflows(
-          tenantId,
-          {
-            contactId,
-            appointmentId: row.id,
-            checkedOutAt: row.completed_at || row.scheduled_at,
-            primaryServiceName: context.serviceName,
-          },
-        );
-        postServiceScheduled += postServiceResult.postVisitJobs || 0;
-
         if (maintenanceClassifications.length) {
           const maintenanceResult = await autoShopMaintenance.scheduleMaintenanceReminders({
             tenantId,
@@ -695,7 +683,7 @@ async function refreshAppointmentServiceNames(tenantId) {
     }
   }
 
-  return { scanned: result.rows.length, updated, classified, maintenanceScheduled, postServiceScheduled };
+  return { scanned: result.rows.length, updated, classified, maintenanceScheduled };
 }
 
 async function testConnection(tenantId) {

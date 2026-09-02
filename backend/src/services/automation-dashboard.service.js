@@ -438,6 +438,7 @@ const redeployCheckoutWorkflows = async (tenantId, appointmentId) => {
     appointmentId: appointment.id,
     checkedOutAt: checkedOutAt ? new Date(checkedOutAt).toISOString() : new Date().toISOString(),
     primaryServiceName: appointment.service_name,
+    forceReschedule: true,
   });
 
   return {
