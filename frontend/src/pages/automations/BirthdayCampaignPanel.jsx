@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { isSluiceTenant } from '../../config/sluiceTenant';
 
 const TEMPLATE_VARS = ['{firstName}', '{lastName}', '{businessName}', '{bookingLink}', '{reviewLink}'];
 
@@ -41,6 +43,7 @@ function formatBirthdayDate(iso) {
 }
 
 export default function BirthdayCampaignPanel() {
+  const { tenant } = useAuth();
   const [config, setConfig] = useState(emptyConfig());
   const [upcoming, setUpcoming] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +108,9 @@ export default function BirthdayCampaignPanel() {
     return <div className="page-loader">Loading birthday campaign...</div>;
   }
 
+  const monthlyBatch = isSluiceTenant(tenant) || upcoming?.viewMode === 'month';
   const weekLabel = formatWeekRange(upcoming?.weekStart, upcoming?.weekEnd);
+  const monthLabel = upcoming?.monthLabel || '';
   const contacts = upcoming?.contacts || [];
 
   return (
@@ -114,8 +119,17 @@ export default function BirthdayCampaignPanel() {
         <div>
           <h2>Birthday Campaign</h2>
           <p className="section-desc">
-            Every day at the configured time, ClientForge sends a birthday SMS to contacts whose date of birth matches that day.
-            Each contact receives at most one birthday message per calendar year.
+            {monthlyBatch ? (
+              <>
+                On the 1st of each month at the configured time, ClientForge sends a birthday SMS to every contact
+                whose birthday falls in that month. Each contact receives at most one birthday message per calendar year.
+              </>
+            ) : (
+              <>
+                Every day at the configured time, ClientForge sends a birthday SMS to contacts whose date of birth matches that day.
+                Each contact receives at most one birthday message per calendar year.
+              </>
+            )}
           </p>
         </div>
         <label className="toggle-row">
@@ -136,8 +150,12 @@ export default function BirthdayCampaignPanel() {
       <div className="birthday-week-section">
         <div className="card-header-row">
           <div>
-            <h3>Birthdays This Week</h3>
-            {weekLabel && <p className="hint" style={{ margin: '0.25rem 0 0' }}>{weekLabel}</p>}
+            <h3>{monthlyBatch ? 'Birthdays This Month' : 'Birthdays This Week'}</h3>
+            {(monthlyBatch ? monthLabel : weekLabel) && (
+              <p className="hint" style={{ margin: '0.25rem 0 0' }}>
+                {monthlyBatch ? monthLabel : weekLabel}
+              </p>
+            )}
           </div>
         </div>
 
@@ -145,7 +163,7 @@ export default function BirthdayCampaignPanel() {
           <div className="page-loader" style={{ padding: '1rem 0' }}>Loading birthdays…</div>
         ) : contacts.length === 0 ? (
           <div className="empty-state" style={{ padding: '1rem 0' }}>
-            <p>No birthdays this week</p>
+            <p>{monthlyBatch ? 'No birthdays this month' : 'No birthdays this week'}</p>
             <span>Add date of birth on contacts to see them here</span>
           </div>
         ) : (
@@ -181,7 +199,12 @@ export default function BirthdayCampaignPanel() {
             <option key={h.value} value={h.value}>{h.label}</option>
           ))}
         </select>
-        <p className="hint">Uses your clinic timezone from Settings. The check runs once per day at this hour.</p>
+        <p className="hint">
+          Uses your clinic timezone from Settings.
+          {monthlyBatch
+            ? ' The campaign runs once on the 1st of each month at this hour.'
+            : ' The check runs once per day at this hour.'}
+        </p>
       </div>
 
       <div className="form-group">

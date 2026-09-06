@@ -5,9 +5,13 @@ const {
   normalizeConfig,
   getLocalDateTimeParts,
   getWeekRange,
+  getMonthStartKey,
+  parseDateOfBirthParts,
   birthdayOccurrenceInWeek,
+  resolveBirthdayCampaignRun,
   buildTemplateVars,
 } = require('../src/services/birthday-campaign.service');
+const { SLUICE_TENANT_ID } = require('../src/config/sluiceTenant');
 const { renderTemplate } = require('../src/services/appointment-automation.service');
 
 let failed = 0;
@@ -73,6 +77,35 @@ check(
   }).reviewLink,
   'https://book.example.com',
 );
+
+check('parseDateOfBirthParts', parseDateOfBirthParts('1990-07-15'), { month: 7, day: 15 });
+check('month start key', getMonthStartKey(2026, 3), '2026-03-01');
+
+const sluiceMidMonth = resolveBirthdayCampaignRun({
+  tenantId: SLUICE_TENANT_ID,
+  local: { year: 2026, month: 3, day: 15, dateKey: '2026-03-15' },
+});
+check('Sluice skips mid-month', sluiceMidMonth.skip, true);
+check('Sluice mid-month reason', sluiceMidMonth.reason, 'not_first_of_month');
+
+const sluiceFirst = resolveBirthdayCampaignRun({
+  tenantId: SLUICE_TENANT_ID,
+  local: { year: 2026, month: 3, day: 1, dateKey: '2026-03-01' },
+});
+check('Sluice runs on 1st', sluiceFirst.skip, false);
+check('Sluice monthly mode', sluiceFirst.mode, 'month_start');
+check('Sluice run date is month start', sluiceFirst.runDate, '2026-03-01');
+check('Sluice matches month only', sluiceFirst.month, 3);
+checkCond('Sluice has no day filter', sluiceFirst.day === undefined);
+
+const otherTenant = resolveBirthdayCampaignRun({
+  tenantId: '00000000-0000-0000-0000-000000000000',
+  local: { year: 2026, month: 3, day: 15, dateKey: '2026-03-15' },
+});
+check('Other tenants run daily', otherTenant.skip, false);
+check('Other tenants exact-day mode', otherTenant.mode, 'on_birthday');
+check('Other tenants use today as run date', otherTenant.runDate, '2026-03-15');
+check('Other tenants match day', otherTenant.day, 15);
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);

@@ -2,6 +2,7 @@ const db = require('../db/connection');
 const smsService = require('./sms.service');
 const compliance = require('./compliance.service');
 const { renderTemplate } = require('./appointment-automation.service');
+const { isSluiceTenant } = require('../config/sluiceTenant');
 
 const DEFAULT_MESSAGE =
   'Happy Birthday {firstName}! From all of us at {businessName}, we hope you have an amazing day. Book a treat: {bookingLink}';
@@ -103,21 +104,48 @@ const getWeekRange = (timezone) => {
   };
 };
 
-const birthdayOccurrenceInWeek = (dateOfBirth, weekDays, calendarYear) => {
-  let month;
-  let day;
+const parseDateOfBirthParts = (dateOfBirth) => {
   if (dateOfBirth instanceof Date) {
-    month = dateOfBirth.getUTCMonth() + 1;
-    day = dateOfBirth.getUTCDate();
-  } else {
-    const iso = String(dateOfBirth).slice(0, 10);
-    const [, m, d] = iso.split('-').map(Number);
-    month = m;
-    day = d;
+    return {
+      month: dateOfBirth.getUTCMonth() + 1,
+      day: dateOfBirth.getUTCDate(),
+    };
   }
+  const iso = String(dateOfBirth).slice(0, 10);
+  const [, month, day] = iso.split('-').map(Number);
+  return { month, day };
+};
+
+const birthdayOccurrenceInWeek = (dateOfBirth, weekDays, calendarYear) => {
+  const { month, day } = parseDateOfBirthParts(dateOfBirth);
   const match = weekDays.find((w) => w.month === month && w.day === day);
   if (!match) return null;
   return formatDateKey(calendarYear, month, day);
+};
+
+const getMonthStartKey = (year, month) => formatDateKey(year, month, 1);
+
+/** Sluice: batch on the 1st for all birthdays in the month. Others: exact day match. */
+const resolveBirthdayCampaignRun = ({ tenantId, local }) => {
+  if (isSluiceTenant(tenantId)) {
+    if (local.day !== 1) {
+      return { skip: true, reason: 'not_first_of_month' };
+    }
+    return {
+      skip: false,
+      runDate: getMonthStartKey(local.year, local.month),
+      month: local.month,
+      mode: 'month_start',
+    };
+  }
+
+  return {
+    skip: false,
+    runDate: local.dateKey,
+    month: local.month,
+    day: local.day,
+    mode: 'on_birthday',
+  };
 };
 
 const getConfigForTenant = async (tenantId) => {
@@ -154,7 +182,91 @@ const updateBirthdayCampaign = async (tenantId, updates) => {
   return getBirthdayCampaign(tenantId);
 };
 
+const getBirthdaysThisMonth = async (tenantId) => {
+  const { tenant, config } = await getConfigForTenant(tenantId);
+  const timezone = tenant.timezone || 'America/New_York';
+  const local = getLocalDateTimeParts(timezone);
+  const monthStartKey = getMonthStartKey(local.year, local.month);
+
+  const result = await db.query(
+    `SELECT
+       c.id,
+       c.first_name,
+       c.last_name,
+       c.phone,
+       c.date_of_birth,
+       c.unsubscribed,
+       s.sent_at,
+       m.delivery_status
+     FROM contacts c
+     LEFT JOIN birthday_campaign_sends s
+       ON s.contact_id = c.id
+      AND s.tenant_id = c.tenant_id
+      AND s.calendar_year = $3
+     LEFT JOIN messages m ON m.id = s.message_id
+     WHERE c.tenant_id = $1
+       AND c.date_of_birth IS NOT NULL
+       AND EXTRACT(MONTH FROM c.date_of_birth)::int = $2
+     ORDER BY EXTRACT(DAY FROM c.date_of_birth)::int ASC,
+              c.last_name ASC NULLS LAST,
+              c.first_name ASC NULLS LAST`,
+    [tenantId, local.month, local.year],
+  );
+
+  const monthLabel = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${monthStartKey}T12:00:00`));
+
+  const contacts = result.rows.map((row) => {
+    const { day } = parseDateOfBirthParts(row.date_of_birth);
+    const birthdayThisYear = formatDateKey(local.year, local.month, day);
+    const eligible = !row.unsubscribed && !!row.phone;
+    const sent = !!row.sent_at && row.delivery_status === 'sent';
+    let status = 'scheduled';
+    if (sent) {
+      status = 'sent';
+    } else if (!eligible) {
+      status = row.unsubscribed ? 'unsubscribed' : 'no_phone';
+    } else if (
+      local.dateKey > monthStartKey
+      || (local.dateKey === monthStartKey && local.hour >= config.send_hour)
+    ) {
+      status = 'pending';
+    }
+
+    return {
+      id: row.id,
+      displayName: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.phone || 'Unknown',
+      dateOfBirth: row.date_of_birth instanceof Date
+        ? row.date_of_birth.toISOString().slice(0, 10)
+        : String(row.date_of_birth).slice(0, 10),
+      birthdayThisYear,
+      phone: row.phone || '',
+      eligible,
+      sent,
+      sentAt: row.sent_at || null,
+      status,
+    };
+  });
+
+  return {
+    viewMode: 'month',
+    monthStart: monthStartKey,
+    monthLabel,
+    timezone,
+    calendarYear: local.year,
+    calendarMonth: local.month,
+    contacts,
+  };
+};
+
 const getBirthdaysThisWeek = async (tenantId) => {
+  if (isSluiceTenant(tenantId)) {
+    return getBirthdaysThisMonth(tenantId);
+  }
+
   const { tenant } = await getConfigForTenant(tenantId);
   const timezone = tenant.timezone || 'America/New_York';
   const week = getWeekRange(timezone);
@@ -217,6 +329,7 @@ const getBirthdaysThisWeek = async (tenantId) => {
   });
 
   return {
+    viewMode: 'week',
     weekStart: week.weekStart,
     weekEnd: week.weekEnd,
     timezone,
@@ -232,6 +345,26 @@ const buildTemplateVars = ({ tenant, contact }) => ({
   bookingLink: tenant.booking_link || '',
   reviewLink: tenant.booking_link || '',
 });
+
+const findBirthdayContactsInMonth = async (tenantId, month, calendarYear) => {
+  const result = await db.query(
+    `SELECT c.*
+     FROM contacts c
+     WHERE c.tenant_id = $1
+       AND c.date_of_birth IS NOT NULL
+       AND EXTRACT(MONTH FROM c.date_of_birth) = $2
+       AND c.unsubscribed = false
+       AND NOT EXISTS (
+         SELECT 1 FROM birthday_campaign_sends s
+         WHERE s.tenant_id = c.tenant_id
+           AND s.contact_id = c.id
+           AND s.calendar_year = $3
+       )
+     ORDER BY EXTRACT(DAY FROM c.date_of_birth) ASC, c.created_at ASC`,
+    [tenantId, month, calendarYear],
+  );
+  return result.rows;
+};
 
 const findBirthdayContacts = async (tenantId, month, day, calendarYear) => {
   const result = await db.query(
@@ -307,22 +440,36 @@ const processBirthdayCampaignForTenant = async (tenantRow) => {
     return { sent: 0, skipped: true, reason: 'not_send_hour' };
   }
 
-  const claimed = await claimDailyRun(tenantRow.id, local.dateKey);
-  if (!claimed) return { sent: 0, skipped: true, reason: 'already_ran_today' };
+  const runPlan = resolveBirthdayCampaignRun({ tenantId: tenantRow.id, local });
+  if (runPlan.skip) {
+    return { sent: 0, skipped: true, reason: runPlan.reason };
+  }
 
-  const contacts = await findBirthdayContacts(
-    tenantRow.id,
-    local.month,
-    local.day,
-    local.year,
-  );
+  const claimed = await claimDailyRun(tenantRow.id, runPlan.runDate);
+  if (!claimed) {
+    return {
+      sent: 0,
+      skipped: true,
+      reason: runPlan.mode === 'month_start' ? 'already_ran_this_month' : 'already_ran_today',
+    };
+  }
+
+  const contacts = runPlan.mode === 'month_start'
+    ? await findBirthdayContactsInMonth(tenantRow.id, runPlan.month, local.year)
+    : await findBirthdayContacts(tenantRow.id, runPlan.month, runPlan.day, local.year);
 
   if (contacts.length === 0) {
-    console.log(`[BIRTHDAY] Tenant ${tenantRow.id}: no birthdays on ${local.dateKey}`);
+    const label = runPlan.mode === 'month_start'
+      ? `no birthdays in month ${local.month}/${local.year}`
+      : `no birthdays on ${local.dateKey}`;
+    console.log(`[BIRTHDAY] Tenant ${tenantRow.id}: ${label}`);
     return { sent: 0, contacts: 0 };
   }
 
-  console.log(`[BIRTHDAY] Tenant ${tenantRow.id}: sending to ${contacts.length} contact(s)`);
+  const batchLabel = runPlan.mode === 'month_start'
+    ? `monthly batch for ${local.month}/${local.year}`
+    : `${local.dateKey}`;
+  console.log(`[BIRTHDAY] Tenant ${tenantRow.id}: sending to ${contacts.length} contact(s) (${batchLabel})`);
 
   let sent = 0;
   for (const contact of contacts) {
@@ -368,10 +515,15 @@ module.exports = {
   getBirthdayCampaign,
   updateBirthdayCampaign,
   getBirthdaysThisWeek,
+  getBirthdaysThisMonth,
   getLocalDateTimeParts,
   getWeekRange,
+  getMonthStartKey,
+  parseDateOfBirthParts,
   birthdayOccurrenceInWeek,
+  resolveBirthdayCampaignRun,
   findBirthdayContacts,
+  findBirthdayContactsInMonth,
   processBirthdayCampaignForTenant,
   processAllBirthdayCampaigns,
   buildTemplateVars,
