@@ -51,6 +51,12 @@ export const emptyConfig = () => ({
   eventMessages: {
     cancellation: { enabled: true, channel: 'sms', message: '', email_subject: '' },
     reschedule: { enabled: true, channel: 'sms', message: '', email_subject: '' },
+    noShow: {
+      enabled: true,
+      channel: 'sms',
+      message: 'Hi {firstName}, we missed you at {businessName} today. We\'d love to reschedule your {serviceName} — book here: {bookingLink}',
+      email_subject: 'We Missed You — {businessName}',
+    },
   },
 });
 
@@ -69,6 +75,10 @@ export const toOffsetMinutes = ({ direction, value, unit }) => {
   const mins = Number(value) * mult;
   return direction === 'before' ? -mins : mins;
 };
+
+export const SLUICE_EVENT_MESSAGE_TABS = [
+  { key: 'noShow', label: 'No-Show Follow-up' },
+];
 
 export const AUTO_SHOP_WORKFLOW_TABS = [
   { key: 'postAppointment', label: 'Post-Service Completion' },

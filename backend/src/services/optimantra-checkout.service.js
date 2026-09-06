@@ -74,7 +74,7 @@ async function findAppointmentForCheckout(tenantId, contactId, { appointmentExte
        WHERE tenant_id = $1
          AND contact_id = $2
          AND provider = 'optimantra'
-         AND status IN ('scheduled', 'confirmed', 'rescheduled', 'completed')
+         AND status IN ('scheduled', 'confirmed', 'rescheduled', 'completed', 'no_show')
          AND scheduled_at >= $3
          AND scheduled_at <= $4
        ORDER BY ABS(EXTRACT(EPOCH FROM (scheduled_at - $5::timestamptz))) ASC
@@ -90,7 +90,7 @@ async function findAppointmentForCheckout(tenantId, contactId, { appointmentExte
      WHERE tenant_id = $1
        AND contact_id = $2
        AND provider = 'optimantra'
-       AND status IN ('scheduled', 'confirmed', 'rescheduled')
+       AND status IN ('scheduled', 'confirmed', 'rescheduled', 'no_show')
        AND scheduled_at <= $3
      ORDER BY scheduled_at DESC
      LIMIT 1`,
@@ -180,6 +180,16 @@ async function processSuperbillCheckout(tenantId, normalized) {
   let appointmentId = matchedAppointment?.id || null;
 
   if (appointmentId) {
+    await db.query(
+      `UPDATE appointment_workflow_jobs
+       SET status = 'cancelled', cancelled_at = NOW()
+       WHERE appointment_id = $1
+         AND tenant_id = $2
+         AND status = 'pending'
+         AND job_type = 'no_show'`,
+      [appointmentId, tenantId],
+    );
+
     await db.query(
       `UPDATE appointments SET
          status = 'completed',

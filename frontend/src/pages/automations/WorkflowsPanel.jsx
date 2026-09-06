@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { isSluiceTenant } from '../../config/sluiceTenant';
 import {
-  WORKFLOW_TABS, AUTO_SHOP_WORKFLOW_TABS, CHANNELS, TEMPLATE_VARS, emptyConfig, newStepId,
+  WORKFLOW_TABS, AUTO_SHOP_WORKFLOW_TABS, SLUICE_EVENT_MESSAGE_TABS, CHANNELS, TEMPLATE_VARS, emptyConfig, newStepId,
   parseOffset, toOffsetMinutes, formatOffsetLabel, formatServiceCompletionOffsetLabel,
 } from './shared';
 
 export default function WorkflowsPanel() {
+  const { tenant } = useAuth();
   const [tab, setTab] = useState('confirmations');
   const [workflowMode, setWorkflowMode] = useState('standard');
   const [config, setConfig] = useState(emptyConfig());
@@ -160,7 +163,11 @@ export default function WorkflowsPanel() {
 
   if (loading) return <div className="page-loader">Loading workflows...</div>;
 
-  const workflowTabs = workflowMode === 'auto_shop' ? AUTO_SHOP_WORKFLOW_TABS : WORKFLOW_TABS;
+  const sluiceTenant = isSluiceTenant(tenant);
+  const workflowTabs = workflowMode === 'auto_shop'
+    ? AUTO_SHOP_WORKFLOW_TABS
+    : (sluiceTenant ? [...WORKFLOW_TABS, ...SLUICE_EVENT_MESSAGE_TABS] : WORKFLOW_TABS);
+  const isNoShowTab = tab === 'noShow';
   const section = config[tab] || { enabled: true, steps: [] };
   const useCompletionOffsets = workflowMode === 'auto_shop'
     && (tab === 'postAppointment' || tab === 'reviewRequests');
@@ -199,7 +206,13 @@ export default function WorkflowsPanel() {
             <div>
               <h3>{workflowTabs.find((t) => t.key === tab)?.label}</h3>
               <p className="settings-desc">
-                {tabDescription || (
+                {isNoShowTab ? (
+                  <>
+                    Sent at <strong>7:00 PM</strong> (clinic timezone) on the appointment day when no checkout
+                    is recorded. Variables:{' '}
+                    {TEMPLATE_VARS.map((v) => <code key={v}>{v}</code>)}
+                  </>
+                ) : tabDescription || (
                   <>
                     Use template variables:{' '}
                     {TEMPLATE_VARS.map((v) => <code key={v}>{v}</code>)}
@@ -208,7 +221,7 @@ export default function WorkflowsPanel() {
               </p>
             </div>
           </div>
-          <button type="button" className="btn-ai" onClick={generateWithAI} disabled={generating}>
+          <button type="button" className="btn-ai" onClick={generateWithAI} disabled={generating || isNoShowTab}>
             {generating ? (
               <><span className="ai-spinner" /> Generating...</>
             ) : (
@@ -217,6 +230,30 @@ export default function WorkflowsPanel() {
           </button>
         </div>
 
+        {isNoShowTab ? (
+          <>
+            <div className="automation-section-header">
+              <span className="settings-desc" style={{ marginBottom: 0 }}>Enable or disable no-show follow-up</span>
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={config.eventMessages?.noShow?.enabled !== false}
+                  onChange={(e) => updateEventMessage('noShow', 'enabled', e.target.checked)}
+                />
+                <span className="toggle-slider" />
+                Enabled
+              </label>
+            </div>
+            {config.eventMessages?.noShow?.enabled !== false && (
+              <EventMessageEditor
+                title="No-Show SMS"
+                config={config.eventMessages?.noShow}
+                onChange={(field, value) => updateEventMessage('noShow', field, value)}
+              />
+            )}
+          </>
+        ) : (
+          <>
         <div className="automation-section-header">
           <span className="settings-desc" style={{ marginBottom: 0 }}>Enable or disable this sequence</span>
           <label className="toggle-label">
@@ -274,6 +311,8 @@ export default function WorkflowsPanel() {
               ))}
             </div>
             <button type="button" className="btn-secondary" onClick={() => addStep(tab)}>+ Add Step</button>
+          </>
+        )}
           </>
         )}
 

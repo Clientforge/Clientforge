@@ -31,6 +31,12 @@ const DEFAULT_EVENT_MESSAGES = {
     message: 'Hi {firstName}, your appointment with {businessName} has been rescheduled. We\'ll send reminders before your new time.',
     email_subject: 'Appointment Rescheduled — {businessName}',
   },
+  no_show: {
+    enabled: true,
+    channel: 'sms',
+    message: 'Hi {firstName}, we missed you at {businessName} today. We\'d love to reschedule your {serviceName} — book here: {bookingLink}',
+    email_subject: 'We Missed You — {businessName}',
+  },
 };
 
 const DEFAULT_STEPS = {
@@ -119,6 +125,7 @@ const buildDefaultConfig = () => ({
   event_messages: {
     cancellation: { ...DEFAULT_EVENT_MESSAGES.cancellation },
     reschedule: { ...DEFAULT_EVENT_MESSAGES.reschedule },
+    no_show: { ...DEFAULT_EVENT_MESSAGES.no_show },
   },
 });
 
@@ -179,6 +186,7 @@ const normalizeConfig = (raw) => {
   config.event_messages = {
     cancellation: normalizeEventMessage(raw.event_messages?.cancellation, 'cancellation'),
     reschedule: normalizeEventMessage(raw.event_messages?.reschedule, 'reschedule'),
+    no_show: normalizeEventMessage(raw.event_messages?.no_show, 'no_show'),
   };
 
   return config;
@@ -196,6 +204,7 @@ const toApiConfig = (config) => ({
   eventMessages: {
     cancellation: config.event_messages.cancellation,
     reschedule: config.event_messages.reschedule,
+    noShow: config.event_messages.no_show,
   },
 });
 
@@ -217,6 +226,7 @@ const fromApiConfig = (api) => {
     raw.event_messages = {
       cancellation: api.eventMessages.cancellation,
       reschedule: api.eventMessages.reschedule,
+      no_show: api.eventMessages.noShow ?? api.eventMessages.no_show,
     };
   }
   return normalizeConfig(raw);

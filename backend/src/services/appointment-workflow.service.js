@@ -287,6 +287,96 @@ const dispatchPostServiceCompletionWorkflows = async (tenantId, params) => dispa
   requireOptimantraCheckout: false,
 });
 
+/**
+ * Sluice: no-show follow-up at 7 PM when appointment day has no checkout.
+ */
+const dispatchNoShowWorkflow = async (tenantId, { contactId, appointmentId }) => {
+  const [tenantRow, contactRow, appointmentRow] = await Promise.all([
+    db.query(
+      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+              appointment_automation_config, optimantra_checkout_automations
+       FROM tenants WHERE id = $1`,
+      [tenantId],
+    ),
+    db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
+    db.query(
+      `SELECT id, scheduled_at, service_name, timezone, provider, status
+       FROM appointments WHERE id = $1 AND tenant_id = $2`,
+      [appointmentId, tenantId],
+    ),
+  ]);
+
+  const tenant = tenantRow.rows[0];
+  const contact = contactRow.rows[0];
+  const appointment = appointmentRow.rows[0];
+
+  if (!tenant || !contact || !appointment) {
+    return { sent: false, skipped: true, reason: 'missing_context' };
+  }
+
+  if (!['scheduled', 'confirmed', 'rescheduled'].includes(appointment.status)) {
+    return { sent: false, skipped: true, reason: 'appointment_not_active' };
+  }
+
+  if (contact.unsubscribed) {
+    return { sent: false, skipped: true, reason: 'unsubscribed' };
+  }
+
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  const noShowConfig = config.event_messages?.no_show;
+  if (!noShowConfig?.enabled || !noShowConfig.message) {
+    return { sent: false, skipped: true, reason: 'no_show_disabled' };
+  }
+
+  const vars = automationService.buildTemplateVars({ tenant, contact, appointment });
+  const body = automationService.renderTemplate(noShowConfig.message, vars);
+  if (!body) {
+    return { sent: false, skipped: true, reason: 'empty_message' };
+  }
+
+  await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
+
+  await db.query(
+    `UPDATE appointments SET status = 'no_show', updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2`,
+    [appointmentId, tenantId],
+  );
+
+  const emailSubject = automationService.renderTemplate(noShowConfig.email_subject, vars);
+  const channels = automationService.channelsForStep(noShowConfig.channel);
+  let sent = false;
+
+  for (const channel of channels) {
+    await deliverMessage(tenantId, contactId, contact, tenant, {
+      channel,
+      body,
+      emailSubject,
+      messageType: 'no_show',
+    });
+    sent = true;
+
+    await appointmentService.scheduleWorkflowJob(tenantId, appointmentId, contactId, 'no_show', {
+      scheduledAt: new Date().toISOString(),
+      channel,
+      messageBody: body,
+      emailSubject: channel === 'email' ? emailSubject : null,
+    });
+    await db.query(
+      `UPDATE appointment_workflow_jobs
+       SET status = 'sent', sent_at = NOW()
+       WHERE appointment_id = $1
+         AND tenant_id = $2
+         AND job_type = 'no_show'
+         AND channel = $3
+         AND status = 'pending'`,
+      [appointmentId, tenantId, channel],
+    );
+  }
+
+  console.log(`[APPT-WORKFLOW] No-show follow-up sent for appointment ${appointmentId}`);
+  return { sent, appointmentId, contactId };
+};
+
 function planAutomationSteps(
   appointment,
   config,
@@ -947,6 +1037,7 @@ module.exports = {
   dispatchWorkflows,
   dispatchCheckoutWorkflows,
   dispatchPostServiceCompletionWorkflows,
+  dispatchNoShowWorkflow,
   redeployBookingWorkflowsForAppointment,
   redeployUpcomingBookingWorkflows,
   isOptimantraCheckoutMode,
