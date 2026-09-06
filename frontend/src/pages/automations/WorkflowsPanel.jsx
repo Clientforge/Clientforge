@@ -320,9 +320,18 @@ export default function WorkflowsPanel() {
           <>
             <hr className="settings-divider" />
             <h3>Event Messages</h3>
-            <p className="settings-desc">Sent immediately when an appointment is cancelled or rescheduled.</p>
+            <p className="settings-desc">
+              {sluiceTenant ? (
+                <>
+                  Cancellation messages send <strong>24 hours after</strong> an appointment is cancelled.
+                  Reschedule messages still send immediately.
+                </>
+              ) : (
+                <>Sent immediately when an appointment is cancelled or rescheduled.</>
+              )}
+            </p>
             <EventMessageEditor
-              title="Cancellation"
+              title={sluiceTenant ? 'Cancellation (24h follow-up)' : 'Cancellation'}
               config={config.eventMessages?.cancellation}
               onChange={(field, value) => updateEventMessage('cancellation', field, value)}
             />

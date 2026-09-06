@@ -7,6 +7,15 @@ const automationService = require('./appointment-automation.service');
 const tenantService = require('./tenant-service.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
 const autoShopMaintenance = require('./auto-shop-maintenance.service');
+const { isSluiceTenant } = require('../config/sluiceTenant');
+
+/** Sluice: cancellation message sends 24 hours after cancel (not immediately). */
+const SLUICE_CANCELLATION_FOLLOWUP_HOURS = 24;
+const CANCELLATION_FOLLOWUP_JOB_TYPE = 'cancellation_followup';
+
+const computeCancellationFollowUpAt = (cancelledAt = new Date()) => (
+  new Date(cancelledAt.getTime() + SLUICE_CANCELLATION_FOLLOWUP_HOURS * 60 * 60 * 1000)
+);
 const {
   DEFAULT_FOLLOWUP_MESSAGE,
   coercePositiveInt,
@@ -77,7 +86,13 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
 
   if (eventType === 'booking.cancelled') {
     await appointmentService.cancelWorkflowJobsForAppointment(appointmentId);
-    await sendEventMessage(tenantId, contactId, contact, tenant, config.event_messages.cancellation, vars, 'cancellation');
+    if (isSluiceTenant(tenantId)) {
+      await scheduleCancellationFollowUp(
+        tenantId, appointmentId, contactId, contact, tenant, config, vars,
+      );
+    } else {
+      await sendEventMessage(tenantId, contactId, contact, tenant, config.event_messages.cancellation, vars, 'cancellation');
+    }
     return;
   }
 
@@ -96,6 +111,7 @@ const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType
 
   if (eventType === 'booking.created') {
     await rebookingCampaign.cancelRebookingJobsForContact(tenantId, contactId);
+    await cancelCancellationFollowupJobsForContact(tenantId, contactId);
     await autoShopMaintenance.cancelMaintenanceReminderJobsForContact(tenantId, contactId);
     await scheduleAutomationSteps(
       tenantId, appointmentId, contactId, contact, tenant, appointment, config, vars,
@@ -802,6 +818,82 @@ const scheduleRebooking = async (
   return { scheduledCount: 0, skipReason, offsetDays: plan.offsetDays, source: plan.source };
 };
 
+const cancelCancellationFollowupJobsForContact = async (tenantId, contactId) => {
+  const result = await db.query(
+    `UPDATE appointment_workflow_jobs
+     SET status = 'cancelled', cancelled_at = NOW()
+     WHERE tenant_id = $1
+       AND contact_id = $2
+       AND status = 'pending'
+       AND job_type = $3
+     RETURNING id`,
+    [tenantId, contactId, CANCELLATION_FOLLOWUP_JOB_TYPE],
+  );
+
+  if (result.rowCount > 0) {
+    console.log(
+      `[APPT-WORKFLOW] Cancelled ${result.rowCount} pending cancellation follow-up job(s) for contact ${contactId}`,
+    );
+  }
+
+  return result.rowCount;
+};
+
+const scheduleCancellationFollowUp = async (
+  tenantId,
+  appointmentId,
+  contactId,
+  contact,
+  tenant,
+  config,
+  vars,
+  { cancelledAt = new Date() } = {},
+) => {
+  const cancellationConfig = config.event_messages?.cancellation;
+  if (!cancellationConfig?.enabled || !cancellationConfig.message) {
+    return { scheduledCount: 0, skipped: true, reason: 'cancellation_disabled' };
+  }
+
+  if (contact.unsubscribed) {
+    return { scheduledCount: 0, skipped: true, reason: 'unsubscribed' };
+  }
+
+  const body = automationService.renderTemplate(cancellationConfig.message, vars);
+  if (!body) {
+    return { scheduledCount: 0, skipped: true, reason: 'empty_message' };
+  }
+
+  const emailSubject = automationService.renderTemplate(cancellationConfig.email_subject, vars);
+  const channels = automationService.channelsForStep(cancellationConfig.channel);
+  const scheduledAt = computeCancellationFollowUpAt(cancelledAt).toISOString();
+
+  let scheduledCount = 0;
+  for (const channel of channels) {
+    await appointmentService.scheduleWorkflowJob(
+      tenantId,
+      appointmentId,
+      contactId,
+      CANCELLATION_FOLLOWUP_JOB_TYPE,
+      {
+        scheduledAt,
+        channel,
+        messageBody: body,
+        emailSubject: channel === 'email' ? emailSubject : null,
+      },
+    );
+    scheduledCount += 1;
+  }
+
+  if (scheduledCount > 0) {
+    console.log(
+      `[APPT-WORKFLOW] Scheduled ${scheduledCount} cancellation follow-up job(s)`
+      + ` for appointment ${appointmentId} at ${scheduledAt}`,
+    );
+  }
+
+  return { scheduledCount, scheduledAt };
+};
+
 const sendEventMessage = async (tenantId, contactId, contact, tenant, eventConfig, vars, messageType) => {
   if (!eventConfig?.enabled || !eventConfig.message) return;
 
@@ -1034,10 +1126,15 @@ const redeployUpcomingBookingWorkflows = async (tenantId, { dryRun = false } = {
 };
 
 module.exports = {
+  SLUICE_CANCELLATION_FOLLOWUP_HOURS,
+  CANCELLATION_FOLLOWUP_JOB_TYPE,
+  computeCancellationFollowUpAt,
   dispatchWorkflows,
   dispatchCheckoutWorkflows,
   dispatchPostServiceCompletionWorkflows,
   dispatchNoShowWorkflow,
+  scheduleCancellationFollowUp,
+  cancelCancellationFollowupJobsForContact,
   redeployBookingWorkflowsForAppointment,
   redeployUpcomingBookingWorkflows,
   isOptimantraCheckoutMode,

@@ -61,6 +61,7 @@ const JOB_TYPE_LABELS = {
   rebooking_followup_1: 'Rebooking (follow-up 1)',
   rebooking_followup_2: 'Rebooking (follow-up 2)',
   cancellation: 'Cancellation',
+  cancellation_followup: 'Cancellation follow-up (24h)',
   reschedule: 'Reschedule',
   no_show: 'No-show follow-up',
   deferred_service_followup: 'Deferred service follow-up',

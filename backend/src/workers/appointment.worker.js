@@ -5,6 +5,7 @@ const compliance = require('../services/compliance.service');
 const rebookingCampaign = require('../services/rebooking-campaign.service');
 const shopmonkeyDeferredService = require('../services/shopmonkey-deferred.service');
 const autoShopMaintenance = require('../services/auto-shop-maintenance.service');
+const { CANCELLATION_FOLLOWUP_JOB_TYPE } = require('../services/appointment-workflow.service');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 1 minute
 
@@ -100,6 +101,24 @@ const processDueAppointmentJobs = async () => {
           );
           console.log(
             `[APPT-WORKER] Skipped maintenance reminder ${job.id} — contact has a future appointment`,
+          );
+          continue;
+        }
+      }
+
+      if (job.job_type === CANCELLATION_FOLLOWUP_JOB_TYPE) {
+        const booked = await rebookingCampaign.hasFutureBooking(
+          job.tenant_id,
+          job.contact_id,
+          { excludeAppointmentId: job.appointment_id },
+        );
+        if (booked) {
+          await db.query(
+            `UPDATE appointment_workflow_jobs SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
+            [job.id],
+          );
+          console.log(
+            `[APPT-WORKER] Skipped cancellation follow-up ${job.id} — contact has a future appointment`,
           );
           continue;
         }
