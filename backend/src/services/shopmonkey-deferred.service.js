@@ -2,6 +2,9 @@ const db = require('../db/connection');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 const { normalizeDeferredServiceList } = require('../adapters/shopmonkey.adapter');
 const appointmentService = require('./appointment.service');
+const {
+  buildAutoShopBookingTemplateExtras,
+} = require('../utils/autoShopBookingCta');
 
 const API_BASE = 'https://api.shopmonkey.cloud/v3';
 
@@ -11,10 +14,10 @@ const JOB_TYPE = 'deferred_service_followup';
 const DEFAULT_FOLLOWUP_SCHEDULE = [7, 14, 30, 60];
 
 const DEFAULT_FOLLOWUP_MESSAGES = [
-  'Hi {firstName}! On your recent visit to {businessName}, we noted {serviceList} still needs attention. When you\'re ready to schedule: {bookingLink}',
-  'Hi {firstName}, friendly reminder from {businessName} — {serviceList} is still on our recommended list from your last visit. Book here: {bookingLink}',
-  'Hi {firstName}, checking in from {businessName}. We still have {serviceList} flagged from your visit. Schedule when it works for you: {bookingLink}',
-  'Hi {firstName}, last reminder from {businessName} about {serviceList} from your recent visit. We\'d love to get this taken care of: {bookingLink}',
+  'Hi {firstName}! On your recent visit to {businessName}, we noted {serviceList} still needs attention. {bookingCta}',
+  'Hi {firstName}, friendly reminder from {businessName} — {serviceList} is still on our recommended list from your last visit. {bookingCta}',
+  'Hi {firstName}, checking in from {businessName}. We still have {serviceList} flagged from your visit. {bookingCta}',
+  'Hi {firstName}, last reminder from {businessName} about {serviceList} from your recent visit. {bookingCta}',
 ];
 
 const DEFERRED_JOB_TYPE_SQL = `(job_type = 'deferred_service_followup' OR job_type LIKE 'deferred_service_followup_%')`;
@@ -68,7 +71,7 @@ async function shopmonkeyFetch(path, apiKey) {
 
 async function getTenantContext(tenantId) {
   const result = await db.query(
-    `SELECT name, booking_link FROM tenants WHERE id = $1`,
+    `SELECT name, booking_link, phone_number FROM tenants WHERE id = $1`,
     [tenantId],
   );
   return result.rows[0] || null;
@@ -295,15 +298,14 @@ async function scheduleDeferredFollowup({
   }
 
   const businessName = tenant?.name || 'our shop';
-  const bookingLink = (tenant?.booking_link || '').trim();
-  const serviceList = formatServiceList(servicesForMessage);
   const firstName = contact.first_name || 'there';
+  const serviceList = formatServiceList(servicesForMessage);
 
   const vars = {
     firstName,
     businessName,
     serviceList,
-    bookingLink: bookingLink || businessName,
+    ...buildAutoShopBookingTemplateExtras(tenant),
   };
 
   const base = referenceAt ? new Date(referenceAt) : new Date();

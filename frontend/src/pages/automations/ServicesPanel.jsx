@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 
-const TEMPLATE_VARS = ['{firstName}', '{categoryName}', '{serviceList}', '{serviceName}', '{businessName}', '{bookingLink}'];
+const TEMPLATE_VARS = ['{firstName}', '{categoryName}', '{serviceList}', '{serviceName}', '{businessName}', '{bookingCta}', '{businessPhone}'];
 
 function daysToLabel(days) {
   if (days === 60) return '2 months (60 days)';
@@ -147,7 +147,7 @@ export default function ServicesPanel() {
                   rows={2}
                   value={cat.reminderMessage || ''}
                   onChange={(e) => updateCategory(idx, 'reminderMessage', e.target.value)}
-                  placeholder="Hi {firstName}! Based on your recent visit to {businessName}, it's time to schedule your next {categoryName} service ({serviceList}). Book here: {bookingLink}"
+                  placeholder="Hi {firstName}! Based on your recent visit to {businessName}, it's time to schedule your next {categoryName} service ({serviceList}). {bookingCta}"
                   disabled={!maintenanceReminderEnabled || cat.reminderEnabled === false}
                 />
               </div>

@@ -8,6 +8,7 @@ const tenantService = require('./tenant-service.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
 const autoShopMaintenance = require('./auto-shop-maintenance.service');
 const { isSluiceTenant } = require('../config/sluiceTenant');
+const { buildAutoShopBookingTemplateExtras } = require('../utils/autoShopBookingCta');
 
 /** Sluice: cancellation message sends 24 hours after cancel (not immediately). */
 const SLUICE_CANCELLATION_FOLLOWUP_HOURS = 24;
@@ -184,6 +185,9 @@ const dispatchPostVisitWorkflows = async (tenantId, {
     contact,
     appointment: appointmentForTemplates,
   });
+  if (isShopmonkeyAutoShopMode(appointmentForTemplates)) {
+    Object.assign(vars, buildAutoShopBookingTemplateExtras(tenant));
+  }
 
   const referenceTime = checkedOutAt || new Date().toISOString();
 

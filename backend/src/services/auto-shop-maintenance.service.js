@@ -2,11 +2,14 @@ const db = require('../db/connection');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 const appointmentService = require('./appointment.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
+const {
+  buildAutoShopBookingTemplateExtras,
+} = require('../utils/autoShopBookingCta');
 
 const JOB_TYPE_PREFIX = 'maintenance_reminder_';
 
 const DEFAULT_REMINDER_MESSAGE =
-  'Hi {firstName}! Based on your recent visit to {businessName}, it\'s time to schedule your next {categoryName} service ({serviceList}). Book here: {bookingLink}';
+  'Hi {firstName}! Based on your recent visit to {businessName}, it\'s time to schedule your next {categoryName} service ({serviceList}). {bookingCta}';
 
 const MAINTENANCE_JOB_TYPE_SQL = `job_type LIKE 'maintenance_reminder_%'`;
 
@@ -64,7 +67,7 @@ function groupClassificationsByCategory(classifications = []) {
 
 async function getTenantContext(tenantId) {
   const result = await db.query(
-    'SELECT name, booking_link FROM tenants WHERE id = $1',
+    'SELECT name, booking_link, phone_number FROM tenants WHERE id = $1',
     [tenantId],
   );
   return result.rows[0] || null;
@@ -192,7 +195,6 @@ async function scheduleMaintenanceReminders({
   await cancelMaintenanceReminderJobs(tenantId, contactId, appointmentId);
 
   const businessName = tenant?.name || 'our shop';
-  const bookingLink = (tenant?.booking_link || '').trim() || businessName;
   const firstName = contact.first_name || 'there';
 
   const scheduledJobs = [];
@@ -211,10 +213,10 @@ async function scheduleMaintenanceReminders({
     const vars = {
       firstName,
       businessName,
-      bookingLink,
       categoryName,
       serviceList,
       serviceName: serviceList,
+      ...buildAutoShopBookingTemplateExtras(tenant),
     };
 
     const template = category.reminder_message?.trim() || DEFAULT_REMINDER_MESSAGE;

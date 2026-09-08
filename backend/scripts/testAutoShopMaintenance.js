@@ -40,7 +40,7 @@ assert('render template', renderTemplate(DEFAULT_REMINDER_MESSAGE, {
   businessName: 'Southlake Autocare',
   categoryName: 'Brakes',
   serviceList: 'Brake Pads',
-  bookingLink: 'https://book.example',
-}).includes('Southlake Autocare'));
+  bookingCta: 'Give us a call at (770) 961-8500 and our team will help you find the best appointment time',
+}).includes('(770) 961-8500'));
 
 process.exit(failed > 0 ? 1 : 0);
