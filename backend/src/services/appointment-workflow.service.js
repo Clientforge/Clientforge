@@ -24,6 +24,8 @@ const {
 
 const PRE_VISIT_CATEGORIES = ['confirmations', 'reminders'];
 const POST_VISIT_CATEGORIES = ['post_appointment', 'review_requests'];
+const POST_VISIT_JOB_TYPES = ['post_visit', 'review_request'];
+const SHOPMONKEY_CONTACT_POST_VISIT_COOLDOWN_HOURS = 24;
 
 const isShopmonkeyAutoShopMode = (appointment) => appointment?.provider === 'shopmonkey';
 
@@ -215,6 +217,30 @@ const dispatchPostVisitWorkflows = async (tenantId, {
         rebookingSkipReason: 'already_sent',
         rebookingOffsetDays: null,
       };
+    }
+
+    if (!requireOptimantraCheckout) {
+      const contactRecentlySent = await hasRecentPostVisitForContact(
+        tenantId,
+        contactId,
+        appointmentId,
+        SHOPMONKEY_CONTACT_POST_VISIT_COOLDOWN_HOURS,
+      );
+      if (contactRecentlySent) {
+        console.log(
+          `[APPT-WORKFLOW] Post-visit already sent/pending for contact ${contactId} within `
+          + `${SHOPMONKEY_CONTACT_POST_VISIT_COOLDOWN_HOURS}h — skipping appointment ${appointmentId}`,
+        );
+        return {
+          jobsScheduled: 0,
+          skipped: 'contact_recently_sent',
+          postVisitJobs: 0,
+          rebookingJobs: 0,
+          rebookingSkipped: true,
+          rebookingSkipReason: 'contact_recently_sent',
+          rebookingOffsetDays: null,
+        };
+      }
     }
 
     const pendingJobs = await loadPendingPostVisitJobs(tenantId, appointmentId);
@@ -497,9 +523,29 @@ async function hasSentPostVisitJobs(tenantId, appointmentId) {
      WHERE tenant_id = $1
        AND appointment_id = $2
        AND status = 'sent'
-       AND job_type IN ('post_visit', 'review_request')
+       AND job_type = ANY($3::text[])
      LIMIT 1`,
-    [tenantId, appointmentId],
+    [tenantId, appointmentId, POST_VISIT_JOB_TYPES],
+  );
+  return result.rows.length > 0;
+}
+
+async function hasRecentPostVisitForContact(tenantId, contactId, excludeAppointmentId, hours) {
+  const windowHours = Math.max(1, Number(hours) || 24);
+  const result = await db.query(
+    `SELECT j.id
+     FROM appointment_workflow_jobs j
+     INNER JOIN appointments a ON a.id = j.appointment_id
+     WHERE j.tenant_id = $1
+       AND a.contact_id = $2
+       AND j.appointment_id != $3
+       AND j.job_type = ANY($4::text[])
+       AND (
+         (j.status = 'sent' AND j.sent_at >= NOW() - ($5::text || ' hours')::interval)
+         OR j.status = 'pending'
+       )
+     LIMIT 1`,
+    [tenantId, contactId, excludeAppointmentId, POST_VISIT_JOB_TYPES, String(windowHours)],
   );
   return result.rows.length > 0;
 }
