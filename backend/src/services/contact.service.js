@@ -3,11 +3,13 @@ const { normalizePhone } = require('./lead.service');
 const { parse } = require('csv-parse/sync');
 const { appendLastVisitCondition } = require('../utils/lastVisitFilter');
 
-/** Normalize CSV header for flexible matching (case, spaces, underscores). */
+/** Normalize CSV header for flexible matching (case, spaces, underscores, Shopmonkey suffixes). */
 function normalizeCsvKey(key) {
   return String(key || '')
     .trim()
     .toLowerCase()
+    .replace(/\*+$/, '')
+    .replace(/\s*\(optional\)\s*$/i, '')
     .replace(/[\s_-]+/g, '');
 }
 
@@ -91,7 +93,15 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   let errors = [];
 
   for (const row of records) {
-    const phone = pickCsvField(row, 'phone', 'phone_number', 'mobile', 'phonenumber');
+    const phone = pickCsvField(
+      row,
+      'phone',
+      'phone_number',
+      'mobile',
+      'phonenumber',
+      'primary phone',
+      'primaryphone',
+    );
     if (!phone) { skipped++; continue; }
 
     try {
@@ -160,6 +170,114 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   }
 
   return { imported, skipped, total: records.length, errors: errors.slice(0, 10) };
+};
+
+/**
+ * Import Shopmonkey customer export CSV. Skips rows without phone and, by default,
+ * existing contacts matched by phone or shopmonkey_customer_id.
+ */
+const importShopmonkeyFromCSV = async (
+  tenantId,
+  csvBuffer,
+  source = 'shopmonkey-import',
+  { skipDuplicates = true } = {},
+) => {
+  const content = csvBuffer.toString('utf-8');
+  const records = parse(content, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    relax_column_count: true,
+  });
+
+  let imported = 0;
+  let skipped = 0;
+  let skippedDuplicates = 0;
+  let skippedNoPhone = 0;
+  const errors = [];
+
+  for (const row of records) {
+    const phone = pickCsvField(
+      row,
+      'phone',
+      'phone_number',
+      'mobile',
+      'phonenumber',
+      'primary phone',
+      'primaryphone',
+    );
+    if (!phone) {
+      skippedNoPhone++;
+      skipped++;
+      continue;
+    }
+
+    try {
+      const normalizedPhone = normalizePhone(phone);
+      const firstName = pickCsvField(row, 'first_name', 'firstname', 'first name', 'first');
+      const lastName = pickCsvField(row, 'last_name', 'lastname', 'last name', 'last');
+      const email = pickCsvField(row, 'email', 'e-mail', 'primary email', 'primaryemail');
+      const notes = pickCsvField(row, 'notes', 'note');
+      const shopmonkeyCustomerId = pickCsvField(
+        row,
+        'shopmonkey customer id',
+        'shopmonkeycustomerid',
+        'shopmonkey_customer_id',
+      );
+
+      if (skipDuplicates) {
+        const existing = await db.query(
+          `SELECT id FROM contacts
+           WHERE tenant_id = $1
+             AND (
+               phone = $2
+               OR ($3::text IS NOT NULL AND shopmonkey_customer_id = $3)
+             )
+           LIMIT 1`,
+          [tenantId, normalizedPhone, shopmonkeyCustomerId || null],
+        );
+        if (existing.rows.length > 0) {
+          skippedDuplicates++;
+          skipped++;
+          continue;
+        }
+      }
+
+      await db.query(
+        `INSERT INTO contacts (
+           tenant_id, first_name, last_name, phone, email, source, notes, shopmonkey_customer_id
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          tenantId,
+          firstName || null,
+          lastName || null,
+          normalizedPhone,
+          email || null,
+          source,
+          notes || null,
+          shopmonkeyCustomerId || null,
+        ],
+      );
+      imported++;
+    } catch (err) {
+      if (skipDuplicates && err.code === '23505') {
+        skippedDuplicates++;
+        skipped++;
+        continue;
+      }
+      errors.push({ phone, error: err.message });
+      skipped++;
+    }
+  }
+
+  return {
+    imported,
+    skipped,
+    skippedDuplicates,
+    skippedNoPhone,
+    total: records.length,
+    errors: errors.slice(0, 10),
+  };
 };
 
 const listContacts = async (tenantId, {
@@ -394,9 +512,12 @@ const listContactTags = async (tenantId) => {
 };
 
 module.exports = {
+  normalizeCsvKey,
+  pickCsvField,
   parseDateOfBirth,
   parseContactDate,
   importFromCSV,
+  importShopmonkeyFromCSV,
   listContacts,
   createContact,
   getContact,

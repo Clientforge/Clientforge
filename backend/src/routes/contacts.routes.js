@@ -5,6 +5,11 @@ const contactService = require('../services/contact.service');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+function isShopmonkeyCustomerCsv(buffer) {
+  const headerLine = buffer.toString('utf-8').split(/\r?\n/)[0] || '';
+  return /shopmonkey customer id/i.test(headerLine);
+}
+
 router.get('/', async (req, res, next) => {
   try {
     const { page, limit, search, tag, lastVisit, sortBy } = req.query;
@@ -47,11 +52,15 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       return res.status(400).json({ error: 'No CSV file provided' });
     }
 
-    const result = await contactService.importFromCSV(
-      req.tenantId,
-      req.file.buffer,
-      req.body.source || 'import',
-    );
+    const source = req.body.source || 'import';
+    const result = isShopmonkeyCustomerCsv(req.file.buffer)
+      ? await contactService.importShopmonkeyFromCSV(
+        req.tenantId,
+        req.file.buffer,
+        source === 'import' ? 'shopmonkey-import' : source,
+        { skipDuplicates: true },
+      )
+      : await contactService.importFromCSV(req.tenantId, req.file.buffer, source);
     res.json(result);
   } catch (err) { next(err); }
 });

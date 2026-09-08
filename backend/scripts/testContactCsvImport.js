@@ -5,24 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
 const { normalizePhone } = require('../src/services/lead.service');
-const { parseDateOfBirth } = require('../src/services/contact.service');
-
-function normalizeCsvKey(key) {
-  return String(key || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, '');
-}
-
-function pickCsvField(row, ...aliases) {
-  const wanted = new Set(aliases.map(normalizeCsvKey));
-  for (const [key, value] of Object.entries(row || {})) {
-    if (!wanted.has(normalizeCsvKey(key))) continue;
-    const trimmed = String(value ?? '').trim();
-    if (trimmed) return trimmed;
-  }
-  return '';
-}
+const {
+  normalizeCsvKey,
+  pickCsvField,
+  parseDateOfBirth,
+} = require('../src/services/contact.service');
 
 const sampleCsv = `Phone,first name,last name,DOB
 2187907954.0,Aisha,Oh,1990-07-15
@@ -48,6 +35,33 @@ check('plain 10-digit phone', normalizePhone('4045551234'), '+14045551234');
 check('first name', pickCsvField(row, 'first_name', 'firstname', 'first name', 'first'), 'Aisha');
 check('last name', pickCsvField(row, 'last_name', 'lastname', 'last name', 'last'), 'Oh');
 check('dob column', pickCsvField(row, 'date_of_birth', 'dateofbirth', 'dob', 'birthday'), '1990-07-15');
+
+const shopmonkeyRow = {
+  'First Name*': 'Tony',
+  'Last Name*': 'Lancaster',
+  'Primary Phone (optional)': '+16789070780',
+  'Primary Email (optional)': 'tony@example.com',
+  'Note (optional)': 'VIP',
+  'Shopmonkey Customer ID (optional)': 'cb99f85a-867f-4806-b2c9-bca9975371e6',
+};
+check('shopmonkey first name', pickCsvField(shopmonkeyRow, 'first_name', 'firstname', 'first name', 'first'), 'Tony');
+check('shopmonkey last name', pickCsvField(shopmonkeyRow, 'last_name', 'lastname', 'last name', 'last'), 'Lancaster');
+check(
+  'shopmonkey phone',
+  pickCsvField(shopmonkeyRow, 'phone', 'phone_number', 'mobile', 'phonenumber', 'primary phone', 'primaryphone'),
+  '+16789070780',
+);
+check(
+  'shopmonkey email',
+  pickCsvField(shopmonkeyRow, 'email', 'e-mail', 'primary email', 'primaryemail'),
+  'tony@example.com',
+);
+check('shopmonkey note', pickCsvField(shopmonkeyRow, 'notes', 'note'), 'VIP');
+check(
+  'shopmonkey customer id',
+  pickCsvField(shopmonkeyRow, 'shopmonkey customer id', 'shopmonkeycustomerid', 'shopmonkey_customer_id'),
+  'cb99f85a-867f-4806-b2c9-bca9975371e6',
+);
 check('parse ISO dob', parseDateOfBirth('1990-07-15'), '1990-07-15');
 check('parse US dob', parseDateOfBirth('7/15/1990'), '1990-07-15');
 check('parse invalid dob', parseDateOfBirth('not-a-date'), null);
