@@ -38,15 +38,17 @@ check(
 
 const extras = buildAutoShopBookingTemplateExtras({
   name: 'Southlake Autocare',
-  phone_number: '7709618500',
+  call_phone: '7709618500',
+  phone_number: '+18772575312',
   booking_link: '',
 });
-checkCond('bookingLink uses CTA when no URL', extras.bookingLink.includes('(770) 961-8500'));
+checkCond('bookingLink uses call_phone not SMS number', extras.bookingLink.includes('(770) 961-8500'));
+checkCond('bookingLink avoids SMS number', !extras.bookingLink.includes('877'));
 checkCond('bookingCta matches', extras.bookingCta === extras.bookingLink);
 check('businessPhone', extras.businessPhone, '(770) 961-8500');
 
 const withUrl = buildAutoShopBookingTemplateExtras({
-  phone_number: '7709618500',
+  call_phone: '7709618500',
   booking_link: 'https://book.example.com',
 });
 check('keeps URL when set', withUrl.bookingLink, 'https://book.example.com');

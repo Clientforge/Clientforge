@@ -71,7 +71,7 @@ async function shopmonkeyFetch(path, apiKey) {
 
 async function getTenantContext(tenantId) {
   const result = await db.query(
-    `SELECT name, booking_link, phone_number FROM tenants WHERE id = $1`,
+    `SELECT name, booking_link, call_phone FROM tenants WHERE id = $1`,
     [tenantId],
   );
   return result.rows[0] || null;

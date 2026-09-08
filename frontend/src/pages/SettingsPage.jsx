@@ -274,6 +274,7 @@ function BusinessTab({ settings, onSave, saving }) {
     industry: settings.business.industry || '',
     timezone: settings.business.timezone || 'America/New_York',
     phoneNumber: settings.business.phoneNumber || '',
+    callPhone: settings.business.callPhone || '',
     smsProvider: settings.business.smsProvider || '',
     bookingLink: settings.business.bookingLink || '',
     description: settings.business.description || '',
@@ -459,6 +460,13 @@ function BusinessTab({ settings, onSave, saving }) {
         )}
         {' '}Assigning a number here automatically removes it from any other account.
       </p>
+      <div className="field">
+        <label>Customer call number</label>
+        <input value={form.callPhone} onChange={set('callPhone')} placeholder="(770) 961-8500" />
+        <span className="field-hint">
+          Phone number shown in auto-shop SMS when inviting customers to book (separate from the SMS send-from number above).
+        </span>
+      </div>
       <div className="field">
         <label>Booking Link</label>
         <input value={form.bookingLink} onChange={set('bookingLink')} placeholder="https://calendly.com/your-link" />

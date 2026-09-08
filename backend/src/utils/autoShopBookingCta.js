@@ -17,16 +17,22 @@ function buildAutoShopBookingCta(phoneNumber) {
   return `Give us a call at ${formatted} and our team will help you find the best appointment time`;
 }
 
+/** Prefer call_phone (customer line); never fall back to SMS phone_number. */
+function resolveCallPhone(tenant) {
+  return (tenant?.call_phone || tenant?.callPhone || '').trim();
+}
+
 /** Prefer a real http(s) booking URL; otherwise use the phone CTA. */
 function resolveAutoShopBookingLink(tenant) {
   const url = (tenant?.booking_link || '').trim();
   if (url && /^https?:\/\//i.test(url)) return url;
-  return buildAutoShopBookingCta(tenant?.phone_number);
+  return buildAutoShopBookingCta(resolveCallPhone(tenant));
 }
 
 function buildAutoShopBookingTemplateExtras(tenant) {
-  const businessPhone = formatDisplayPhone(tenant?.phone_number);
-  const bookingCta = buildAutoShopBookingCta(tenant?.phone_number);
+  const callPhone = resolveCallPhone(tenant);
+  const businessPhone = formatDisplayPhone(callPhone);
+  const bookingCta = buildAutoShopBookingCta(callPhone);
   const bookingLink = resolveAutoShopBookingLink(tenant);
   return { businessPhone, bookingCta, bookingLink };
 }

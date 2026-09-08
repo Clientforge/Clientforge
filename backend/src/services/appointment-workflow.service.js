@@ -54,7 +54,7 @@ const shouldScheduleRebookingOnBooking = (tenant, appointment) => (
 const dispatchWorkflows = async (tenantId, { contactId, appointmentId, eventType }) => {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
-      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+      `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
               appointment_automation_config, optimantra_checkout_automations,
               service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,
@@ -139,7 +139,7 @@ const dispatchPostVisitWorkflows = async (tenantId, {
 }) => {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
-      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+      `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
               appointment_automation_config, optimantra_checkout_automations,
               service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,
@@ -313,7 +313,7 @@ const dispatchPostServiceCompletionWorkflows = async (tenantId, params) => dispa
 const dispatchNoShowWorkflow = async (tenantId, { contactId, appointmentId }) => {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
-      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+      `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
               appointment_automation_config, optimantra_checkout_automations
        FROM tenants WHERE id = $1`,
       [tenantId],
@@ -994,7 +994,7 @@ const redeployBookingWorkflowsForAppointment = async (tenantId, appointmentId) =
   const contactId = apptRow.contact_id;
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
-      `SELECT name, phone_number, timezone, booking_link, email_from_name, email_from_address,
+      `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
               appointment_automation_config, optimantra_checkout_automations,
               service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,

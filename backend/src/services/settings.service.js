@@ -31,7 +31,7 @@ const knowledgeProfileChanged = (business, currentRow) => {
 
 const getSettings = async (tenantId) => {
   const result = await db.query(
-    `SELECT id, name, industry, timezone, phone_number, sms_provider, booking_link,
+    `SELECT id, name, industry, timezone, phone_number, call_phone, sms_provider, booking_link,
             plan, api_key, followup_config, description, target_audience, tone,
             email_from_name, email_from_address, calendly_webhook_signing_key,
             optimantra_webhook_secret,
@@ -93,6 +93,7 @@ const getSettings = async (tenantId) => {
       industry: t.industry,
       timezone: t.timezone,
       phoneNumber: t.phone_number,
+      callPhone: t.call_phone,
       smsProvider: t.sms_provider,
       effectiveSmsFrom: smsFrom.from,
       effectiveSmsProvider,
@@ -167,6 +168,23 @@ const updateSettings = async (tenantId, updates) => {
     if (business.industry !== undefined) { sets.push(`industry = $${idx++}`); params.push(business.industry); }
     if (business.timezone !== undefined) { sets.push(`timezone = $${idx++}`); params.push(business.timezone); }
     if (business.bookingLink !== undefined) { sets.push(`booking_link = $${idx++}`); params.push(business.bookingLink); }
+    if (business.callPhone !== undefined) {
+      const trimmed = String(business.callPhone ?? '').trim();
+      if (trimmed) {
+        try {
+          sets.push(`call_phone = $${idx++}`);
+          params.push(normalizePhone(trimmed));
+        } catch {
+          throw Object.assign(new Error('Invalid customer call phone number'), {
+            statusCode: 400,
+            isOperational: true,
+          });
+        }
+      } else {
+        sets.push(`call_phone = $${idx++}`);
+        params.push(null);
+      }
+    }
     if (business.description !== undefined) { sets.push(`description = $${idx++}`); params.push(business.description); }
     if (business.targetAudience !== undefined) { sets.push(`target_audience = $${idx++}`); params.push(business.targetAudience); }
     if (business.tone !== undefined) { sets.push(`tone = $${idx++}`); params.push(business.tone); }
