@@ -227,6 +227,15 @@ app.get('/soothing-intention-review/feedback', (req, res) => {
 app.get('/soothing-intention-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'soothing-intention-review-thanks.html'));
 });
+app.get('/spatium-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-review.html'));
+});
+app.get('/spatium-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-review-feedback.html'));
+});
+app.get('/spatium-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-review-thanks.html'));
+});
 app.get('/cherished-onboarding', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-onboarding.html'));
 });
@@ -335,6 +344,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/soothing-intention-review' || req.path.startsWith('/soothing-intention-review/')) {
+    return next();
+  }
+  if (req.path === '/spatium-review' || req.path.startsWith('/spatium-review/')) {
     return next();
   }
   if (req.path === '/cherished-onboarding' || req.path.startsWith('/cherished-onboarding/')) {
