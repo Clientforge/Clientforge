@@ -236,6 +236,15 @@ app.get('/spatium-review/feedback', (req, res) => {
 app.get('/spatium-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-review-thanks.html'));
 });
+app.get('/atlas-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'atlas-financial-review.html'));
+});
+app.get('/atlas-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'atlas-financial-review-feedback.html'));
+});
+app.get('/atlas-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'atlas-financial-review-thanks.html'));
+});
 app.get('/cherished-onboarding', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'cherished-aesthetics-onboarding.html'));
 });
@@ -347,6 +356,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/spatium-review' || req.path.startsWith('/spatium-review/')) {
+    return next();
+  }
+  if (req.path === '/atlas-review' || req.path.startsWith('/atlas-review/')) {
     return next();
   }
   if (req.path === '/cherished-onboarding' || req.path.startsWith('/cherished-onboarding/')) {
