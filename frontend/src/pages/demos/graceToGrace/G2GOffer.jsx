@@ -34,7 +34,6 @@ import {
   coerceDecodedYear,
 } from './vehicleCatalog';
 import {
-  displayOfferUsd,
   formatOfferRange,
   formatPointOffer,
   formatPointOfferUsd,
@@ -43,11 +42,6 @@ import {
 } from './displayOffer';
 import OfferPricingDisplay from './OfferPricingDisplay';
 import G2gPhotoUploadPanel from './G2gPhotoUploadPanel';
-import {
-  US_STATE_OPTIONS,
-  composeSellAddress,
-  isValidUsZipInput,
-} from './usStates';
 
 const FLOW = {
   year: 1,
@@ -498,13 +492,6 @@ export default function G2GOffer() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const [sellOpen, setSellOpen] = useState(false);
-  const [sellName, setSellName] = useState('');
-  const [sellPhone, setSellPhone] = useState('');
-  const [sellStreet, setSellStreet] = useState('');
-  const [sellCity, setSellCity] = useState('');
-  const [sellState, setSellState] = useState('');
-  const [sellPickupZip, setSellPickupZip] = useState('');
   const [sellConsent, setSellConsent] = useState(false);
   const [sellBusy, setSellBusy] = useState(false);
   const [sellErr, setSellErr] = useState('');
@@ -563,11 +550,6 @@ export default function G2GOffer() {
       saveG2gContact(saved);
       setContact(saved);
       setZip(zipClean);
-      setSellName(saved.firstName);
-      setSellPhone(saved.phone);
-      setSellPickupZip(zipClean);
-      setSellCity(saved.city);
-      setSellState(saved.state);
       setShowLeadGate(false);
       await runEstimate(saved);
     } catch (err) {
@@ -656,7 +638,7 @@ export default function G2GOffer() {
       });
       setResult(range);
       setShowLeadGate(false);
-      if (activeContact) {
+      if (activeContact && !range?.meta?.noEstimate) {
         const displayRange = formatOfferRange(range);
         const rangeLoHi = getDisplayRangeLoHi(range);
         const conditionLabel = buildSellConditionSummary({
@@ -808,7 +790,7 @@ export default function G2GOffer() {
     setFormError('');
     setResult(null);
     setSellOk(false);
-    setSellOpen(false);
+    setSellConsent(false);
     setFlowMax(0);
   };
 
@@ -861,7 +843,7 @@ export default function G2GOffer() {
     setFormError('');
     setResult(null);
     setSellOk(false);
-    setSellOpen(false);
+    setSellConsent(false);
     setFlowMax(0);
   };
 
@@ -918,7 +900,7 @@ export default function G2GOffer() {
     setFormError('');
     setResult(null);
     setSellOk(false);
-    setSellOpen(false);
+    setSellConsent(false);
 
     const validation = validateVehicleForEstimate();
     if (validation.error) {
@@ -941,10 +923,23 @@ export default function G2GOffer() {
     await runEstimate();
   };
 
-  const handleSellSubmit = async (e) => {
-    e.preventDefault();
+  const handleRequestTeamContact = async () => {
     setSellErr('');
     setSellOk(false);
+    if (!contact?.firstName?.trim() || contact.firstName.trim().length < 2) {
+      setSellErr('Contact info is missing. Please complete the form above.');
+      return;
+    }
+    if (!contact.phone?.trim()) {
+      setSellErr('Contact info is missing. Please complete the form above.');
+      return;
+    }
+    if (!sellConsent) {
+      setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
+      return;
+    }
+    if (!result?.meta?.noEstimate) return;
+
     const makeFinal =
       makeSelect === OTHER_VALUE ? makeOther.trim() : makeSelect.trim();
     const modelFinal =
@@ -953,43 +948,16 @@ export default function G2GOffer() {
         : modelSelect === OTHER_VALUE
           ? modelOther.trim()
           : modelSelect.trim();
-    if (!sellName.trim() || sellName.trim().length < 2) {
-      setSellErr('Enter your name.');
+    const zipClean =
+      zip.trim().replace(/\D/g, '').slice(0, 5) || contact.zip?.replace(/\D/g, '').slice(0, 5) || '';
+    if (zipClean.length !== 5) {
+      setSellErr('ZIP code is required.');
       return;
     }
-    if (!sellPhone.trim()) {
-      setSellErr('Enter your phone number.');
-      return;
-    }
-    if (!sellStreet.trim() || sellStreet.trim().length < 3) {
-      setSellErr('Enter the street address for pickup.');
-      return;
-    }
-    if (!sellCity.trim() || sellCity.trim().length < 2) {
-      setSellErr('Enter the city.');
-      return;
-    }
-    if (!sellState) {
-      setSellErr('Select the state.');
-      return;
-    }
-    if (!isValidUsZipInput(sellPickupZip)) {
-      setSellErr('Enter a valid 5-digit ZIP (or ZIP+4).');
-      return;
-    }
-    const addressLine = composeSellAddress({
-      street: sellStreet,
-      city: sellCity,
-      state: sellState,
-      zip: sellPickupZip,
-    });
-    if (!sellConsent) {
-      setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
-      return;
-    }
-    const offerDisplay = displayOfferUsd(result);
-    const customOfferFlow = Boolean(result?.meta?.noEstimate);
-    if (!result || (offerDisplay == null && !customOfferFlow)) return;
+    const city = contact.city?.trim() || '';
+    const state = contact.state?.trim() || '';
+    const addressLine =
+      city && state ? `${city}, ${state} ${zipClean}` : zipClean;
 
     const miParsed = parseMileageInput(mileageOdometer);
     const miLabel = miParsed != null ? formatMileageDisplay(miParsed) : undefined;
@@ -1010,27 +978,23 @@ export default function G2GOffer() {
     setSellBusy(true);
     try {
       await postGraceSellIntent({
-        customerName: sellName.trim(),
-        phone: sellPhone.trim(),
-        email: contact?.email,
-        leadId: contact?.leadId,
+        customerName: contact.firstName.trim(),
+        phone: contact.phone.trim(),
+        email: contact.email,
+        leadId: contact.leadId,
         address: addressLine,
         smsConsent: true,
         year: year.trim(),
         make: makeFinal,
         model: modelFinal,
-        zip: zip.trim().replace(/\D/g, '').slice(0, 5),
+        zip: zipClean,
         vin: normalizeVin(vin) || undefined,
         mileage: miLabel || undefined,
         conditionLabel,
-        estimateLow: result.low != null ? result.low : offerDisplay != null ? offerDisplay : undefined,
-        estimateHigh: result.high != null ? result.high : offerDisplay != null ? offerDisplay : undefined,
-        manualReviewRequired: Boolean(
-          result.meta?.manualReviewRequired || result.meta?.noEstimate,
-        ),
+        manualReviewRequired: true,
+        pickupNotes: 'Customer requested team contact — confirm pickup address on follow-up.',
       });
       setSellOk(true);
-      setSellOpen(false);
     } catch (err) {
       setSellErr(err.message || 'Something went wrong.');
     } finally {
@@ -1687,8 +1651,7 @@ export default function G2GOffer() {
               <h2>We&apos;re ready to help with your vehicle</h2>
               <div className="g2g-alert g2g-alert--info g2g-mt" role="status">
                 <p className="g2g-no-estimate-copy">
-                  Your vehicle may require a quick review. Enter your details below and our team will provide a custom
-                  offer.
+                  Your vehicle may require a quick review. Our team will follow up with a custom offer.
                 </p>
               </div>
             </>
@@ -1718,135 +1681,38 @@ export default function G2GOffer() {
           ) : null}
           {hasCustomOfferFlow ? (
             <>
-              <button
-                type="button"
-                className="g2g-btn g2g-btn--primary g2g-mt"
-                onClick={() => {
-                  if (contact) {
-                    if (!sellName.trim()) setSellName(contact.firstName);
-                    if (!sellPhone.trim()) setSellPhone(contact.phone);
-                  }
-                  setSellOpen((o) => !o);
-                  setSellErr('');
-                  setSellOk(false);
-                }}
-              >
-                {sellOpen ? 'Hide form' : "Enter your details — we'll text you"}
-              </button>
               {sellOk ? (
                 <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
-                  Thanks — we got your details and our team has been notified. We&apos;ll reach out shortly.
+                  Thanks — our team has been notified and will reach out shortly.
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <div className="g2g-field g2g-mt">
+                    <div className="g2g-consent-wrap">
+                      <input
+                        id="g2g-custom-consent"
+                        type="checkbox"
+                        checked={sellConsent}
+                        onChange={(ev) => setSellConsent(ev.target.checked)}
+                      />
+                      <label htmlFor="g2g-custom-consent" className="g2g-consent-text">
+                        I agree to receive SMS messages from Grace to Grace about selling my vehicle. Message and data
+                        rates may apply. Reply STOP to opt out.
+                      </label>
+                    </div>
+                  </div>
+                  {sellErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{sellErr}</div> : null}
+                  <button
+                    type="button"
+                    className="g2g-btn g2g-btn--primary g2g-mt"
+                    disabled={sellBusy}
+                    onClick={handleRequestTeamContact}
+                  >
+                    {sellBusy ? 'Sending…' : 'Let our team contact you'}
+                  </button>
+                </>
+              )}
             </>
-          ) : null}
-          {hasCustomOfferFlow && sellOpen ? (
-            <form className="g2g-sell-panel g2g-form" onSubmit={handleSellSubmit}>
-              <p style={{ margin: '0 0 0.75rem', fontSize: '0.92rem', color: 'var(--g2g-muted)' }}>
-                Share your contact info and pickup address. We&apos;ll text our buyer team so someone can follow up with
-                your custom offer.
-              </p>
-              <div className="g2g-field">
-                <label htmlFor="g2g-sell-name">Your name</label>
-                <input
-                  id="g2g-sell-name"
-                  name="customerName"
-                  autoComplete="name"
-                  value={sellName}
-                  onChange={(ev) => setSellName(ev.target.value)}
-                  required
-                />
-              </div>
-              <div className="g2g-field g2g-mt">
-                <label htmlFor="g2g-sell-phone">Mobile phone</label>
-                <input
-                  id="g2g-sell-phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={sellPhone}
-                  onChange={(ev) => setSellPhone(ev.target.value)}
-                  required
-                />
-              </div>
-              <div className="g2g-field g2g-mt">
-                <label htmlFor="g2g-sell-street">Street address</label>
-                <input
-                  id="g2g-sell-street"
-                  name="addressStreet"
-                  autoComplete="street-address"
-                  placeholder="Number and street"
-                  value={sellStreet}
-                  onChange={(ev) => setSellStreet(ev.target.value)}
-                  required
-                />
-              </div>
-              <div className="g2g-field g2g-mt">
-                <div className="g2g-row">
-                  <div className="g2g-field" style={{ flex: '2 1 10rem' }}>
-                    <label htmlFor="g2g-sell-city">City</label>
-                    <input
-                      id="g2g-sell-city"
-                      name="addressCity"
-                      autoComplete="address-level2"
-                      placeholder="City"
-                      value={sellCity}
-                      onChange={(ev) => setSellCity(ev.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="g2g-field" style={{ flex: '0 1 7.5rem', minWidth: '7rem' }}>
-                    <label htmlFor="g2g-sell-state">State</label>
-                    <select
-                      id="g2g-sell-state"
-                      name="addressState"
-                      autoComplete="address-level1"
-                      value={sellState}
-                      onChange={(ev) => setSellState(ev.target.value)}
-                      required
-                    >
-                      {US_STATE_OPTIONS.map((o) => (
-                        <option key={o.value || 'placeholder'} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="g2g-field g2g-pickup-zip-field">
-                    <label htmlFor="g2g-sell-pickup-zip">ZIP</label>
-                    <input
-                      id="g2g-sell-pickup-zip"
-                      name="addressZip"
-                      inputMode="numeric"
-                      autoComplete="postal-code"
-                      placeholder="30260"
-                      maxLength={10}
-                      value={sellPickupZip}
-                      onChange={(ev) => setSellPickupZip(ev.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="g2g-field g2g-mt">
-                <div className="g2g-consent-wrap">
-                  <input
-                    id="g2g-sell-consent"
-                    type="checkbox"
-                    checked={sellConsent}
-                    onChange={(ev) => setSellConsent(ev.target.checked)}
-                  />
-                  <label htmlFor="g2g-sell-consent" className="g2g-consent-text">
-                    I agree to receive SMS messages from Grace to Grace about selling my vehicle. Message and data rates
-                    may apply. Reply STOP to opt out.
-                  </label>
-                </div>
-              </div>
-              {sellErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{sellErr}</div> : null}
-              <button type="submit" className="g2g-btn g2g-btn--primary g2g-mt" disabled={sellBusy}>
-                {sellBusy ? 'Sending…' : 'Submit & notify our team'}
-              </button>
-            </form>
           ) : null}
           {!hasCustomOfferFlow ? (
             <p className="g2g-disclaimer">
