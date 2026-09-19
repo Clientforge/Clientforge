@@ -712,6 +712,23 @@ a.g2g-logo:focus-visible {
   color: #9b2c2c;
 }
 
+.g2g-post-estimate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.g2g-sell-now-skip {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--g2g-border, #e5ddd2);
+}
+
+.g2g-sell-now-skip__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+  color: var(--g2g-muted);
+}
+
 .g2g-photo-upload {
   width: 100%;
   margin-top: 0.25rem;
