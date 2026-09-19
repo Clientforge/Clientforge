@@ -496,6 +496,7 @@ export default function G2GOffer() {
   const [sellBusy, setSellBusy] = useState(false);
   const [sellErr, setSellErr] = useState('');
   const [sellOk, setSellOk] = useState(false);
+  const [photosSubmitted, setPhotosSubmitted] = useState(false);
 
   useEffect(() => {
     document.title = result
@@ -791,6 +792,7 @@ export default function G2GOffer() {
     setResult(null);
     setSellOk(false);
     setSellConsent(false);
+    setPhotosSubmitted(false);
     setFlowMax(0);
   };
 
@@ -844,6 +846,7 @@ export default function G2GOffer() {
     setResult(null);
     setSellOk(false);
     setSellConsent(false);
+    setPhotosSubmitted(false);
     setFlowMax(0);
   };
 
@@ -901,6 +904,7 @@ export default function G2GOffer() {
     setResult(null);
     setSellOk(false);
     setSellConsent(false);
+    setPhotosSubmitted(false);
 
     const validation = validateVehicleForEstimate();
     if (validation.error) {
@@ -923,7 +927,7 @@ export default function G2GOffer() {
     await runEstimate();
   };
 
-  const handleRequestTeamContact = async () => {
+  const submitTeamContact = async (mode) => {
     setSellErr('');
     setSellOk(false);
     if (!contact?.firstName?.trim() || contact.firstName.trim().length < 2) {
@@ -938,7 +942,9 @@ export default function G2GOffer() {
       setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
       return;
     }
-    if (!result?.meta?.noEstimate) return;
+    const isCustomReview = mode === 'custom';
+    if (isCustomReview && !result?.meta?.noEstimate) return;
+    if (!isCustomReview && !hasDisplayableOffer(result)) return;
 
     const makeFinal =
       makeSelect === OTHER_VALUE ? makeOther.trim() : makeSelect.trim();
@@ -974,6 +980,7 @@ export default function G2GOffer() {
       interiorQuality,
       bodyDamage,
     });
+    const rangeLoHi = !isCustomReview ? getDisplayRangeLoHi(result) : null;
 
     setSellBusy(true);
     try {
@@ -991,8 +998,12 @@ export default function G2GOffer() {
         vin: normalizeVin(vin) || undefined,
         mileage: miLabel || undefined,
         conditionLabel,
-        manualReviewRequired: true,
-        pickupNotes: 'Customer requested team contact — confirm pickup address on follow-up.',
+        estimateLow: rangeLoHi?.lo ?? undefined,
+        estimateHigh: rangeLoHi?.hi ?? undefined,
+        manualReviewRequired: isCustomReview,
+        pickupNotes: isCustomReview
+          ? 'Customer requested team contact — confirm pickup address on follow-up.'
+          : 'Customer chose Sell My Car Now without photos — confirm pickup address on follow-up.',
       });
       setSellOk(true);
     } catch (err) {
@@ -1672,12 +1683,49 @@ export default function G2GOffer() {
               </div>
             </>
           )}
-          {contact && result && !hasCustomOfferFlow ? (
-            <G2gPhotoUploadPanel
-              contact={contact}
-              vehicle={buildVehicleSnapshot()}
-              estimatePayload={buildEstimateSnapshot()}
-            />
+          {contact && result && hasPricedOffer ? (
+            sellOk ? (
+              <div className="g2g-alert g2g-alert--success g2g-mt" role="status">
+                Thanks — our team will contact you directly to continue the process.
+              </div>
+            ) : (
+              <div className="g2g-post-estimate-actions g2g-mt">
+                <G2gPhotoUploadPanel
+                  contact={contact}
+                  vehicle={buildVehicleSnapshot()}
+                  estimatePayload={buildEstimateSnapshot()}
+                  onSuccess={() => setPhotosSubmitted(true)}
+                />
+                {!photosSubmitted ? (
+                  <div className="g2g-sell-now-skip">
+                    <p className="g2g-sell-now-skip__hint">Prefer to skip photos?</p>
+                    <div className="g2g-field">
+                      <div className="g2g-consent-wrap">
+                        <input
+                          id="g2g-sell-now-consent"
+                          type="checkbox"
+                          checked={sellConsent}
+                          onChange={(ev) => setSellConsent(ev.target.checked)}
+                        />
+                        <label htmlFor="g2g-sell-now-consent" className="g2g-consent-text">
+                          I agree to receive SMS messages from Grace to Grace about selling my vehicle. Message and
+                          data rates may apply. Reply STOP to opt out.
+                        </label>
+                      </div>
+                    </div>
+                    {sellErr ? <div className="g2g-alert g2g-alert--error g2g-mt">{sellErr}</div> : null}
+                    <button
+                      type="button"
+                      className="g2g-btn g2g-btn--ghost g2g-mt"
+                      disabled={sellBusy}
+                      onClick={() => submitTeamContact('priced')}
+                    >
+                      {sellBusy ? 'Sending…' : 'Sell My Car Now'}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )
           ) : null}
           {hasCustomOfferFlow ? (
             <>
@@ -1706,7 +1754,7 @@ export default function G2GOffer() {
                     type="button"
                     className="g2g-btn g2g-btn--primary g2g-mt"
                     disabled={sellBusy}
-                    onClick={handleRequestTeamContact}
+                    onClick={() => submitTeamContact('custom')}
                   >
                     {sellBusy ? 'Sending…' : 'Let our team contact you'}
                   </button>
