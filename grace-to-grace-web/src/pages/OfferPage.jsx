@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { computeOfferRange, CONDITION_OPTIONS } from '../lib/pricingEngine.js';
 import { formatOfferRange, getDisplayRangeLoHi } from '../lib/displayOffer.js';
@@ -9,7 +9,7 @@ import { getOrCreateG2gSessionId, postGraceEstimateSnapshot } from '../lib/estim
 import { loadG2gContact, saveG2gContact } from '../lib/g2gContactStorage.js';
 import { postG2gLeadStart, postG2gNotifyEstimate } from '../lib/g2gLeadApi.js';
 import { lookupUsZipCityState } from '../lib/zipLookup.js';
-import { pickReviewMessage } from '../lib/reviewMessages.js';
+import { pickRandomReviewMessage } from '../lib/reviewMessages.js';
 
 export default function OfferPage() {
   const vinInputRef = useRef(null);
@@ -105,6 +105,7 @@ export default function OfferPage() {
   const [sellErr, setSellErr] = useState('');
   const [sellOk, setSellOk] = useState(false);
   const [photosSubmitted, setPhotosSubmitted] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
 
   const conditionLabel =
     CONDITION_OPTIONS.find((o) => o.id === conditionId)?.label || conditionId;
@@ -139,6 +140,7 @@ export default function OfferPage() {
       mileage: mileage.trim(),
     });
     setResult(range);
+    setReviewMessage(pickRandomReviewMessage());
     setShowLeadGate(false);
 
     const zipClean = zip.trim().replace(/\D/g, '').slice(0, 5);
@@ -266,6 +268,7 @@ export default function OfferPage() {
   const handleEstimate = (e) => {
     e.preventDefault();
     setResult(null);
+    setReviewMessage('');
     setSellOk(false);
     setSellConsent(false);
     setPhotosSubmitted(false);
@@ -347,11 +350,6 @@ export default function OfferPage() {
       setSellBusy(false);
     }
   };
-
-  const reviewMessage = useMemo(
-    () => (result ? pickReviewMessage(getOrCreateG2gSessionId()) : ''),
-    [result],
-  );
 
   const buildVehicleSnapshot = () => ({
     year: year.trim(),
