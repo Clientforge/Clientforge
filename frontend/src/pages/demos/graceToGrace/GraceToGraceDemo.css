@@ -729,6 +729,29 @@ a.g2g-logo:focus-visible {
   color: var(--g2g-muted);
 }
 
+.g2g-sell-now-skip .g2g-consent-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.62rem;
+  width: 100%;
+}
+
+.g2g-sell-now-skip .g2g-consent-wrap input[type='checkbox'] {
+  margin-top: 0.28rem;
+  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.g2g-sell-now-skip .g2g-consent-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
 .g2g-photo-upload {
   width: 100%;
   margin-top: 0.25rem;
