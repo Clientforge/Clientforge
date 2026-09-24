@@ -7,19 +7,21 @@
   <title>Patient Check-In — Spatium Urgent Care</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f2f8fb;
-      --paper: #fcfeff;
-      --ink: #14202b;
-      --muted: #5a6b78;
-      --accent: #1a7a9e;
-      --accent-dark: #0d5a78;
-      --line: #d8e8ef;
+      --green: #387648;
+      --green-dark: #2d5f3a;
+      --red: #b22d30;
+      --red-dark: #8f2427;
+      --bg: #f7faf7;
+      --paper: #ffffff;
+      --ink: #1a2420;
+      --muted: #5c6b60;
+      --line: #dce8de;
       --radius: 16px;
-      --shadow: 0 20px 48px rgba(20, 32, 43, 0.07);
-      --error: #b42318;
+      --shadow: 0 20px 48px rgba(45, 56, 48, 0.08);
+      --error: #b22d30;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -29,22 +31,29 @@
       color: var(--ink);
       background: var(--bg);
       min-height: 100vh;
-      padding: 32px 22px 48px;
+      padding: 32px 22px 0;
     }
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(126, 196, 217, 0.35), transparent 55%),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(26, 122, 158, 0.1), transparent 50%);
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 118, 72, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(178, 45, 48, 0.08), transparent 50%);
       pointer-events: none;
       z-index: 0;
     }
-    .card {
+    .page {
       position: relative;
       z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .card {
+      flex: 1;
       max-width: 480px;
+      width: 100%;
       margin: 0 auto;
       background: var(--paper);
       border: 1px solid var(--line);
@@ -52,31 +61,49 @@
       padding: 36px 28px 40px;
       box-shadow: var(--shadow);
     }
-    .brand-name {
-      font-family: 'Montserrat', system-ui, sans-serif;
-      font-size: clamp(1.55rem, 5vw, 1.85rem);
-      font-weight: 700;
-      color: var(--accent-dark);
+    .brand-lockup {
       text-align: center;
-      margin-bottom: 8px;
-      line-height: 1.15;
+      margin-bottom: 18px;
+      line-height: 1.1;
+    }
+    .brand-spatium {
+      display: block;
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(1.65rem, 5vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--green);
+    }
+    .brand-sub {
+      display: block;
+      margin-top: 4px;
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--red);
     }
     .badge {
-      display: block;
+      display: inline-block;
+      width: 100%;
       text-align: center;
       font-size: 0.72rem;
       font-weight: 600;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: var(--accent-dark);
+      color: var(--green-dark);
       margin-bottom: 18px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(56, 118, 72, 0.1);
     }
     h1 {
       font-family: 'Montserrat', system-ui, sans-serif;
-      font-size: 1.5rem;
+      font-size: 1.45rem;
       font-weight: 600;
       text-align: center;
       margin-bottom: 10px;
+      color: var(--green-dark);
     }
     .lead {
       text-align: center;
@@ -89,6 +116,7 @@
       font-weight: 600;
       font-size: 0.9rem;
       margin-bottom: 8px;
+      color: var(--green-dark);
     }
     input, select {
       width: 100%;
@@ -99,11 +127,12 @@
       font-size: 1rem;
       margin-bottom: 18px;
       background: #fff;
+      color: var(--ink);
     }
     input:focus, select:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(26, 122, 158, 0.18);
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(56, 118, 72, 0.18);
     }
     .btn {
       display: block;
@@ -111,61 +140,77 @@
       padding: 16px;
       border: none;
       border-radius: 999px;
-      font-weight: 600;
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-weight: 700;
       font-size: 1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       cursor: pointer;
-      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      background: linear-gradient(135deg, var(--green), var(--green-dark));
       color: #fff;
-      transition: filter 0.15s ease;
+      transition: filter 0.15s ease, transform 0.15s ease;
     }
-    .btn:hover { filter: brightness(1.05); }
+    .btn:hover { filter: brightness(1.06); }
+    .btn:active { transform: scale(0.99); }
     .btn:disabled { opacity: 0.65; cursor: not-allowed; }
     .error {
       display: none;
       margin-bottom: 16px;
       padding: 12px 14px;
       border-radius: 10px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
+      background: #fdf2f2;
+      border: 1px solid rgba(178, 45, 48, 0.25);
       color: var(--error);
       font-size: 0.92rem;
     }
     .error.visible { display: block; }
+    .brand-bar {
+      margin-top: auto;
+      height: 8px;
+      background: var(--red);
+      width: 100%;
+    }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <p class="brand-name">Spatium Urgent Care</p>
-    <span class="badge">Patient check-in</span>
-    <h1>Welcome to Spatium Urgent Care</h1>
-    <p class="lead">Please complete the quick check-in form below to let our team know you&apos;ve arrived.</p>
+  <div class="page">
+    <div class="card">
+      <div class="brand-lockup">
+        <span class="brand-spatium">SPATIUM</span>
+        <span class="brand-sub">URGENT CARE</span>
+      </div>
+      <span class="badge">Patient check-in</span>
+      <h1>Welcome</h1>
+      <p class="lead">Please complete the quick check-in form below to let our team know you&apos;ve arrived.</p>
 
-    <p id="form-error" class="error" role="alert"></p>
+      <p id="form-error" class="error" role="alert"></p>
 
-    <form id="checkin-form" novalidate>
-      <label for="firstName">First name</label>
-      <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
+      <form id="checkin-form" novalidate>
+        <label for="firstName">First name</label>
+        <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
 
-      <label for="lastName">Last name</label>
-      <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
+        <label for="lastName">Last name</label>
+        <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
 
-      <label for="phone">Phone number</label>
-      <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="(555) 555-5555">
+        <label for="phone">Phone number</label>
+        <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="(555) 555-5555">
 
-      <label for="serviceType">Service type</label>
-      <select id="serviceType" name="serviceType" required>
-        <option value="">Select a service…</option>
-        <option value="Urgent Care Visit">Urgent Care Visit</option>
-        <option value="IV Hydration">IV Hydration</option>
-        <option value="Massage Therapy">Massage Therapy</option>
-        <option value="Weight Management">Weight Management</option>
-        <option value="Wellness Services">Wellness Services</option>
-        <option value="Other">Other</option>
-      </select>
+        <label for="serviceType">Service type</label>
+        <select id="serviceType" name="serviceType" required>
+          <option value="">Select a service…</option>
+          <option value="Urgent Care Visit">Urgent Care Visit</option>
+          <option value="IV Hydration">IV Hydration</option>
+          <option value="Massage Therapy">Massage Therapy</option>
+          <option value="Weight Management">Weight Management</option>
+          <option value="Wellness Services">Wellness Services</option>
+          <option value="Other">Other</option>
+        </select>
 
-      <button type="submit" class="btn" id="submit-btn">Check In</button>
-    </form>
+        <button type="submit" class="btn" id="submit-btn">Check In</button>
+      </form>
+    </div>
+    <div class="brand-bar" aria-hidden="true"></div>
   </div>
 
   <script>

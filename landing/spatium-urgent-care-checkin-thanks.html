@@ -7,18 +7,20 @@
   <title>You're checked in — Spatium Urgent Care</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f2f8fb;
-      --paper: #fcfeff;
-      --ink: #14202b;
-      --muted: #5a6b78;
-      --accent: #1a7a9e;
-      --accent-dark: #0d5a78;
-      --line: #d8e8ef;
+      --green: #387648;
+      --green-dark: #2d5f3a;
+      --red: #b22d30;
+      --red-dark: #8f2427;
+      --bg: #f7faf7;
+      --paper: #ffffff;
+      --ink: #1a2420;
+      --muted: #5c6b60;
+      --line: #dce8de;
       --radius: 16px;
-      --shadow: 0 20px 48px rgba(20, 32, 43, 0.07);
+      --shadow: 0 20px 48px rgba(45, 56, 48, 0.08);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -28,21 +30,29 @@
       color: var(--ink);
       background: var(--bg);
       min-height: 100vh;
-      padding: 32px 22px 48px;
+      padding: 32px 22px 0;
     }
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(126, 196, 217, 0.35), transparent 55%);
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 118, 72, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(178, 45, 48, 0.08), transparent 50%);
       pointer-events: none;
       z-index: 0;
     }
-    .card {
+    .page {
       position: relative;
       z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .card {
+      flex: 1;
       max-width: 520px;
+      width: 100%;
       margin: 0 auto;
       background: var(--paper);
       border: 1px solid var(--line);
@@ -51,18 +61,44 @@
       box-shadow: var(--shadow);
       text-align: center;
     }
-    .brand-name {
+    .brand-lockup {
+      margin-bottom: 24px;
+      line-height: 1.1;
+    }
+    .brand-spatium {
+      display: block;
       font-family: 'Montserrat', system-ui, sans-serif;
-      font-size: clamp(1.55rem, 5vw, 1.85rem);
+      font-size: clamp(1.65rem, 5vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--green);
+    }
+    .brand-sub {
+      display: block;
+      margin-top: 4px;
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(0.95rem, 3.5vw, 1.1rem);
       font-weight: 700;
-      color: var(--accent-dark);
-      margin-bottom: 20px;
+      letter-spacing: 0.18em;
+      color: var(--red);
+    }
+    .check-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: rgba(56, 118, 72, 0.12);
+      color: var(--green);
+      font-size: 1.75rem;
+      line-height: 56px;
+      font-weight: 700;
     }
     h1 {
       font-family: 'Montserrat', system-ui, sans-serif;
       font-size: 1.75rem;
       font-weight: 600;
       margin-bottom: 14px;
+      color: var(--green-dark);
     }
     .lead {
       color: var(--muted);
@@ -77,20 +113,33 @@
       font-size: 0.95rem;
     }
     .site-link a {
-      color: var(--accent-dark);
+      color: var(--red);
       text-decoration: none;
       font-weight: 600;
     }
     .site-link a:hover { text-decoration: underline; }
+    .brand-bar {
+      margin-top: auto;
+      height: 8px;
+      background: var(--red);
+      width: 100%;
+    }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <p class="brand-name">Spatium Urgent Care</p>
-    <h1>You&apos;re all set!</h1>
-    <p class="lead">Thank you for checking in. Please have a seat and we&apos;ll be with you shortly.</p>
-    <p class="site-link"><a href="https://www.spatiumurgentcare.com/" target="_blank" rel="noopener noreferrer">spatiumurgentcare.com</a></p>
+  <div class="page">
+    <div class="card">
+      <div class="brand-lockup">
+        <span class="brand-spatium">SPATIUM</span>
+        <span class="brand-sub">URGENT CARE</span>
+      </div>
+      <div class="check-icon" aria-hidden="true">✓</div>
+      <h1>You&apos;re all set!</h1>
+      <p class="lead">Thank you for checking in. Please have a seat and we&apos;ll be with you shortly.</p>
+      <p class="site-link"><a href="https://www.spatiumurgentcare.com/" target="_blank" rel="noopener noreferrer">spatiumurgentcare.com</a></p>
+    </div>
+    <div class="brand-bar" aria-hidden="true"></div>
   </div>
 
 </body>
