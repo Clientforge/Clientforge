@@ -306,6 +306,124 @@ a.g2g-logo:hover {
   color: var(--g2g-text);
 }
 
+.g2g-alert--info {
+  background: rgba(79, 124, 168, 0.12);
+  border: 1px solid rgba(79, 124, 168, 0.38);
+  color: var(--g2g-text);
+}
+
+.g2g-no-estimate-copy {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.g2g-exact-offer-step {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(227, 184, 106, 0.18);
+}
+
+.g2g-exact-offer-step__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--g2g-text);
+}
+
+.g2g-exact-offer-step__hint {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--g2g-muted);
+}
+
+.g2g-post-estimate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.g2g-sell-now-skip {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--g2g-border);
+}
+
+.g2g-sell-now-skip__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+  color: var(--g2g-muted);
+}
+
+.g2g-sell-now-skip .g2g-consent-wrap,
+.g2g-sell-panel .g2g-consent-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.62rem;
+  width: 100%;
+}
+
+.g2g-sell-now-skip .g2g-consent-wrap input[type='checkbox'],
+.g2g-sell-panel .g2g-consent-wrap input[type='checkbox'] {
+  margin-top: 0.28rem;
+  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.g2g-sell-now-skip .g2g-consent-text,
+.g2g-sell-panel .g2g-consent-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--g2g-muted);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.g2g-photo-upload {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.g2g-photo-panel {
+  padding: 1rem;
+  border: 1px solid var(--g2g-border);
+  border-radius: 8px;
+  background: var(--g2g-surface);
+}
+
+.g2g-photo-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.g2g-photo-preview {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--g2g-border);
+}
+
+.g2g-photo-preview img {
+  width: 100%;
+  height: 88px;
+  object-fit: cover;
+  display: block;
+}
+
+.g2g-photo-preview__remove {
+  width: 100%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.35rem;
+  cursor: pointer;
+}
+
 .g2g-sell-panel {
   margin-top: 1.25rem;
   padding-top: 1.25rem;

@@ -1,15 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { postG2gPhotoSubmission } from './graceEstimateApi';
-import { getOrCreateG2gSessionId } from './g2gSession';
+import { postG2gPhotoSubmission } from '../lib/g2gPhotoApi.js';
+import { getOrCreateG2gSessionId } from '../lib/estimateSnapshotApi.js';
 
 const MAX_PHOTOS = 12;
 
-export default function G2gPhotoUploadPanel({
-  contact,
-  vehicle,
-  estimatePayload,
-  onSuccess,
-}) {
+export default function G2gPhotoUploadPanel({ contact, vehicle, estimatePayload, onSuccess }) {
   const inputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
