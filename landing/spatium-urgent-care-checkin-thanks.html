@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Thank you — you're checked in at Spatium Urgent Care.">
+  <title>You're checked in — Spatium Urgent Care</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f2f8fb;
+      --paper: #fcfeff;
+      --ink: #14202b;
+      --muted: #5a6b78;
+      --accent: #1a7a9e;
+      --accent-dark: #0d5a78;
+      --line: #d8e8ef;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(20, 32, 43, 0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Source Sans 3', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 48px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(126, 196, 217, 0.35), transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 40px 28px 44px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .brand-name {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(1.55rem, 5vw, 1.85rem);
+      font-weight: 700;
+      color: var(--accent-dark);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .site-link {
+      margin-top: 28px;
+      font-size: 0.95rem;
+    }
+    .site-link a {
+      color: var(--accent-dark);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .site-link a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <p class="brand-name">Spatium Urgent Care</p>
+    <h1>You&apos;re all set!</h1>
+    <p class="lead">Thank you for checking in. Please have a seat and we&apos;ll be with you shortly.</p>
+    <p class="site-link"><a href="https://www.spatiumurgentcare.com/" target="_blank" rel="noopener noreferrer">spatiumurgentcare.com</a></p>
+  </div>
+
+</body>
+</html>

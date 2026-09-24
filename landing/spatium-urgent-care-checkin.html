@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Spatium Urgent Care — Quick patient check-in in Marietta, GA.">
+  <title>Patient Check-In — Spatium Urgent Care</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f2f8fb;
+      --paper: #fcfeff;
+      --ink: #14202b;
+      --muted: #5a6b78;
+      --accent: #1a7a9e;
+      --accent-dark: #0d5a78;
+      --line: #d8e8ef;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(20, 32, 43, 0.07);
+      --error: #b42318;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Source Sans 3', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 48px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(126, 196, 217, 0.35), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(26, 122, 158, 0.1), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 36px 28px 40px;
+      box-shadow: var(--shadow);
+    }
+    .brand-name {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(1.55rem, 5vw, 1.85rem);
+      font-weight: 700;
+      color: var(--accent-dark);
+      text-align: center;
+      margin-bottom: 8px;
+      line-height: 1.15;
+    }
+    .badge {
+      display: block;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+      margin-bottom: 18px;
+    }
+    h1 {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .lead {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 28px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    input, select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      margin-bottom: 18px;
+      background: #fff;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(26, 122, 158, 0.18);
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      transition: filter 0.15s ease;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .error {
+      display: none;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: var(--error);
+      font-size: 0.92rem;
+    }
+    .error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <p class="brand-name">Spatium Urgent Care</p>
+    <span class="badge">Patient check-in</span>
+    <h1>Welcome to Spatium Urgent Care</h1>
+    <p class="lead">Please complete the quick check-in form below to let our team know you&apos;ve arrived.</p>
+
+    <p id="form-error" class="error" role="alert"></p>
+
+    <form id="checkin-form" novalidate>
+      <label for="firstName">First name</label>
+      <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
+
+      <label for="lastName">Last name</label>
+      <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
+
+      <label for="phone">Phone number</label>
+      <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="(555) 555-5555">
+
+      <label for="serviceType">Service type</label>
+      <select id="serviceType" name="serviceType" required>
+        <option value="">Select a service…</option>
+        <option value="Urgent Care Visit">Urgent Care Visit</option>
+        <option value="IV Hydration">IV Hydration</option>
+        <option value="Massage Therapy">Massage Therapy</option>
+        <option value="Weight Management">Weight Management</option>
+        <option value="Wellness Services">Wellness Services</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <button type="submit" class="btn" id="submit-btn">Check In</button>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById('checkin-form');
+      var errorEl = document.getElementById('form-error');
+      var submitBtn = document.getElementById('submit-btn');
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.classList.add('visible');
+      }
+
+      function clearError() {
+        errorEl.textContent = '';
+        errorEl.classList.remove('visible');
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearError();
+
+        var payload = {
+          firstName: document.getElementById('firstName').value.trim(),
+          lastName: document.getElementById('lastName').value.trim(),
+          phone: document.getElementById('phone').value.trim(),
+          serviceType: document.getElementById('serviceType').value,
+        };
+
+        if (!payload.firstName) { showError('First name is required.'); return; }
+        if (!payload.lastName) { showError('Last name is required.'); return; }
+        if (!payload.phone) { showError('Phone number is required.'); return; }
+        if (!payload.serviceType) { showError('Please select a service type.'); return; }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Checking in…';
+
+        fetch('/api/v1/public/spatium-checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+              window.location.href = '/spatium-checkin/thanks';
+            });
+          })
+          .catch(function (err) {
+            showError(err.message || 'Could not complete check-in. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Check In';
+          });
+      });
+    })();
+  </script>
+
+</body>
+</html>

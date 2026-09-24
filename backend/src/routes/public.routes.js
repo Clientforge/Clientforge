@@ -30,6 +30,11 @@ const {
   CherishedOnboardingError,
 } = require('../services/cherishedOnboarding.service');
 const {
+  submitCheckIn,
+  getPublicConfig: getSpatiumCheckInConfig,
+  SpatiumCheckInError,
+} = require('../services/spatiumCheckIn.service');
+const {
   submitAssessment,
   RevenueAssessmentError,
 } = require('../services/revenueAssessment.service');
@@ -396,6 +401,28 @@ router.get('/g2g-estimate-snapshots-report', snapshotReportLimiter, async (req, 
 router.get('/cherished-onboarding/config', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   return res.json(getPublicConfig());
+});
+
+/**
+ * Spatium Urgent Care — QR patient check-in (upserts contact + triggers follow-up automations).
+ */
+router.get('/spatium-checkin/config', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  return res.json(getSpatiumCheckInConfig());
+});
+
+router.post('/spatium-checkin', sellIntentLimiter, async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const result = await submitCheckIn(req.body);
+    return res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof SpatiumCheckInError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/spatium-checkin]', err);
+    return res.status(500).json({ error: 'Could not complete check-in.' });
+  }
 });
 
 /**

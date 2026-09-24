@@ -327,6 +327,93 @@ const dispatchCheckoutWorkflows = async (tenantId, params) => dispatchPostVisitW
   requireOptimantraCheckout: true,
 });
 
+/**
+ * Spatium QR check-in — schedule service-based follow-up from check-in time.
+ * No staff notification; rebooking / service campaigns only.
+ */
+const dispatchCheckInWorkflows = async (tenantId, {
+  contactId,
+  appointmentId,
+  checkedInAt,
+  serviceName,
+}) => {
+  const [tenantRow, contactRow, appointmentRow] = await Promise.all([
+    db.query(
+      `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
+              appointment_automation_config, service_followup_campaigns_enabled
+       FROM tenants WHERE id = $1`,
+      [tenantId],
+    ),
+    db.query('SELECT first_name, last_name, phone, email, unsubscribed FROM contacts WHERE id = $1', [contactId]),
+    db.query(
+      'SELECT scheduled_at, service_name, timezone, provider, matched_service_id FROM appointments WHERE id = $1',
+      [appointmentId],
+    ),
+  ]);
+
+  const tenant = tenantRow.rows[0];
+  const contact = contactRow.rows[0];
+  const appointment = appointmentRow.rows[0];
+
+  if (!tenant || !contact || !appointment) {
+    console.warn('[APPT-WORKFLOW] Check-in dispatch missing context — skipping');
+    return { jobsScheduled: 0, skipped: 'missing_context' };
+  }
+
+  if (contact.unsubscribed) {
+    return { jobsScheduled: 0, skipped: 'unsubscribed' };
+  }
+
+  const appointmentForTemplates = {
+    ...appointment,
+    service_name: serviceName || appointment.service_name,
+  };
+
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  const vars = automationService.buildTemplateVars({
+    tenant,
+    contact,
+    appointment: appointmentForTemplates,
+  });
+
+  await rebookingCampaign.cancelRebookingJobsForContact(tenantId, contactId);
+
+  await db.query(
+    `UPDATE appointment_workflow_jobs
+     SET status = 'cancelled', cancelled_at = NOW()
+     WHERE appointment_id = $1
+       AND tenant_id = $2
+       AND status = 'pending'
+       AND (
+         job_type IN ('rebooking', 'rebooking_initial')
+         OR job_type LIKE 'rebooking_followup_%'
+       )`,
+    [appointmentId, tenantId],
+  );
+
+  const referenceTime = checkedInAt || new Date().toISOString();
+  const rebookingResult = await scheduleRebooking(
+    tenantId,
+    appointmentId,
+    contactId,
+    contact,
+    tenant,
+    appointmentForTemplates,
+    config,
+    vars,
+    { referenceTime },
+  );
+
+  const jobsScheduled = rebookingResult.scheduledCount || 0;
+  return {
+    jobsScheduled,
+    rebookingJobs: jobsScheduled,
+    rebookingSkipped: jobsScheduled === 0,
+    rebookingSkipReason: rebookingResult.skipReason || null,
+    rebookingOffsetDays: rebookingResult.offsetDays || null,
+  };
+};
+
 const dispatchPostServiceCompletionWorkflows = async (tenantId, params) => dispatchPostVisitWorkflows(tenantId, {
   ...params,
   scheduleRebooking: false,
@@ -1181,6 +1268,7 @@ module.exports = {
   computeCancellationFollowUpAt,
   dispatchWorkflows,
   dispatchCheckoutWorkflows,
+  dispatchCheckInWorkflows,
   dispatchPostServiceCompletionWorkflows,
   dispatchNoShowWorkflow,
   scheduleCancellationFollowUp,
