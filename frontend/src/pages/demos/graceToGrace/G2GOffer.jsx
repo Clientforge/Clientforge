@@ -40,7 +40,7 @@ import {
   getDisplayRangeLoHi,
 } from './displayOffer';
 import G2gPhotoUploadPanel from './G2gPhotoUploadPanel';
-import { pickReviewMessage } from './reviewMessages';
+import { pickRandomReviewMessage } from './reviewMessages';
 
 const FLOW = {
   year: 1,
@@ -496,6 +496,7 @@ export default function G2GOffer() {
   const [sellErr, setSellErr] = useState('');
   const [sellOk, setSellOk] = useState(false);
   const [photosSubmitted, setPhotosSubmitted] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
 
   useEffect(() => {
     document.title = result
@@ -637,6 +638,7 @@ export default function G2GOffer() {
         },
       });
       setResult(range);
+      setReviewMessage(pickRandomReviewMessage());
       setShowLeadGate(false);
       if (activeContact && !range?.meta?.noEstimate) {
         const displayRange = formatOfferRange(range);
@@ -789,6 +791,7 @@ export default function G2GOffer() {
     setBodyDamage(initialBody());
     setFormError('');
     setResult(null);
+    setReviewMessage('');
     setSellOk(false);
     setSellConsent(false);
     setPhotosSubmitted(false);
@@ -843,6 +846,7 @@ export default function G2GOffer() {
     setBodyDamage(initialBody());
     setFormError('');
     setResult(null);
+    setReviewMessage('');
     setSellOk(false);
     setSellConsent(false);
     setPhotosSubmitted(false);
@@ -901,6 +905,7 @@ export default function G2GOffer() {
     e.preventDefault();
     setFormError('');
     setResult(null);
+    setReviewMessage('');
     setSellOk(false);
     setSellConsent(false);
     setPhotosSubmitted(false);
@@ -1017,10 +1022,6 @@ export default function G2GOffer() {
   const canSubmitEstimate = unlocked >= FLOW.body;
 
   const showResultActions = Boolean(result);
-  const reviewMessage = useMemo(
-    () => (result ? pickReviewMessage(getOrCreateG2gSessionId()) : ''),
-    [result],
-  );
 
   const buildVehicleSnapshot = () => {
     const makeFinal =
