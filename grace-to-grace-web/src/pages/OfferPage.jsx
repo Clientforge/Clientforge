@@ -162,8 +162,9 @@ export default function OfferPage() {
     }).catch(() => {});
 
     if (activeContact) {
-      const displayRange = formatOfferRange(range);
-      const rangeLoHi = getDisplayRangeLoHi(range);
+      const manualReviewRequired = Boolean(range?.meta?.noEstimate);
+      const displayRange = manualReviewRequired ? undefined : formatOfferRange(range);
+      const rangeLoHi = manualReviewRequired ? null : getDisplayRangeLoHi(range);
       postG2gNotifyEstimate({
         firstName: activeContact.firstName,
         phone: activeContact.phone,
@@ -179,6 +180,7 @@ export default function OfferPage() {
         vin: normalizeVin(vin) || undefined,
         mileage: mileage.trim() || undefined,
         conditionLabel,
+        manualReviewRequired,
         estimateLow: rangeLoHi?.lo ?? range.low,
         estimateHigh: rangeLoHi?.hi ?? range.high,
         estimateDisplay: displayRange || undefined,

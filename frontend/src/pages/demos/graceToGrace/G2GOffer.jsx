@@ -640,9 +640,10 @@ export default function G2GOffer() {
       setResult(range);
       setReviewMessage(pickRandomReviewMessage());
       setShowLeadGate(false);
-      if (activeContact && !range?.meta?.noEstimate) {
-        const displayRange = formatOfferRange(range);
-        const rangeLoHi = getDisplayRangeLoHi(range);
+      if (activeContact) {
+        const manualReviewRequired = Boolean(range?.meta?.noEstimate);
+        const displayRange = manualReviewRequired ? undefined : formatOfferRange(range);
+        const rangeLoHi = manualReviewRequired ? null : getDisplayRangeLoHi(range);
         const conditionLabel = buildSellConditionSummary({
           titleStatus,
           mileageOdometer,
@@ -673,6 +674,7 @@ export default function G2GOffer() {
           vin: normalizeVin(vin) || undefined,
           mileage: miParsed != null ? formatMileageDisplay(miParsed) : undefined,
           conditionLabel,
+          manualReviewRequired,
           estimateLow: rangeLoHi?.lo ?? (range.low != null ? range.low : undefined),
           estimateHigh: rangeLoHi?.hi ?? (range.high != null ? range.high : undefined),
           estimateDisplay: displayRange || undefined,

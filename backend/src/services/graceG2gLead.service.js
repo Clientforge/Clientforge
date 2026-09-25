@@ -178,6 +178,10 @@ function buildEstimateSmsBody(v) {
   } else if (estPart === '—' && v.estimateLow != null && Number.isFinite(v.estimateLow)) {
     estPart = `$${v.estimateLow.toLocaleString()}`;
   }
+  if (v.manualReviewRequired && estPart === '—') {
+    estPart = 'Team review required';
+  }
+  const reviewPart = v.manualReviewRequired ? '\nReview: MANUAL (confirm custom quote)' : '';
   return (
     `[G2G ESTIMATE] New estimate inquiry\n` +
     `Name: ${v.customerName}\n` +
@@ -188,7 +192,8 @@ function buildEstimateSmsBody(v) {
     `Mileage: ${miPart}\n` +
     `Condition: ${condPart}\n` +
     `ZIP: ${v.zip}\n` +
-    `Estimate: ${estPart}`
+    `Estimate: ${estPart}` +
+    reviewPart
   );
 }
 
@@ -260,6 +265,7 @@ function validateEstimateNotifyBody(body) {
   }
   const estimateDisplay = trimStr(body.estimateDisplay, 64) || null;
   const leadId = trimStr(body.leadId, 64) || null;
+  const manualReviewRequired = body.manualReviewRequired === true;
   return {
     ...contact,
     customerName: contact.firstName,
@@ -273,9 +279,15 @@ function validateEstimateNotifyBody(body) {
     estimateLow,
     estimateHigh,
     estimateDisplay,
+    manualReviewRequired,
     leadId: leadId || null,
     vehicle: { year, make, model, zip: vehicleZip, vin, mileage, conditionLabel },
-    estimate: { low: estimateLow, high: estimateHigh, display: estimateDisplay },
+    estimate: {
+      low: estimateLow,
+      high: estimateHigh,
+      display: estimateDisplay,
+      manualReviewRequired,
+    },
   };
 }
 
