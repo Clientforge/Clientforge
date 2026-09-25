@@ -471,7 +471,7 @@ export default function G2GOffer() {
   const [engineNote, setEngineNote] = useState('');
 
   const [mileageOdometer, setMileageOdometer] = useState('');
-  const [zip, setZip] = useState(() => loadG2gContact()?.zip || '');
+  const [zip, setZip] = useState('');
   const [titleStatus, setTitleStatus] = useState('clean');
 
   const [vinStepAcknowledged, setVinStepAcknowledged] = useState(false);
@@ -1326,11 +1326,12 @@ export default function G2GOffer() {
                   name="zip"
                   inputMode="numeric"
                   autoComplete="postal-code"
-                  placeholder="30260"
+                  placeholder="e.g. 30260"
                   maxLength={10}
                   value={zip}
                   onChange={(e) => setZip(e.target.value)}
                 />
+                <p className="g2g-field-hint">Enter your 5-digit ZIP code where the vehicle is located.</p>
               </div>
               <div className="g2g-field">
                 <label htmlFor="g2g-title">Title status (seller-reported)</label>
@@ -1588,12 +1589,15 @@ export default function G2GOffer() {
                     name="zip"
                     inputMode="numeric"
                     autoComplete="postal-code"
-                    placeholder="30260"
+                    placeholder="e.g. 30260"
                     maxLength={10}
                     value={leadZip}
                     onChange={(ev) => setLeadZip(ev.target.value)}
                     required
                   />
+                  {!zipLookupBusy && !zipLookupErr ? (
+                    <p className="g2g-field-hint">Enter your 5-digit ZIP code where the vehicle is located.</p>
+                  ) : null}
                   {zipLookupBusy ? (
                     <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
                       Looking up city and state…

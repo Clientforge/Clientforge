@@ -445,11 +445,12 @@ export default function OfferPage() {
             name="zip"
             inputMode="numeric"
             autoComplete="postal-code"
-            placeholder="30260"
+            placeholder="e.g. 30260"
             maxLength={10}
             value={zip}
             onChange={(e) => setZip(e.target.value)}
           />
+          <p className="g2g-field-hint">Enter your 5-digit ZIP code where the vehicle is located.</p>
         </div>
 
         <div className="g2g-field">
@@ -513,12 +514,15 @@ export default function OfferPage() {
                 name="leadZip"
                 inputMode="numeric"
                 autoComplete="postal-code"
-                placeholder="30260"
+                placeholder="e.g. 30260"
                 maxLength={10}
                 value={leadZip}
                 onChange={(ev) => setLeadZip(ev.target.value)}
                 required
               />
+              {!zipLookupBusy && !zipLookupErr ? (
+                <p className="g2g-field-hint">Enter your 5-digit ZIP code where the vehicle is located.</p>
+              ) : null}
               {zipLookupBusy ? (
                 <p className="g2g-field-hint" style={{ margin: '0.35rem 0 0' }}>
                   Looking up city and state…
