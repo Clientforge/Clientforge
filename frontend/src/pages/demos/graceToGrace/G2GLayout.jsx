@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import './GraceToGraceDemo.css';
-
-const BASE = '/demo/grace-to-grace';
+import { g2gPath } from './g2gBase';
 
 function navClass({ isActive }) {
   return isActive ? 'g2g-nav--active' : '';
@@ -32,7 +31,7 @@ export default function G2GLayout() {
       <div className="g2g-shell">
         <header className="g2g-header">
           <div className="g2g-header-inner">
-            <Link to={BASE} className="g2g-logo" onClick={closeMenu}>
+            <Link to={g2gPath()} className="g2g-logo" onClick={closeMenu}>
               Grace <span>to</span> Grace
             </Link>
             <button
@@ -66,22 +65,22 @@ export default function G2GLayout() {
               )}
             </button>
             <nav className="g2g-nav g2g-nav--desktop" aria-label="Grace to Grace demo">
-              <NavLink to={BASE} end className={navClass}>
+              <NavLink to={g2gPath()} end className={navClass}>
                 Home
               </NavLink>
-              <Link to={`${BASE}/#how-it-works`} className="g2g-nav-hash">
+              <Link to={`${g2gPath()}#how-it-works`} className="g2g-nav-hash">
                 How it works
               </Link>
-              <Link to={`${BASE}/#reviews`} className="g2g-nav-hash">
+              <Link to={`${g2gPath()}#reviews`} className="g2g-nav-hash">
                 Reviews
               </Link>
-              <Link to={`${BASE}/#faq`} className="g2g-nav-hash">
+              <Link to={`${g2gPath()}#faq`} className="g2g-nav-hash">
                 FAQ
               </Link>
-              <NavLink to={`${BASE}/contact`} className={navClass}>
+              <NavLink to={g2gPath('contact')} className={navClass}>
                 Contact
               </NavLink>
-              <NavLink to={`${BASE}/offer`} className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
+              <NavLink to={g2gPath('offer')} className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
                 Get offer
               </NavLink>
             </nav>
@@ -99,16 +98,16 @@ export default function G2GLayout() {
               className={`g2g-nav-mobile${menuOpen ? ' g2g-nav-mobile--open' : ''}`}
               aria-hidden={!menuOpen}
             >
-              <NavLink to={BASE} end className={navClass} onClick={closeMenu}>
+              <NavLink to={g2gPath()} end className={navClass} onClick={closeMenu}>
                 Home
               </NavLink>
-              <Link to={`${BASE}/#how-it-works`} className="g2g-nav-hash" onClick={closeMenu}>
+              <Link to={`${g2gPath()}#how-it-works`} className="g2g-nav-hash" onClick={closeMenu}>
                 How it works
               </Link>
-              <Link to={`${BASE}/#faq`} className="g2g-nav-hash" onClick={closeMenu}>
+              <Link to={`${g2gPath()}#faq`} className="g2g-nav-hash" onClick={closeMenu}>
                 FAQ
               </Link>
-              <NavLink to={`${BASE}/contact`} className={navClass} onClick={closeMenu}>
+              <NavLink to={g2gPath('contact')} className={navClass} onClick={closeMenu}>
                 Contact now
               </NavLink>
             </div>

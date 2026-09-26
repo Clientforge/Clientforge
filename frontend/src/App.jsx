@@ -24,8 +24,7 @@ import G2GHome from './pages/demos/graceToGrace/G2GHome';
 import G2GOffer from './pages/demos/graceToGrace/G2GOffer';
 import G2GContact from './pages/demos/graceToGrace/G2GContact';
 import HomeRedirect from './components/HomeRedirect';
-
-const G2G_BASE = '/demo/grace-to-grace';
+import { G2G_BASE, g2gPath } from './pages/demos/graceToGrace/g2gBase';
 
 export default function App() {
   return (
@@ -40,7 +39,7 @@ export default function App() {
             <Route index element={<G2GHome />} />
             <Route path="offer" element={<G2GOffer />} />
             <Route path="contact" element={<G2GContact />} />
-            <Route path="*" element={<Navigate to={G2G_BASE} replace />} />
+            <Route path="*" element={<Navigate to={g2gPath()} replace />} />
           </Route>
 
           {/* Tenant routes */}

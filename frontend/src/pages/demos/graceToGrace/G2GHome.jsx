@@ -10,8 +10,7 @@ import {
   TRUST_BAND,
   TRUST_CHIPS,
 } from './homeContent';
-
-const BASE = '/demo/grace-to-grace';
+import { g2gPath } from './g2gBase';
 
 function StepIcon({ name }) {
   const common = { width: 40, height: 40, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -116,10 +115,10 @@ export default function G2GHome() {
         <h1 id="g2g-demo-hero-heading">{HERO.headline}</h1>
         <p className="g2g-hero-lead">{HERO.subhead}</p>
         <div className="g2g-hero-actions">
-          <Link to={`${BASE}/offer`} className="g2g-btn g2g-btn--primary">
+          <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary">
             {HERO.primaryCta}
           </Link>
-          <Link to={`${BASE}/offer?start=vin`} className="g2g-btn g2g-btn--ghost">
+          <Link to={`${g2gPath('offer')}?start=vin`} className="g2g-btn g2g-btn--ghost">
             {HERO.secondaryCta}
           </Link>
         </div>
@@ -136,7 +135,7 @@ export default function G2GHome() {
         </h2>
         <p className="g2g-cta-band__title">{CTA_REPEAT.title}</p>
         <p className="g2g-cta-band__body">{CTA_REPEAT.body}</p>
-        <Link to={`${BASE}/offer`} className="g2g-btn g2g-btn--primary">
+        <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary">
           {CTA_REPEAT.button}
         </Link>
       </section>
@@ -180,7 +179,7 @@ export default function G2GHome() {
           Get offer
         </h2>
         <p className="g2g-cta-band__title">Ready to see numbers?</p>
-        <Link to={`${BASE}/offer`} className="g2g-btn g2g-btn--primary">
+        <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary">
           {HERO.primaryCta}
         </Link>
       </section>
@@ -220,7 +219,7 @@ export default function G2GHome() {
       </p>
 
       <aside className="g2g-sticky-cta" aria-label="Get offer">
-        <Link to={`${BASE}/offer`} className="g2g-btn g2g-btn--primary g2g-sticky-cta__btn">
+        <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary g2g-sticky-cta__btn">
           {HERO.primaryCta}
         </Link>
       </aside>

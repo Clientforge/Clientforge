@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:g2g-public": "VITE_G2G_BASE=/ VITE_G2G_ROUTER_BASENAME=/ vite build --config vite.g2g-public.config.js && cp dist-g2g-public/g2g-public.html dist-g2g-public/index.html",
     "lint": "eslint .",
     "preview": "vite preview"
   },

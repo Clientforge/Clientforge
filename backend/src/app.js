@@ -163,7 +163,7 @@ app.use('/api/v1/admin',     authenticate, requireSuperAdmin, require('./routes/
 // Landing page (marketing site) at /
 const LANDING_DIR = path.join(__dirname, '../../landing');
 const G2G_DIR = path.join(__dirname, '../../grace-to-grace-web/dist');
-const G2G_ROOT_DIR = path.join(__dirname, '../../grace-to-grace-web/dist-root');
+const G2G_ROOT_DIR = path.join(__dirname, '../../frontend/dist-g2g-public');
 
 function sendG2gRootSpaIndex(res) {
   const g2gIndex = path.join(G2G_ROOT_DIR, 'index.html');
@@ -171,7 +171,7 @@ function sendG2gRootSpaIndex(res) {
     return res.status(503).json({
       error: 'Grace to Grace root site not built',
       message:
-        'grace-to-grace-web/dist-root is missing. Run: cd backend && npm run build (includes build:root).',
+        'frontend/dist-g2g-public is missing. Run: cd backend && npm run build (includes build:g2g-public-root).',
     });
   }
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -332,8 +332,13 @@ app.use((req, res, next) => {
   const canonical = g2gCanonicalOrigin();
   if (!canonical) return next();
   if (isG2gPublicHost(req.hostname)) return next();
-  if (req.path !== '/grace-to-grace' && !req.path.startsWith('/grace-to-grace/')) return next();
-  const rest = req.path.replace(/^\/grace-to-grace\/?/, '');
+  const legacyG2g =
+    req.path === '/grace-to-grace' ||
+    req.path.startsWith('/grace-to-grace/') ||
+    req.path === '/demo/grace-to-grace' ||
+    req.path.startsWith('/demo/grace-to-grace/');
+  if (!legacyG2g) return next();
+  const rest = req.path.replace(/^\/(?:grace-to-grace|demo\/grace-to-grace)\/?/, '');
   const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
   const suffix = rest ? `/${rest.replace(/^\/+/, '')}` : '';
   return res.redirect(301, `${canonical}${suffix}${query}`);
