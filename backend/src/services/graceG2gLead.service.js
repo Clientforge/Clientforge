@@ -54,6 +54,35 @@ function resolveNotifyPhone(envKey, fallbackEnvKey) {
   return null;
 }
 
+/** Comma/semicolon/newline-separated E.164 or US numbers; deduped. */
+function parseNotifyPhoneList(raw) {
+  if (!raw || !String(raw).trim()) return [];
+  const out = [];
+  const seen = new Set();
+  for (const part of String(raw).split(/[,;\n]+/)) {
+    const t = part.trim();
+    if (!t) continue;
+    try {
+      const n = normalizePhone(t);
+      const digits = n.replace(/\D/g, '');
+      if (digits.length < 10 || seen.has(digits)) continue;
+      seen.add(digits);
+      out.push(n);
+    } catch {
+      /* skip invalid segment */
+    }
+  }
+  return out;
+}
+
+/** Staff numbers for estimate team SMS (multi env or single + fallback). */
+function resolveEstimateNotifyPhones() {
+  const fromList = parseNotifyPhoneList(process.env.G2G_ESTIMATE_NOTIFY_PHONES);
+  if (fromList.length > 0) return fromList;
+  const single = resolveNotifyPhone('G2G_ESTIMATE_NOTIFY_PHONE', 'G2G_SELL_NOTIFY_PHONE');
+  return single ? [single] : [];
+}
+
 async function sendInternalSms({ tenantId, leadId, to, body, messageType }) {
   const from = await resolveFromNumber(tenantId);
   await sendSms({
@@ -357,10 +386,10 @@ async function updateLeadAfterEstimate(tenantId, leadId, phone, patch) {
  * After estimate is generated — notify team and mark lead ESTIMATE_COMPLETED.
  */
 const notifyG2gEstimateLead = async (body) => {
-  const to = resolveNotifyPhone('G2G_ESTIMATE_NOTIFY_PHONE', 'G2G_SELL_NOTIFY_PHONE');
-  if (!to || to.replace(/\D/g, '').length < 10) {
+  const notifyPhones = resolveEstimateNotifyPhones();
+  if (notifyPhones.length === 0) {
     throw new G2gLeadError(
-      'Estimate notifications are not configured. Set G2G_ESTIMATE_NOTIFY_PHONE or G2G_SELL_NOTIFY_PHONE.',
+      'Estimate notifications are not configured. Set G2G_ESTIMATE_NOTIFY_PHONES, G2G_ESTIMATE_NOTIFY_PHONE, or G2G_SELL_NOTIFY_PHONE.',
       503,
     );
   }
@@ -395,13 +424,15 @@ const notifyG2gEstimateLead = async (body) => {
 
   if (sendTeamSms) {
     const smsBody = buildEstimateSmsBody(v);
-    await sendInternalSms({
-      tenantId,
-      leadId: resolvedLeadId,
-      to,
-      body: smsBody,
-      messageType: 'g2g_estimate_lead',
-    });
+    for (const to of notifyPhones) {
+      await sendInternalSms({
+        tenantId,
+        leadId: resolvedLeadId,
+        to,
+        body: smsBody,
+        messageType: 'g2g_estimate_lead',
+      });
+    }
 
     const emailTo = process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim();
     if (emailTo) {
