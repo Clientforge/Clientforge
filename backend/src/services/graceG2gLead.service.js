@@ -182,7 +182,6 @@ function buildEstimateSmsBody(v) {
     `Phone: ${v.phone || '—'}`,
     `Email: ${v.email || '—'}`,
   ];
-  if (v.manualReviewRequired) lines.push('Note: Team review required');
   return lines.join('\n').slice(0, 1500);
 }
 

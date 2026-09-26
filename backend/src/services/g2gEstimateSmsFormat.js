@@ -92,9 +92,6 @@ function buildCompactEstimateTeamSms(v) {
   const lines = ['New Estimate', line1, line2, `ZIP: ${v.zip || '—'}`];
   lines.push(`Phone: ${formatPhoneDisplay(v.phone)}`);
   lines.push(`Email: ${v.email || '—'}`);
-  if (v.manualReviewRequired) {
-    lines.push('Note: Team review required');
-  }
   return lines.join('\n').slice(0, 1500);
 }
 
