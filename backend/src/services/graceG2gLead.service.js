@@ -1,6 +1,10 @@
 const db = require('../db/connection');
 const config = require('../config');
 const { G2G_BRAND_NAME } = require('../config/g2gBrand');
+const {
+  buildCompactEstimateTeamSms,
+  sanitizeBodyDamage,
+} = require('./g2gEstimateSmsFormat');
 const { createLead, normalizePhone } = require('./lead.service');
 const { sendSms } = require('./sms.service');
 const { sendEmail } = require('./email.service');
@@ -165,37 +169,21 @@ const startG2gLead = async (body) => {
 };
 
 function buildEstimateSmsBody(v) {
-  const vinPart = v.vin || '—';
+  if (v.titleStatus || v.startDrive || v.key || v.tireCondition) {
+    return buildCompactEstimateTeamSms(v);
+  }
   const miPart = v.mileage || '—';
   const condPart = v.conditionLabel || '—';
-  let estPart = v.estimateDisplay || '—';
-  if (
-    estPart === '—'
-    && v.estimateLow != null
-    && v.estimateHigh != null
-    && v.estimateLow !== v.estimateHigh
-  ) {
-    estPart = `$${v.estimateLow.toLocaleString()}–$${v.estimateHigh.toLocaleString()}`;
-  } else if (estPart === '—' && v.estimateLow != null && Number.isFinite(v.estimateLow)) {
-    estPart = `$${v.estimateLow.toLocaleString()}`;
-  }
-  if (v.manualReviewRequired && estPart === '—') {
-    estPart = 'Team review required';
-  }
-  const reviewPart = v.manualReviewRequired ? '\nReview: MANUAL (confirm custom quote)' : '';
-  return (
-    `[G2G ESTIMATE] New estimate inquiry\n` +
-    `Name: ${v.customerName}\n` +
-    `Phone: ${v.phone}\n` +
-    `Email: ${v.email}\n` +
-    `Vehicle: ${v.year} ${v.make} ${v.model}\n` +
-    `VIN: ${vinPart}\n` +
-    `Mileage: ${miPart}\n` +
-    `Condition: ${condPart}\n` +
-    `ZIP: ${v.zip}\n` +
-    `Estimate: ${estPart}` +
-    reviewPart
-  );
+  const lines = [
+    'New Estimate',
+    `${v.customerName || '—'} | ${[v.year, v.make, v.model].filter(Boolean).join(' ') || '—'} | ${miPart}`,
+    condPart !== '—' ? condPart : 'Condition: —',
+    `ZIP: ${v.zip || '—'}`,
+    `Phone: ${v.phone || '—'}`,
+    `Email: ${v.email || '—'}`,
+  ];
+  if (v.manualReviewRequired) lines.push('Note: Team review required');
+  return lines.join('\n').slice(0, 1500);
 }
 
 function buildEstimateEmailBody(v) {
@@ -267,6 +255,12 @@ function validateEstimateNotifyBody(body) {
   const estimateDisplay = trimStr(body.estimateDisplay, 64) || null;
   const leadId = trimStr(body.leadId, 64) || null;
   const manualReviewRequired = body.manualReviewRequired === true;
+  const titleStatus = trimStr(body.titleStatus, 40) || null;
+  const startDrive = trimStr(body.startDrive, 40) || null;
+  const key = trimStr(body.key, 8) || null;
+  const tireCondition = trimStr(body.tireCondition, 24) || null;
+  const exterior = trimStr(body.exterior, 32) || null;
+  const bodyDamage = sanitizeBodyDamage(body.bodyDamage);
   return {
     ...contact,
     customerName: contact.firstName,
@@ -276,6 +270,12 @@ function validateEstimateNotifyBody(body) {
     zip: vehicleZip,
     vin,
     mileage,
+    titleStatus,
+    startDrive,
+    key,
+    tireCondition,
+    exterior,
+    bodyDamage,
     conditionLabel,
     estimateLow,
     estimateHigh,
