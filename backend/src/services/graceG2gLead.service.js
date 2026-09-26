@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const config = require('../config');
+const { G2G_BRAND_NAME } = require('../config/g2gBrand');
 const { createLead, normalizePhone } = require('./lead.service');
 const { sendSms } = require('./sms.service');
 const { sendEmail } = require('./email.service');
@@ -67,7 +68,7 @@ async function sendInternalEmail({ tenantId, to, subject, body }) {
   await sendEmail({
     tenantId,
     to,
-    fromName: 'Grace to Grace',
+    fromName: G2G_BRAND_NAME,
     subject,
     body,
   });

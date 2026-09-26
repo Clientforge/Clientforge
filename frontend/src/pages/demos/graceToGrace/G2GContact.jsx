@@ -7,13 +7,14 @@ import {
   CONTACT_STREET,
   CONTACT_CITY_LINE,
   CONTACT_MAPS_QUERY,
+  BRAND,
 } from './constants';
 
 export default function G2GContact() {
   const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(CONTACT_MAPS_QUERY)}`;
 
   useEffect(() => {
-    document.title = 'Contact — Grace to Grace';
+    document.title = `Contact — ${BRAND}`;
   }, []);
 
   return (

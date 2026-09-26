@@ -1,4 +1,4 @@
-export const BRAND = 'Grace to Grace';
+export const BRAND = 'Cash4JunkCar';
 export const TAGLINE = 'Instant estimated offers for junk, damaged & scrap vehicles.';
 
 export const CONTACT_EMAIL =

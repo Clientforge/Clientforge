@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import './GraceToGraceDemo.css';
+import { BRAND } from './constants';
 import { g2gPath } from './g2gBase';
 
 function navClass({ isActive }) {
@@ -32,7 +33,7 @@ export default function G2GLayout() {
         <header className="g2g-header">
           <div className="g2g-header-inner">
             <Link to={g2gPath()} className="g2g-logo" onClick={closeMenu}>
-              Grace <span>to</span> Grace
+              Cash<span>4</span>JunkCar
             </Link>
             <button
               type="button"
@@ -64,7 +65,7 @@ export default function G2GLayout() {
                 </svg>
               )}
             </button>
-            <nav className="g2g-nav g2g-nav--desktop" aria-label="Grace to Grace demo">
+            <nav className="g2g-nav g2g-nav--desktop" aria-label={BRAND}>
               <NavLink to={g2gPath()} end className={navClass}>
                 Home
               </NavLink>

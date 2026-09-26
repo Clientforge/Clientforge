@@ -36,8 +36,8 @@ const grace = parseBookingEmail({
   bodyText: loadFixture('grace-to-grace-booking.txt'),
 });
 
-totalFailed += runChecks('Grace To Grace booking', grace, [
-  ['businessName', grace.businessName, 'Grace To Grace Cash for Cars'],
+totalFailed += runChecks('Cash4JunkCar booking', grace, [
+  ['businessName', grace.businessName, 'Cash4JunkCar'],
   ['firstName', grace.firstName, 'James'],
   ['lastName', grace.lastName, 'Wells'],
   ['scheduledAt', grace.scheduledAt, '2026-06-01T18:00:00.000Z'],

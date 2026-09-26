@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { G2G_BRAND_NAME } = require('../config/g2gBrand');
 const fs = require('fs');
 const path = require('path');
 const db = require('../db/connection');
@@ -295,7 +296,7 @@ async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, esti
       await sendEmail({
         tenantId,
         to: emailTo,
-        fromName: 'Grace to Grace',
+        fromName: G2G_BRAND_NAME,
         subject: '[G2G PHOTOS] Vehicle photo review',
         body: buildNotifySms({
           contact,

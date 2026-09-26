@@ -169,7 +169,7 @@ function sendG2gRootSpaIndex(res) {
   const g2gIndex = path.join(G2G_ROOT_DIR, 'index.html');
   if (!fs.existsSync(g2gIndex)) {
     return res.status(503).json({
-      error: 'Grace to Grace root site not built',
+      error: 'Cash4JunkCar public site not built',
       message:
         'frontend/dist-g2g-public is missing. Run: cd backend && npm run build (includes build:g2g-public-root).',
     });
@@ -357,7 +357,7 @@ app.get(/^\/grace-to-grace\/?.*$/, (req, res, next) => {
   const g2gIndex = path.join(G2G_DIR, 'index.html');
   if (!fs.existsSync(g2gIndex)) {
     return res.status(503).json({
-      error: 'Grace to Grace not built',
+      error: 'Cash4JunkCar legacy app not built',
       message:
         'grace-to-grace-web/dist is missing. On the server run: cd backend && npm run build (or npm run build:grace-to-grace). Ensure Render/rootDir is backend and the repo includes grace-to-grace-web.',
     });

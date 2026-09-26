@@ -22,6 +22,7 @@ import {
 } from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
 import { loadG2gContact, saveG2gContact } from './g2gContactStorage';
+import { BRAND } from './constants';
 import { lookupUsZipCityState } from './zipLookup';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
 import {
@@ -500,8 +501,8 @@ export default function G2GOffer() {
 
   useEffect(() => {
     document.title = result
-      ? 'Your offer — Grace to Grace'
-      : 'See what your car is worth — Grace to Grace';
+      ? `Your offer — ${BRAND}`
+      : `See what your car is worth — ${BRAND}`;
   }, [result]);
 
   const handleContactSubmit = async (e) => {
@@ -946,7 +947,7 @@ export default function G2GOffer() {
       return;
     }
     if (!sellConsent) {
-      setSellErr('Please confirm consent to receive SMS from Grace to Grace.');
+      setSellErr(`Please confirm consent to receive SMS from ${BRAND}.`);
       return;
     }
 
@@ -1696,7 +1697,7 @@ export default function G2GOffer() {
                           onChange={(ev) => setSellConsent(ev.target.checked)}
                         />
                         <label htmlFor="g2g-sell-now-consent" className="g2g-consent-text">
-                          I agree to receive SMS messages from Grace to Grace about selling my vehicle. Message and
+                          I agree to receive SMS messages from {BRAND} about selling my vehicle. Message and
                           data rates may apply. Reply STOP to opt out.
                         </label>
                       </div>

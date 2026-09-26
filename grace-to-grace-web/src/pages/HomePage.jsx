@@ -213,8 +213,8 @@ export default function HomePage() {
       </section>
 
       <p className="g2g-disclaimer g2g-muted-block">
-        {BRAND} demo platform — estimates are for illustration only. Final purchase offers require inspection, title
-        verification, and local compliance.
+        {BRAND} — estimates are for illustration only. Final purchase offers require inspection, title verification,
+        and local compliance.
       </p>
 
       <aside className="g2g-sticky-cta" aria-label="Get offer">

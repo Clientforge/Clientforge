@@ -1,4 +1,5 @@
 const db = require('../db/connection');
+const { G2G_BRAND_NAME } = require('../config/g2gBrand');
 const { normalizePhone } = require('./lead.service');
 const { sendSms } = require('./sms.service');
 const { sendEmail } = require('./email.service');
@@ -191,7 +192,7 @@ const processSellIntent = async (body) => {
     await sendEmail({
       tenantId,
       to: sellEmailTo,
-      fromName: 'Grace to Grace',
+      fromName: G2G_BRAND_NAME,
       subject: '[G2G] READY TO SELL',
       body: smsBody,
     });

@@ -30,7 +30,7 @@ export default function SiteLayout() {
       <header className="g2g-header">
         <div className="g2g-header-inner">
           <Link to="/" className="g2g-logo" onClick={closeMenu}>
-            Grace <span>to</span> Grace
+            Cash<span>4</span>JunkCar
           </Link>
           <button
             type="button"

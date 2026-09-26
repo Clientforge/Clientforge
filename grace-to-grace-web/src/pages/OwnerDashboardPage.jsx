@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearG2gOwnerToken, g2gOwnerMe, getG2gOwnerToken } from '../lib/g2gOwnerApi.js';
+import { BRAND } from '../constants.js';
 
 export default function OwnerDashboardPage() {
   const navigate = useNavigate();
   const [owner, setOwner] = useState(null);
 
   useEffect(() => {
-    document.title = 'Owner — Grace to Grace';
+    document.title = `Owner — ${BRAND}`;
   }, []);
 
   useEffect(() => {

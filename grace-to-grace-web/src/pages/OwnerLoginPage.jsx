@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { g2gOwnerLogin, setG2gOwnerToken } from '../lib/g2gOwnerApi.js';
+import { BRAND } from '../constants.js';
 
 export default function OwnerLoginPage() {
   const navigate = useNavigate();
@@ -10,7 +11,7 @@ export default function OwnerLoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = 'Owner sign in — Grace to Grace';
+    document.title = `Owner sign in — ${BRAND}`;
   }, []);
 
   async function onSubmit(e) {
@@ -32,7 +33,7 @@ export default function OwnerLoginPage() {
     <>
       <h1 className="g2g-page-title">Owner sign in</h1>
       <p className="g2g-page-lead">
-        Access the Grace to Grace owner area with your dedicated username and password.
+        Access the {BRAND} owner area with your dedicated username and password.
       </p>
       {error ? (
         <p className="g2g-alert g2g-alert--error" role="alert">
