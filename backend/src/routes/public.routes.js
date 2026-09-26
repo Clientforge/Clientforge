@@ -269,19 +269,19 @@ router.post('/g2g-notify-estimate', sellIntentLimiter, async (req, res) => {
 });
 
 /**
- * Grace to Grace — customer tapped "Sell now" on estimate; SMS staff at G2G_SELL_NOTIFY_PHONE.
+ * Cash4JunkCar — customer tapped "Sell now"; records READY_TO_SELL on lead (no staff SMS).
  */
 router.post('/grace-sell-intent', sellIntentLimiter, async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   try {
-    await processSellIntent(req.body);
-    return res.json({ ok: true });
+    const result = await processSellIntent(req.body);
+    return res.json(result);
   } catch (err) {
     if (err instanceof SellIntentError) {
       return res.status(err.statusCode).json({ error: err.message });
     }
     console.error('[public/grace-sell-intent]', err);
-    return res.status(500).json({ error: 'Could not send notification.' });
+    return res.status(500).json({ error: 'Could not save sell request.' });
   }
 });
 

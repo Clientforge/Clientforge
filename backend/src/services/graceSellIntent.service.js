@@ -1,10 +1,5 @@
-const db = require('../db/connection');
-const { G2G_BRAND_NAME } = require('../config/g2gBrand');
 const { normalizePhone } = require('./lead.service');
-const { sendSms } = require('./sms.service');
-const { sendEmail } = require('./email.service');
 const { tenantIdForG2g, updateLeadAfterEstimate } = require('./graceG2gLead.service');
-const smsProviderService = require('./sms-provider.service');
 
 class SellIntentError extends Error {
   constructor(message, statusCode = 400) {
@@ -100,64 +95,12 @@ function validatePayload(body) {
   };
 }
 
-function buildNotifySmsBody(v) {
-  const vinPart = v.vin || '—';
-  const miPart = v.mileage || '—';
-  const condPart = v.conditionLabel || '—';
-  const estPart =
-    v.estimateLow != null && v.estimateHigh != null
-      ? `$${v.estimateLow.toLocaleString()}–$${v.estimateHigh.toLocaleString()}`
-      : '—';
-  const reviewPart = v.manualReviewRequired ? `\nReview: MANUAL (confirm custom quote)` : '';
-  const emailPart = v.email ? `\nEmail: ${v.email}` : '';
-  const notesPart = v.pickupNotes ? `\nNotes: ${v.pickupNotes}` : '';
-  return (
-    `[G2G] READY TO SELL\n` +
-    `Name: ${v.customerName}\n` +
-    `Phone: ${v.customerPhone}` +
-    emailPart +
-    `\nAddress: ${v.address}\n` +
-    `Vehicle: ${v.year} ${v.make} ${v.model}\n` +
-    `VIN: ${vinPart}\n` +
-    `Condition: ${condPart}\n` +
-    `ZIP: ${v.zip}\n` +
-    `Mileage: ${miPart}\n` +
-    `Est. range: ${estPart}` +
-    notesPart +
-    reviewPart
-  ).slice(0, 1500);
-}
-
-async function resolveFromNumber(tenantId) {
-  const r = await db.query('SELECT phone_number, sms_provider FROM tenants WHERE id = $1', [tenantId]);
-  const row = r.rows[0];
-  if (row?.phone_number) return row.phone_number;
-  return smsProviderService.getPlatformDefaultFrom(row?.sms_provider);
-}
-
 /**
- * Public Grace-to-Grace "sell now" → SMS ops/staff number.
+ * Public Cash4JunkCar "Sell now" — updates lead only (no staff SMS/email; estimate notify is separate).
  */
 const processSellIntent = async (body) => {
-  const notifyRaw = process.env.G2G_SELL_NOTIFY_PHONE;
-  if (!notifyRaw || !String(notifyRaw).trim()) {
-    throw new SellIntentError(
-      'Sell notifications are not configured. Set G2G_SELL_NOTIFY_PHONE.',
-      503,
-    );
-  }
-
-  let to;
-  to = normalizePhone(String(notifyRaw).trim());
-  const toDigits = to.replace(/\D/g, '');
-  if (toDigits.length < 10) {
-    throw new SellIntentError('Server misconfiguration: invalid G2G_SELL_NOTIFY_PHONE.', 503);
-  }
-
   const v = validatePayload(body);
   const tenantId = tenantIdForLogging();
-  const from = await resolveFromNumber(tenantId);
-  const smsBody = buildNotifySmsBody(v);
 
   const resolvedLeadId = await updateLeadAfterEstimate(tenantId, v.leadId, v.customerPhone, {
     funnelStage: 'READY_TO_SELL',
@@ -174,29 +117,6 @@ const processSellIntent = async (body) => {
     },
     estimate: { low: v.estimateLow, high: v.estimateHigh },
   });
-
-  await sendSms({
-    tenantId,
-    leadId: resolvedLeadId,
-    contactId: null,
-    to,
-    from,
-    body: smsBody,
-    messageType: 'g2g_sell_intent',
-  });
-
-  const sellEmailTo =
-    process.env.G2G_SELL_NOTIFY_EMAIL?.trim() ||
-    process.env.G2G_ESTIMATE_NOTIFY_EMAIL?.trim();
-  if (sellEmailTo) {
-    await sendEmail({
-      tenantId,
-      to: sellEmailTo,
-      fromName: G2G_BRAND_NAME,
-      subject: '[G2G] READY TO SELL',
-      body: smsBody,
-    });
-  }
 
   return { ok: true, leadId: resolvedLeadId };
 };
