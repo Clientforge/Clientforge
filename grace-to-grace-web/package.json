@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:root": "VITE_G2G_BASE=/ VITE_G2G_ROUTER_BASENAME=/ VITE_G2G_OUT_DIR=dist-root vite build",
     "preview": "vite preview"
   },
   "dependencies": {

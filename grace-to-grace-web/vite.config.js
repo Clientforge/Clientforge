@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const g2gBase = process.env.VITE_G2G_BASE || '/grace-to-grace/';
+const g2gOutDir = process.env.VITE_G2G_OUT_DIR || 'dist';
+
 export default defineConfig({
-  base: '/grace-to-grace/',
+  base: g2gBase.endsWith('/') ? g2gBase : `${g2gBase}/`,
   plugins: [react()],
   server: {
     proxy: {
@@ -18,7 +21,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: g2gOutDir,
     sourcemap: false,
   },
 });

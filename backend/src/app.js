@@ -9,6 +9,7 @@ const authenticate = require('./middleware/auth');
 const tenantScope = require('./middleware/tenantScope');
 const requireSuperAdmin = require('./middleware/superadmin');
 const config = require('./config');
+const { isG2gPublicHost, g2gCanonicalOrigin } = require('./config/g2gPublicHost');
 const trackedLinkService = require('./services/trackedLink.service');
 
 const app = express();
@@ -161,6 +162,40 @@ app.use('/api/v1/admin',     authenticate, requireSuperAdmin, require('./routes/
 
 // Landing page (marketing site) at /
 const LANDING_DIR = path.join(__dirname, '../../landing');
+const G2G_DIR = path.join(__dirname, '../../grace-to-grace-web/dist');
+const G2G_ROOT_DIR = path.join(__dirname, '../../grace-to-grace-web/dist-root');
+
+function sendG2gRootSpaIndex(res) {
+  const g2gIndex = path.join(G2G_ROOT_DIR, 'index.html');
+  if (!fs.existsSync(g2gIndex)) {
+    return res.status(503).json({
+      error: 'Grace to Grace root site not built',
+      message:
+        'grace-to-grace-web/dist-root is missing. Run: cd backend && npm run build (includes build:root).',
+    });
+  }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(g2gIndex);
+}
+
+/** Grace to Grace at / on G2G_PUBLIC_HOSTS — must run before landing static (landing/index.html). */
+app.use((req, res, next) => {
+  if (!isG2gPublicHost(req.hostname)) return next();
+  if (req.path.startsWith('/api')) return next();
+  if (req.path.startsWith('/g2g-review/')) return next();
+  if (req.path.startsWith('/r/')) return next();
+  if (req.path === '/grace-to-grace' || req.path.startsWith('/grace-to-grace/')) {
+    const rest = req.path.replace(/^\/grace-to-grace\/?/, '');
+    const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    const suffix = rest ? `/${rest.replace(/^\/+/, '')}` : '';
+    return res.redirect(301, `${suffix || '/'}${query}`);
+  }
+  if (!fs.existsSync(G2G_ROOT_DIR)) {
+    return sendG2gRootSpaIndex(res);
+  }
+  return staticWithFreshIndex(G2G_ROOT_DIR)(req, res, next);
+});
+
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'privacy.html'));
 });
@@ -292,8 +327,18 @@ app.get('/services/performance-tracking', (req, res) => {
 });
 app.use(express.static(LANDING_DIR));
 
-// Grace to Grace demo SPA — https://<host>/grace-to-grace/
-const G2G_DIR = path.join(__dirname, '../../grace-to-grace-web/dist');
+/** Redirect legacy /grace-to-grace on ClientForge host to G2G_CANONICAL_ORIGIN. */
+app.use((req, res, next) => {
+  const canonical = g2gCanonicalOrigin();
+  if (!canonical) return next();
+  if (isG2gPublicHost(req.hostname)) return next();
+  if (req.path !== '/grace-to-grace' && !req.path.startsWith('/grace-to-grace/')) return next();
+  const rest = req.path.replace(/^\/grace-to-grace\/?/, '');
+  const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  const suffix = rest ? `/${rest.replace(/^\/+/, '')}` : '';
+  return res.redirect(301, `${canonical}${suffix}${query}`);
+});
+
 // AMY client management SPA — https://<host>/amy-app/
 const AMY_DIR = path.join(__dirname, '../../amy-app/dist');
 app.use('/grace-to-grace', staticWithFreshIndex(G2G_DIR));
@@ -338,8 +383,23 @@ app.get(/^\/amy-app\/?.*$/, (req, res, next) => {
 const FRONTEND_DIR = path.join(__dirname, '../../frontend/dist');
 app.use(staticWithFreshIndex(FRONTEND_DIR));
 
+// G2G public host — SPA fallback (after landing + subpath routes)
+app.get(/^\/(?!api).*/, (req, res, next) => {
+  if (!isG2gPublicHost(req.hostname)) return next();
+  if (req.path.startsWith('/g2g-review/')) return next();
+  if (req.path.startsWith('/r/')) return next();
+  const lastSeg = req.path.split('/').filter(Boolean).pop() || '';
+  if (lastSeg.includes('.')) {
+    return res.status(404).type('text').send('Not found');
+  }
+  return sendG2gRootSpaIndex(res);
+});
+
 // React SPA fallback for /login, /register, /dashboard, etc. (not /grace-to-grace)
 app.get(/^\/(?!api).*/, (req, res, next) => {
+  if (isG2gPublicHost(req.hostname)) {
+    return next();
+  }
   if (req.path === '/grace-to-grace' || req.path.startsWith('/grace-to-grace/')) {
     return next();
   }
