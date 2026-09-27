@@ -204,20 +204,91 @@
   min-height: min(85vh, 640px);
   display: flex;
   align-items: flex-end;
-  background: var(--febe-text) center / cover no-repeat;
+  background: var(--febe-text);
   color: #fff;
+  overflow: hidden;
+}
+
+.febe-hero-carousel {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.febe-hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 20%;
+  opacity: 0;
+  transition: opacity 1.2s ease-in-out;
+  transform: scale(1.04);
+  animation: febe-hero-kenburns 14s ease-out infinite;
+  animation-play-state: paused;
+}
+
+.febe-hero-slide--active {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+@keyframes febe-hero-kenburns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .febe-hero-slide {
+    animation: none;
+    transform: none;
+    transition: opacity 0.4s ease;
+  }
+}
+
+.febe-hero-dots {
+  position: absolute;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 3;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.febe-hero-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.febe-hero-dot--active {
+  background: #fff;
 }
 
 .febe-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(44, 36, 32, 0.85) 0%, rgba(44, 36, 32, 0.25) 55%, transparent 100%);
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(44, 36, 32, 0.88) 0%,
+    rgba(44, 36, 32, 0.45) 45%,
+    rgba(44, 36, 32, 0.2) 100%
+  );
 }
 
 .febe-hero-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 1120px;
   margin: 0 auto;
   padding: 3rem 1.25rem 2.5rem;
@@ -253,6 +324,16 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.febe-hero .febe-btn--ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.febe-hero .febe-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .febe-section {

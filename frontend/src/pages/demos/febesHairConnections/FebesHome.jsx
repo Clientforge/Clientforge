@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BRAND, IMAGES, TAGLINE } from './constants';
+import { BRAND, TAGLINE } from './constants';
+import { HERO_SLIDES } from './content/heroSlides';
+import FebesHeroCarousel from './FebesHeroCarousel';
 import { SERVICES } from './content/services';
 import { TESTIMONIALS } from './content/reviews';
 import { PROMOTIONS } from './content/promotions';
@@ -17,9 +19,10 @@ export default function FebesHome() {
     <>
       <section
         className="febe-hero"
-        style={{ backgroundImage: `url(${IMAGES.hero})` }}
         aria-labelledby="febe-hero-heading"
+        aria-label={`Salon showcase: ${HERO_SLIDES.map((s) => s.alt).join('; ')}`}
       >
+        <FebesHeroCarousel />
         <div className="febe-hero-content">
           <p className="febe-hero-eyebrow">Morrow · Mt Zion Rd</p>
           <h1 id="febe-hero-heading">Where your hair feels cared for</h1>
