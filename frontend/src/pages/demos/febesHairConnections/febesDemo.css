@@ -219,7 +219,8 @@
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center 20%;
+  background-repeat: no-repeat;
+  background-position: center center;
   opacity: 0;
   transition: opacity 1.2s ease-in-out;
   transform: scale(1.04);

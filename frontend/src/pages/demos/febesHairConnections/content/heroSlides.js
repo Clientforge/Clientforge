@@ -1,23 +1,27 @@
-/** Hero carousel — African American hairstyle showcase (Unsplash; swap for salon photos in production). */
+/** Hero carousel — salon showcase (static assets in /public/febes/hero). */
 export const HERO_SLIDES = [
   {
-    id: 'silk-press',
-    alt: 'Silk press on natural hair with glossy finish',
-    src: 'https://images.unsplash.com/photo-1522338242992-e78694fd63d0?w=1600&q=80&auto=format&fit=crop',
+    id: 'natural-afro',
+    alt: 'Natural afro hairstyle with volume and shine',
+    src: '/febes/hero/hero-natural-afro.png',
+    position: '38% 42%',
   },
   {
-    id: 'braids',
-    alt: 'Neat knotless braids protective style',
-    src: 'https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?w=1600&q=80&auto=format&fit=crop',
+    id: 'cornrows-curls',
+    alt: 'Cornrows with flowing curls',
+    src: '/febes/hero/hero-cornrows-curls.png',
+    position: 'center 22%',
   },
   {
-    id: 'locs',
-    alt: 'Well-maintained loc hairstyle',
-    src: 'https://images.unsplash.com/photo-1622287162716-f311baa1a241?w=1600&q=80&auto=format&fit=crop',
+    id: 'profile-braids',
+    alt: 'Intricate geometric braided style, profile view',
+    src: '/febes/hero/hero-profile-braids.png',
+    position: '58% 32%',
   },
   {
-    id: 'color',
-    alt: 'Dimensional color and styling',
-    src: 'https://images.unsplash.com/photo-1492106087820-71f1a00d2bdf?w=1600&q=80&auto=format&fit=crop',
+    id: 'braid-pattern',
+    alt: 'Precision cornrow pattern from above',
+    src: '/febes/hero/hero-braid-pattern.png',
+    position: 'center 38%',
   },
 ];

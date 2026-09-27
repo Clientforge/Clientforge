@@ -37,7 +37,10 @@ export default function FebesHeroCarousel() {
         <div
           key={slide.id}
           className={`febe-hero-slide${i === index ? ' febe-hero-slide--active' : ''}`}
-          style={{ backgroundImage: `url(${slide.src})` }}
+          style={{
+            backgroundImage: `url(${slide.src})`,
+            backgroundPosition: slide.position ?? 'center center',
+          }}
         />
       ))}
       <div className="febe-hero-dots" role="tablist" aria-label="Hero images">
