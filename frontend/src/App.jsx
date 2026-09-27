@@ -25,6 +25,17 @@ import G2GOffer from './pages/demos/graceToGrace/G2GOffer';
 import G2GContact from './pages/demos/graceToGrace/G2GContact';
 import HomeRedirect from './components/HomeRedirect';
 import { G2G_BASE, g2gPath } from './pages/demos/graceToGrace/g2gBase';
+import FebesLayout from './pages/demos/febesHairConnections/FebesLayout';
+import FebesHome from './pages/demos/febesHairConnections/FebesHome';
+import FebesAbout from './pages/demos/febesHairConnections/FebesAbout';
+import FebesServices from './pages/demos/febesHairConnections/FebesServices';
+import FebesBook from './pages/demos/febesHairConnections/FebesBook';
+import FebesGallery from './pages/demos/febesHairConnections/FebesGallery';
+import FebesReviews from './pages/demos/febesHairConnections/FebesReviews';
+import FebesPromotions from './pages/demos/febesHairConnections/FebesPromotions';
+import FebesContact from './pages/demos/febesHairConnections/FebesContact';
+import FebesFaq from './pages/demos/febesHairConnections/FebesFaq';
+import { FEBES_BASE, febesPath } from './pages/demos/febesHairConnections/febesBase';
 
 export default function App() {
   return (
@@ -40,6 +51,19 @@ export default function App() {
             <Route path="offer" element={<G2GOffer />} />
             <Route path="contact" element={<G2GContact />} />
             <Route path="*" element={<Navigate to={g2gPath()} replace />} />
+          </Route>
+
+          <Route path={`${FEBES_BASE}/*`} element={<FebesLayout />}>
+            <Route index element={<FebesHome />} />
+            <Route path="about" element={<FebesAbout />} />
+            <Route path="services" element={<FebesServices />} />
+            <Route path="book" element={<FebesBook />} />
+            <Route path="gallery" element={<FebesGallery />} />
+            <Route path="reviews" element={<FebesReviews />} />
+            <Route path="promotions" element={<FebesPromotions />} />
+            <Route path="contact" element={<FebesContact />} />
+            <Route path="faq" element={<FebesFaq />} />
+            <Route path="*" element={<Navigate to={febesPath()} replace />} />
           </Route>
 
           {/* Tenant routes */}
