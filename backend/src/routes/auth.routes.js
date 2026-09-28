@@ -2,10 +2,22 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../services/auth.service');
 const authenticate = require('../middleware/auth');
+const config = require('../config');
+const {
+  loginLimiter,
+  registerLimiter,
+  refreshLimiter,
+} = require('../middleware/authRateLimit');
 
 // POST /api/v1/auth/register — Create tenant + first admin user
-router.post('/register', async (req, res, next) => {
+router.post('/register', registerLimiter, async (req, res, next) => {
   try {
+    if (!config.allowPublicRegister) {
+      return res.status(403).json({
+        error: 'Registration is disabled. Contact ClientForge to get access.',
+      });
+    }
+
     const { businessName, industry, email, password, firstName, lastName } = req.body;
 
     if (!businessName || !email || !password) {
@@ -36,7 +48,7 @@ router.post('/register', async (req, res, next) => {
 });
 
 // POST /api/v1/auth/login — Authenticate and return JWT
-router.post('/login', async (req, res, next) => {
+router.post('/login', loginLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -55,7 +67,7 @@ router.post('/login', async (req, res, next) => {
 });
 
 // POST /api/v1/auth/refresh — Refresh access token
-router.post('/refresh', async (req, res, next) => {
+router.post('/refresh', refreshLimiter, async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
 

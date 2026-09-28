@@ -41,6 +41,11 @@ const {
 
 const router = express.Router();
 
+/** SPA: whether /register is available (production defaults to false). */
+router.get('/auth-config', (req, res) => {
+  res.json({ registrationEnabled: config.allowPublicRegister });
+});
+
 const g2gPhotoUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: MAX_FILES },

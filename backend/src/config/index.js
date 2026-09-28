@@ -1,6 +1,17 @@
+const envName = process.env.NODE_ENV || 'development';
+
+/** Public self-serve signup: off in production unless ALLOW_PUBLIC_REGISTER=true. */
+function resolveAllowPublicRegister() {
+  const raw = process.env.ALLOW_PUBLIC_REGISTER;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return envName !== 'production';
+}
+
 const config = {
-  env: process.env.NODE_ENV || 'development',
+  env: envName,
   port: parseInt(process.env.PORT, 10) || 3000,
+  allowPublicRegister: resolveAllowPublicRegister(),
 
   corsOrigin: process.env.CORS_ORIGIN || '*',
 

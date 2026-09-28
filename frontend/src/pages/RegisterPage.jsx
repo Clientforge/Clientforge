@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { homePath } from '../utils/uiMode';
+import { useRegistrationEnabled } from '../hooks/useRegistrationEnabled';
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { registrationEnabled, loading: regLoading } = useRegistrationEnabled();
   const [form, setForm] = useState({ businessName: '', firstName: '', lastName: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,14 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (!regLoading && !registrationEnabled) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (regLoading) {
+    return <div className="auth-page"><div className="auth-card"><p className="auth-sub">Loading…</p></div></div>;
+  }
 
   return (
     <div className="auth-page">

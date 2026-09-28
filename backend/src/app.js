@@ -14,6 +14,9 @@ const trackedLinkService = require('./services/trackedLink.service');
 
 const app = express();
 
+// Render / reverse proxy — needed for accurate req.ip and rate limits
+app.set('trust proxy', 1);
+
 /** Prevent stale SPA shells after frontend deploys (hashed assets still cache long-term). */
 function staticWithFreshIndex(rootDir) {
   return express.static(rootDir, {

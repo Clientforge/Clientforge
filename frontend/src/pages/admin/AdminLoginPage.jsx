@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLoginPage() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,7 @@ export default function AdminLoginPage() {
     try {
       const data = await login(email, password);
       if (data.user.role !== 'superadmin') {
+        logout();
         setError('Admin access only. Use the regular login for tenant accounts.');
         setLoading(false);
         return;

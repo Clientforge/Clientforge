@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { homePath } from '../utils/uiMode';
+import { useRegistrationEnabled } from '../hooks/useRegistrationEnabled';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { registrationEnabled, loading: regLoading } = useRegistrationEnabled();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,9 +57,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="auth-footer">
-          No account yet? <Link to="/register">Create one</Link>
-        </p>
+        {!regLoading && registrationEnabled && (
+          <p className="auth-footer">
+            No account yet? <Link to="/register">Create one</Link>
+          </p>
+        )}
         <p className="auth-footer" style={{ marginTop: 8, fontSize: 12 }}>
           <Link to="/admin/login">Platform admin login</Link>
         </p>
