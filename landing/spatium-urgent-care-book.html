@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Book urgent care, primary care, weight loss, body sculpting, or aesthetics at Spatium Urgent Care in Marietta, GA.">
+  <title>Book an appointment — Spatium Urgent Care</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green: #387648;
+      --green-dark: #2d5f3a;
+      --red: #b22d30;
+      --bg: #f7faf7;
+      --paper: #ffffff;
+      --ink: #1a2420;
+      --muted: #5c6b60;
+      --line: #dce8de;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(45, 56, 48, 0.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Source Sans 3', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 22px 0;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 118, 72, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(178, 45, 48, 0.08), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .card {
+      flex: 1;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 36px 24px 32px;
+      box-shadow: var(--shadow);
+    }
+    .brand-lockup {
+      text-align: center;
+      margin-bottom: 18px;
+      line-height: 1.1;
+    }
+    .brand-spatium {
+      display: block;
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(1.65rem, 5vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--green);
+    }
+    .brand-sub {
+      display: block;
+      margin-top: 4px;
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--red);
+    }
+    .badge {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 18px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--green-dark);
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(56, 118, 72, 0.1);
+    }
+    h1 {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(1.35rem, 4.5vw, 1.65rem);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 10px;
+      color: var(--green-dark);
+      line-height: 1.25;
+    }
+    .lead {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 26px;
+    }
+    .services {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      list-style: none;
+    }
+    .service-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 18px 18px 20px;
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      text-decoration: none;
+      color: inherit;
+      background: #fff;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .service-card:hover {
+      border-color: var(--green);
+      box-shadow: 0 8px 24px rgba(56, 118, 72, 0.12);
+      transform: translateY(-1px);
+    }
+    .service-card:focus-visible {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(56, 118, 72, 0.22);
+    }
+    .service-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .service-title {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--green-dark);
+      margin-bottom: 2px;
+    }
+    .service-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .service-arrow {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green), var(--green-dark));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    .footer-note {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .footer-note a {
+      color: var(--green);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .footer-note a:hover { text-decoration: underline; }
+    .footer-note p + p { margin-top: 8px; }
+    .brand-bar {
+      margin-top: auto;
+      height: 8px;
+      background: var(--red);
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page">
+    <main class="card">
+      <div class="brand-lockup">
+        <span class="brand-spatium">SPATIUM</span>
+        <span class="brand-sub">URGENT CARE</span>
+      </div>
+      <span class="badge">Online booking</span>
+      <h1>What would you like to book?</h1>
+      <p class="lead">Choose a service below. You&apos;ll go straight to the scheduling page for that line of care.</p>
+
+      <ul class="services" id="service-list"></ul>
+
+      <div class="footer-note">
+        <p>Questions? Call <a href="tel:6789322121">(678) 932-2121</a> · Primary care line <a href="tel:6789322138">(678) 932-2138</a></p>
+        <p><a href="https://www.spatiumurgentcare.com/" target="_blank" rel="noopener noreferrer">spatiumurgentcare.com</a></p>
+      </div>
+    </main>
+    <div class="brand-bar" aria-hidden="true"></div>
+  </div>
+
+  <script>
+    (function () {
+      /** Matches spatiumurgentcare.com booking destinations (update if their links change). */
+      var CLOCKWISE = 'https://www.clockwisemd.com/visit/15645';
+      var GLOSSGENIUS = 'https://spatiumurgentcareandwellness.glossgenius.com/';
+
+      var services = [
+        {
+          id: 'urgent-care',
+          title: 'Urgent Care',
+          description: 'Same-day care for illness, injury, and walk-in visits.',
+          href: CLOCKWISE,
+        },
+        {
+          id: 'primary-care',
+          title: 'Primary Care',
+          description: 'Dawn Primary Care — wellness, chronic care, and check-ups.',
+          href: CLOCKWISE,
+        },
+        {
+          id: 'weight-loss',
+          title: 'Weight Loss',
+          description: 'Medically supervised weight management program.',
+          href: CLOCKWISE,
+        },
+        {
+          id: 'body-sculpting',
+          title: 'Body Sculpting',
+          description: 'EMSCULPT NEO — non-invasive body contouring.',
+          href: CLOCKWISE,
+        },
+        {
+          id: 'aesthetics',
+          title: 'Aesthetics',
+          description: 'Skincare and spa services at Spatium Sculpt Studio.',
+          href: GLOSSGENIUS,
+        },
+      ];
+
+      var list = document.getElementById('service-list');
+      services.forEach(function (s) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'service-card';
+        a.href = s.href;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.setAttribute('aria-label', 'Book ' + s.title);
+
+        a.innerHTML =
+          '<span class="service-text">' +
+            '<span class="service-title">' + s.title + '</span>' +
+            '<span class="service-desc">' + s.description + '</span>' +
+          '</span>' +
+          '<span class="service-arrow" aria-hidden="true">→</span>';
+
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+    })();
+  </script>
+</body>
+</html>

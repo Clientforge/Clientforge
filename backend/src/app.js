@@ -277,6 +277,9 @@ app.get('/spatium-checkin', (req, res) => {
 app.get('/spatium-checkin/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-checkin-thanks.html'));
 });
+app.get('/spatium-book', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-book.html'));
+});
 app.get('/atlas-review', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'atlas-financial-review.html'));
 });
@@ -430,6 +433,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/spatium-checkin' || req.path.startsWith('/spatium-checkin/')) {
+    return next();
+  }
+  if (req.path === '/spatium-book' || req.path.startsWith('/spatium-book/')) {
     return next();
   }
   if (req.path === '/atlas-review' || req.path.startsWith('/atlas-review/')) {
