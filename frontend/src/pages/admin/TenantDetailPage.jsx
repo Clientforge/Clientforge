@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../../api/client';
+import UserPasswordResetButton from '../../components/UserPasswordResetButton';
 
 function PhoneNumberEditor({ tenantId, value, smsProvider, onSaved }) {
   const [edit, setEdit] = useState(false);
@@ -172,6 +173,7 @@ export default function TenantDetailPage() {
                   <span className="user-row-email">{u.email}</span>
                 </div>
                 <span className="user-row-role">{u.role}</span>
+                <UserPasswordResetButton userId={u.id} userEmail={u.email} />
                 <span className="muted" style={{fontSize:'11px'}}>{u.lastLoginAt ? `Last login ${formatDate(u.lastLoginAt)}` : 'Never logged in'}</span>
               </div>
             ))}

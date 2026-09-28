@@ -7,7 +7,9 @@ const {
   loginLimiter,
   registerLimiter,
   refreshLimiter,
+  passwordHelpLimiter,
 } = require('../middleware/authRateLimit');
+const passwordHelpService = require('../services/passwordHelp.service');
 
 // POST /api/v1/auth/register — Create tenant + first admin user
 router.post('/register', registerLimiter, async (req, res, next) => {
@@ -42,6 +44,22 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     });
 
     res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/auth/password-help-request — User locked out; notifies platform admin (no self-serve reset)
+router.post('/password-help-request', passwordHelpLimiter, async (req, res, next) => {
+  try {
+    await passwordHelpService.submitPasswordHelpRequest({
+      email: req.body?.email,
+      message: req.body?.message,
+    });
+    res.json({
+      ok: true,
+      message: 'If an account exists for that email, our team will follow up shortly.',
+    });
   } catch (err) {
     next(err);
   }

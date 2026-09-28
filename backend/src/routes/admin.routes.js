@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminService = require('../services/admin.service');
+const passwordHelpService = require('../services/passwordHelp.service');
 const { getG2gEstimateSnapshots } = require('../services/graceEstimateSnapshot.service');
 
 router.get('/stats', async (req, res, next) => {
@@ -58,6 +59,52 @@ router.patch('/tenants/:id', async (req, res, next) => {
 router.post('/tenants/:id/send-welcome-email', async (req, res, next) => {
   try {
     const result = await adminService.sendWelcomeEmailToTenant(req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get('/password-help-requests/pending-count', async (req, res, next) => {
+  try {
+    const count = await passwordHelpService.countPendingPasswordHelpRequests();
+    res.json({ count });
+  } catch (err) { next(err); }
+});
+
+router.get('/password-help-requests', async (req, res, next) => {
+  try {
+    const { status, page, limit } = req.query;
+    const result = await passwordHelpService.listPasswordHelpRequests({
+      status: status || 'pending',
+      page: parseInt(page, 10) || 1,
+      limit: Math.min(parseInt(limit, 10) || 30, 100),
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.patch('/password-help-requests/:id', async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const result = await passwordHelpService.updatePasswordHelpRequestStatus(
+      req.params.id,
+      req.user.id,
+      status,
+    );
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/users/:userId/reset-password', async (req, res, next) => {
+  try {
+    const { password, sendEmail } = req.body;
+    const result = await passwordHelpService.resetUserPasswordByAdmin(
+      req.params.userId,
+      req.user.id,
+      {
+        password,
+        sendEmail: sendEmail !== false,
+      },
+    );
     res.json(result);
   } catch (err) { next(err); }
 });

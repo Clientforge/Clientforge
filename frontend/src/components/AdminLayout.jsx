@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api/client';
 
-function AdminNavItems({ onNavigate }) {
+function AdminNavItems({ onNavigate, pendingPasswordRequests }) {
   const close = onNavigate || (() => {});
 
   return (
@@ -15,6 +16,13 @@ function AdminNavItems({ onNavigate }) {
         <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         Businesses
       </NavLink>
+      <NavLink to="/admin/password-requests" onClick={close} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        Password requests
+        {pendingPasswordRequests > 0 && (
+          <span className="nav-badge">{pendingPasswordRequests}</span>
+        )}
+      </NavLink>
     </>
   );
 }
@@ -24,9 +32,16 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [navOpen, setNavOpen] = useState(false);
+  const [pendingPasswordRequests, setPendingPasswordRequests] = useState(0);
 
   useEffect(() => {
     setNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    api.get('/admin/password-help-requests/pending-count')
+      .then((r) => setPendingPasswordRequests(r.count || 0))
+      .catch(() => {});
   }, [location.pathname]);
 
   useEffect(() => {
@@ -78,7 +93,7 @@ export default function AdminLayout() {
         </div>
 
         <nav className="sidebar-nav">
-          <AdminNavItems onNavigate={closeNav} />
+          <AdminNavItems onNavigate={closeNav} pendingPasswordRequests={pendingPasswordRequests} />
         </nav>
 
         <div className="sidebar-footer">

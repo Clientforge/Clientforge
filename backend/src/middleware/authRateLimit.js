@@ -37,9 +37,11 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
 const loginLimiter = createRateLimiter({ windowMs: FIFTEEN_MIN, max: 20, label: 'login' });
 const registerLimiter = createRateLimiter({ windowMs: FIFTEEN_MIN, max: 10, label: 'register' });
 const refreshLimiter = createRateLimiter({ windowMs: FIFTEEN_MIN, max: 30, label: 'refresh' });
+const passwordHelpLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 5, label: 'password-help' });
 
 module.exports = {
   loginLimiter,
   registerLimiter,
   refreshLimiter,
+  passwordHelpLimiter,
 };

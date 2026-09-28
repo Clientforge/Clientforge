@@ -5,6 +5,7 @@ import AdminRoute from './components/AdminRoute';
 import AppLayout from './components/AppLayout';
 import AdminLayout from './components/AdminLayout';
 import LoginPage from './pages/LoginPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import LeadsPage from './pages/LeadsPage';
@@ -18,6 +19,7 @@ import PlatformDashboard from './pages/admin/PlatformDashboard';
 import TenantListPage from './pages/admin/TenantListPage';
 import TenantDetailPage from './pages/admin/TenantDetailPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
+import PasswordRequestsPage from './pages/admin/PasswordRequestsPage';
 import GoldenCrownDemoPage from './pages/demos/GoldenCrownDemoPage';
 import G2GLayout from './pages/demos/graceToGrace/G2GLayout';
 import G2GHome from './pages/demos/graceToGrace/G2GHome';
@@ -43,6 +45,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/demo/golden-crown-kitchen" element={<GoldenCrownDemoPage />} />
@@ -85,6 +88,7 @@ export default function App() {
             <Route index element={<PlatformDashboard />} />
             <Route path="tenants" element={<TenantListPage />} />
             <Route path="tenants/:id" element={<TenantDetailPage />} />
+            <Route path="password-requests" element={<PasswordRequestsPage />} />
           </Route>
         </Routes>
       </AuthProvider>

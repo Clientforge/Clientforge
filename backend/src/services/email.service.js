@@ -127,4 +127,68 @@ Let's turn more leads into customers!
   });
 };
 
-module.exports = { sendEmail, sendWelcomeEmail };
+const sendPasswordHelpNotifyEmail = async ({
+  toEmail,
+  requestEmail,
+  message,
+  matchedSummary,
+  queueUrl,
+}) => {
+  const subject = `Password help request — ${requestEmail}`;
+  const body = `A user submitted a password help request on ClientForge.
+
+Email entered: ${requestEmail}
+Account match: ${matchedSummary}
+${message ? `\nMessage from user:\n${message}\n` : ''}
+Review and reset their password in the admin panel:
+${queueUrl}
+
+— ClientForge Platform`;
+
+  return sendEmail({
+    tenantId: null,
+    to: toEmail,
+    fromName: 'ClientForge.ai',
+    fromAddress: null,
+    subject,
+    body,
+  });
+};
+
+const sendTemporaryPasswordEmail = async ({
+  toEmail,
+  recipientName,
+  tenantName,
+  temporaryPassword,
+  loginUrl,
+}) => {
+  const name = recipientName || 'there';
+  const subject = `Your ClientForge password was reset — ${tenantName}`;
+  const body = `Hi ${name},
+
+Your ClientForge password for ${tenantName} was reset by our support team.
+
+Temporary password: ${temporaryPassword}
+
+Sign in here: ${loginUrl}
+
+We recommend changing this password after you log in (when that option is available in Settings). If you did not request this reset, contact us immediately.
+
+— The ClientForge.ai Team`;
+
+  return sendEmail({
+    tenantId: null,
+    to: toEmail,
+    fromName: 'ClientForge.ai',
+    fromAddress: null,
+    subject,
+    body,
+  });
+};
+
+module.exports = {
+  sendEmail,
+  sendWelcomeEmail,
+  sendPasswordHelpNotifyEmail,
+  sendTemporaryPasswordEmail,
+};

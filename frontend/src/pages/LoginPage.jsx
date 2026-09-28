@@ -49,7 +49,10 @@ export default function LoginPage() {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required />
           </div>
           <div className="field">
-            <label>Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <label>Password</label>
+              <Link to="/forgot-password" style={{ fontSize: 13 }}>Forgot password?</Link>
+            </div>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
           </div>
           <button type="submit" className="btn-primary-full" disabled={loading}>
