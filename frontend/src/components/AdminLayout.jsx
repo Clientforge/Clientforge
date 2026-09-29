@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import BrandLogo from './BrandLogo';
 
 function AdminNavItems({ onNavigate, pendingPasswordRequests }) {
   const close = onNavigate || (() => {});
@@ -75,21 +76,14 @@ export default function AdminLayout() {
             <svg width="22" height="22" fill="none" viewBox="0 0 24 24" aria-hidden><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
           )}
         </button>
-        <span className="mobile-app-title">ClientForge <span className="brand-admin">Admin</span></span>
+        <span className="mobile-app-title"><BrandLogo size="sm" suffix="Admin" /></span>
       </header>
 
       <button type="button" className="sidebar-backdrop" aria-label="Close menu" tabIndex={navOpen ? 0 : -1} onClick={closeNav} />
 
       <aside className="sidebar admin-sidebar">
         <div className="sidebar-brand">
-          <div className="brand-icon">
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="8" fill="url(#asg)" />
-              <path d="M8 14l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <defs><linearGradient id="asg" x1="0" y1="0" x2="28" y2="28"><stop stopColor="#dc2626" /><stop offset="1" stopColor="#f59e0b" /></linearGradient></defs>
-            </svg>
-          </div>
-          <span>ClientForge <span className="brand-admin">Admin</span></span>
+          <BrandLogo size="md" suffix="Admin" />
         </div>
 
         <nav className="sidebar-nav">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function AdminLoginPage() {
   const { login, logout } = useAuth();
@@ -34,17 +35,7 @@ export default function AdminLoginPage() {
     <div className="auth-page auth-page-admin">
       <div className="auth-card auth-card-admin">
         <div className="auth-brand auth-brand-admin">
-          <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
-            <rect width="28" height="28" rx="8" fill="url(#adminGrad)"/>
-            <path d="M8 14l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <defs>
-              <linearGradient id="adminGrad" x1="0" y1="0" x2="28" y2="28">
-                <stop stopColor="#dc2626"/>
-                <stop offset="1" stopColor="#f59e0b"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <h1>ClientForge <span className="brand-admin">Admin</span></h1>
+          <BrandLogo size="lg" suffix="Admin" />
         </div>
         <h2>Platform Admin</h2>
         <p className="auth-sub">Sign in to the admin dashboard</p>

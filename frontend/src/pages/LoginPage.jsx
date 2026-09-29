@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { homePath } from '../utils/uiMode';
 import { useRegistrationEnabled } from '../hooks/useRegistrationEnabled';
+import BrandLogo from '../components/BrandLogo';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -31,12 +32,7 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
-            <rect width="28" height="28" rx="8" fill="url(#ag)"/>
-            <path d="M8 14l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <defs><linearGradient id="ag" x1="0" y1="0" x2="28" y2="28"><stop stopColor="#6366f1"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
-          </svg>
-          <h1>ClientForge<span className="brand-ai">.ai</span></h1>
+          <BrandLogo size="lg" />
         </div>
         <h2>Welcome back</h2>
         <p className="auth-sub">Sign in to your dashboard</p>

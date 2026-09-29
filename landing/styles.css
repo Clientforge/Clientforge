@@ -25,6 +25,8 @@
   --color-blue: #3b82f6;
   --color-green: #22c55e;
   --color-orange: #f59e0b;
+  --brand-flame-mid: #ea580c;
+  --brand-flame-end: #fbbf24;
   --color-pink: #ec4899;
   --color-red: #ef4444;
   --color-indigo: #6366f1;
@@ -171,13 +173,19 @@ img {
   color: var(--color-text);
 }
 
-.logo-icon {
-  display: flex;
-  align-items: center;
+.logo-mark {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.logo-mark--sm {
+  width: 28px;
+  height: 28px;
 }
 
 .logo-ai {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
+  background: linear-gradient(135deg, var(--brand-flame-mid), var(--brand-flame-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
