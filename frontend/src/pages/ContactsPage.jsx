@@ -418,7 +418,7 @@ function ImportModal({ onClose, onSuccess }) {
               <div className="upload-area" onClick={() => fileRef.current.click()}>
                 {file ? (
                   <div className="file-selected">
-                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#6366f1" strokeWidth="2"/><polyline points="14,2 14,8 20,8" stroke="#6366f1" strokeWidth="2"/></svg>
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="2"/><polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2"/></svg>
                     <span>{file.name}</span>
                   </div>
                 ) : (

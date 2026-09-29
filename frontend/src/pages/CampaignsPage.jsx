@@ -1523,7 +1523,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
               </div>
 
               <div className="review-note">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#6366f1" strokeWidth="2"/><path d="M12 16v-4M12 8h.01" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/></svg>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                 <span>If a contact replies, remaining waves are skipped. Unsubscribed contacts are never messaged. When you launch, you can send in batches (e.g. 100 at a time) for better deliverability.</span>
               </div>
 
