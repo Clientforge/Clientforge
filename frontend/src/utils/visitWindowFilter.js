@@ -6,6 +6,8 @@ export const VISITED_WITHIN_OPTIONS = [
 ];
 
 export const NOT_VISITED_WITHIN_OPTIONS = [
+  { value: 0, label: '0 days' },
+  { value: 1, label: '1 day' },
   { value: 30, label: '30 days' },
   { value: 60, label: '60 days' },
   { value: 90, label: '3 months' },
@@ -32,8 +34,13 @@ export function getVisitFilterMode(filter, { sluiceCampaign = false } = {}) {
   return 'none';
 }
 
+const isNotVisitedWithinDays = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0;
+};
+
 export function formatVisitWindowLabel(visitWindow) {
-  if (!visitWindow?.visitedWithinDays || !visitWindow?.notVisitedWithinDays) return null;
+  if (!visitWindow?.visitedWithinDays || !isNotVisitedWithinDays(visitWindow.notVisitedWithinDays)) return null;
   const inner = notVisitedLabel(visitWindow.notVisitedWithinDays);
   const outer = visitedLabel(visitWindow.visitedWithinDays);
   const source = visitWindow.source === 'appointments' ? ' (appointments only)' : '';
@@ -42,9 +49,15 @@ export function formatVisitWindowLabel(visitWindow) {
 
 export function normalizeVisitWindowForForm(raw) {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_VISIT_WINDOW };
+  const visited = Number(raw.visitedWithinDays);
+  const notVisited = Number(raw.notVisitedWithinDays);
   return {
-    visitedWithinDays: raw.visitedWithinDays || DEFAULT_VISIT_WINDOW.visitedWithinDays,
-    notVisitedWithinDays: raw.notVisitedWithinDays || DEFAULT_VISIT_WINDOW.notVisitedWithinDays,
+    visitedWithinDays: Number.isFinite(visited) && visited >= 1
+      ? visited
+      : DEFAULT_VISIT_WINDOW.visitedWithinDays,
+    notVisitedWithinDays: Number.isFinite(notVisited) && notVisited >= 0
+      ? notVisited
+      : DEFAULT_VISIT_WINDOW.notVisitedWithinDays,
     source: raw.source === 'appointments' ? 'appointments' : 'effective',
   };
 }

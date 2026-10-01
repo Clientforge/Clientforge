@@ -76,6 +76,27 @@ includes('visit window inner bound', visitWindow, "INTERVAL '90 days'");
 includes('visit window requires date', visitWindow, 'effective_last_at IS NOT NULL');
 check('visit window uses audience CTE', visitWindow.fromTable, 'audience_contacts');
 
+check('normalize visit window 0-day inner', normalizeAudienceFilter({
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 0, source: 'effective' },
+}), {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 0, source: 'effective' },
+});
+check('normalize visit window 1-day inner', normalizeAudienceFilter({
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 1, source: 'effective' },
+}), {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 1, source: 'effective' },
+});
+
+const visitWindow0d = buildAudienceWhere('tenant-1', {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 0, source: 'effective' },
+}, 'sms');
+includes('visit window 0-day inner bound', visitWindow0d, "INTERVAL '0 days'");
+
+const visitWindow1d = buildAudienceWhere('tenant-1', {
+  visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 1, source: 'effective' },
+}, 'sms');
+includes('visit window 1-day inner bound', visitWindow1d, "INTERVAL '1 days'");
+
 const apptWindow = buildAudienceWhere('tenant-1', {
   visitWindow: { visitedWithinDays: 730, notVisitedWithinDays: 90, source: 'appointments' },
 }, 'sms');

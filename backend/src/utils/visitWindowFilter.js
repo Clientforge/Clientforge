@@ -1,8 +1,8 @@
 const VISIT_SOURCES = new Set(['effective', 'appointments']);
 
-const normalizePositiveDays = (value) => {
+const normalizeDays = (value, { min = 1 } = {}) => {
   const n = parseInt(value, 10);
-  if (!Number.isFinite(n) || n < 1 || n > 3650) return null;
+  if (!Number.isFinite(n) || n < min || n > 3650) return null;
   return n;
 };
 
@@ -14,8 +14,8 @@ const normalizePositiveDays = (value) => {
  */
 const normalizeVisitWindow = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  const visitedWithinDays = normalizePositiveDays(raw.visitedWithinDays);
-  const notVisitedWithinDays = normalizePositiveDays(raw.notVisitedWithinDays);
+  const visitedWithinDays = normalizeDays(raw.visitedWithinDays, { min: 1 });
+  const notVisitedWithinDays = normalizeDays(raw.notVisitedWithinDays, { min: 0 });
   if (visitedWithinDays == null || notVisitedWithinDays == null) return null;
   if (notVisitedWithinDays >= visitedWithinDays) return null;
   const source = VISIT_SOURCES.has(raw.source) ? raw.source : 'effective';
