@@ -1,6 +1,5 @@
 const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
-const appointmentWorkflowService = require('./appointment-workflow.service');
 
 async function getTenantAutomationTestConfig(tenantId) {
   if (!tenantId) return null;
@@ -112,7 +111,9 @@ async function goLive(tenantId) {
     [tenantId],
   );
 
-  const redeploy = await appointmentWorkflowService.redeployUpcomingBookingWorkflows(tenantId);
+  // Lazy require avoids circular load: workflow → email/sms → this module.
+  const { redeployUpcomingBookingWorkflows } = require('./appointment-workflow.service');
+  const redeploy = await redeployUpcomingBookingWorkflows(tenantId);
 
   return {
     cancelledPendingJobs: cancelled.rows.length,
