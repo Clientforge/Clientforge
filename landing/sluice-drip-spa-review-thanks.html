@@ -136,8 +136,8 @@
       document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
       document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
 
-      /** Paste g.page “Write a review” URL from Google Business Profile when available. */
-      var GOOGLE_REVIEW_URL = '';
+      /** Google Business Profile “Write a review” link */
+      var GOOGLE_REVIEW_URL = 'https://g.page/r/CZsMV_W0SLSKEAE/review';
 
       var btn = document.getElementById('google-btn');
       var hint = document.getElementById('google-review-hint');
@@ -148,6 +148,8 @@
 
       if (googleReviewConfigured(GOOGLE_REVIEW_URL)) {
         btn.href = GOOGLE_REVIEW_URL.trim();
+        btn.setAttribute('target', '_blank');
+        btn.setAttribute('rel', 'noopener noreferrer');
         btn.removeAttribute('role');
       } else {
         btn.href = 'https://www.google.com/maps/search/?api=1&query=Sluice+Drip+Spa+Peachtree+City+GA+30269';
