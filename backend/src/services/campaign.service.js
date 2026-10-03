@@ -441,11 +441,16 @@ const getCampaign = async (tenantId, campaignId) => {
   return campaign;
 };
 
-const listCampaigns = async (tenantId, { page = 1, limit = 20 }) => {
+const listCampaigns = async (tenantId, { page = 1, limit = 20, archived = false }) => {
   const offset = (page - 1) * limit;
+  const archivedOnly = archived === true || archived === 'true';
+  const archiveFilter = archivedOnly ? 'archived_at IS NOT NULL' : 'archived_at IS NULL';
 
   const [countRes, dataRes] = await Promise.all([
-    db.query('SELECT COUNT(*)::int FROM campaigns WHERE tenant_id = $1', [tenantId]),
+    db.query(
+      `SELECT COUNT(*)::int FROM campaigns WHERE tenant_id = $1 AND ${archiveFilter}`,
+      [tenantId],
+    ),
     db.query(
       `SELECT c.*,
          COALESCE(lc_agg.link_total_clicks, 0)::int AS link_total_clicks,
@@ -460,7 +465,7 @@ const listCampaigns = async (tenantId, { page = 1, limit = 20 }) => {
          JOIN campaign_messages cm ON cm.id = tl.campaign_message_id
          GROUP BY cm.campaign_id
        ) lc_agg ON lc_agg.campaign_id = c.id
-       WHERE c.tenant_id = $1
+       WHERE c.tenant_id = $1 AND c.${archiveFilter}
        ORDER BY c.created_at DESC
        LIMIT $2 OFFSET $3`,
       [tenantId, limit, offset],
@@ -479,6 +484,12 @@ const listCampaigns = async (tenantId, { page = 1, limit = 20 }) => {
 
 const launchCampaign = async (tenantId, campaignId, launchOptions = {}) => {
   const campaign = await getCampaign(tenantId, campaignId);
+
+  if (campaign.archivedAt) {
+    throw Object.assign(new Error('Archived campaigns cannot be launched. Restore the campaign first.'), {
+      statusCode: 400, isOperational: true,
+    });
+  }
 
   const launchableStatuses = ['draft', 'sending', 'completed'];
   if (!launchableStatuses.includes(campaign.status)) {
@@ -621,10 +632,77 @@ const getCampaignStats = async (tenantId) => {
        COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
        COALESCE(SUM(sent_count), 0)::int AS total_sent,
        COALESCE(SUM(reply_count), 0)::int AS total_replies
-     FROM campaigns WHERE tenant_id = $1`,
+     FROM campaigns WHERE tenant_id = $1 AND archived_at IS NULL`,
     [tenantId],
   );
   return result.rows[0];
+};
+
+const archiveCampaign = async (tenantId, campaignId) => {
+  await getCampaign(tenantId, campaignId);
+
+  await db.query(
+    `UPDATE campaign_messages SET status = 'skipped'
+     WHERE campaign_id = $1 AND tenant_id = $2 AND status = 'pending'`,
+    [campaignId, tenantId],
+  );
+
+  const result = await db.query(
+    `UPDATE campaigns SET
+       archived_at = NOW(),
+       updated_at = NOW(),
+       status = CASE WHEN status = 'sending' THEN 'completed' ELSE status END,
+       completed_at = CASE
+         WHEN status = 'sending' AND completed_at IS NULL THEN NOW()
+         ELSE completed_at
+       END
+     WHERE tenant_id = $1 AND id = $2 AND archived_at IS NULL
+     RETURNING *`,
+    [tenantId, campaignId],
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Campaign not found'), { statusCode: 404, isOperational: true });
+  }
+
+  return formatCampaign(result.rows[0]);
+};
+
+const unarchiveCampaign = async (tenantId, campaignId) => {
+  const result = await db.query(
+    `UPDATE campaigns SET archived_at = NULL, updated_at = NOW()
+     WHERE tenant_id = $1 AND id = $2 AND archived_at IS NOT NULL
+     RETURNING *`,
+    [tenantId, campaignId],
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Campaign not found or not archived'), { statusCode: 404, isOperational: true });
+  }
+
+  return formatCampaign(result.rows[0]);
+};
+
+const deleteCampaign = async (tenantId, campaignId) => {
+  const campaign = await getCampaign(tenantId, campaignId);
+
+  if (campaign.status !== 'draft' || campaign.launchedAt) {
+    throw Object.assign(
+      new Error('Only draft campaigns that were never launched can be deleted. Archive completed campaigns instead.'),
+      { statusCode: 400, isOperational: true },
+    );
+  }
+
+  const result = await db.query(
+    'DELETE FROM campaigns WHERE tenant_id = $1 AND id = $2 RETURNING id',
+    [tenantId, campaignId],
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error('Campaign not found'), { statusCode: 404, isOperational: true });
+  }
+
+  return { deleted: true, id: campaignId };
 };
 
 const personalizeMessage = (template, vars) => {
@@ -654,6 +732,7 @@ const formatCampaign = (row) => ({
   optoutCount: row.optout_count,
   launchedAt: row.launched_at,
   completedAt: row.completed_at,
+  archivedAt: row.archived_at,
   createdAt: row.created_at,
   linkTotalClicks: row.link_total_clicks != null ? Number(row.link_total_clicks) : 0,
   linkUniqueClicks: row.link_unique_clicks != null ? Number(row.link_unique_clicks) : 0,
@@ -795,6 +874,9 @@ module.exports = {
   previewAudience,
   previewAudienceForCampaign,
   cloneCampaign,
+  archiveCampaign,
+  unarchiveCampaign,
+  deleteCampaign,
   createTemplate,
   listTemplates,
   getTemplate,

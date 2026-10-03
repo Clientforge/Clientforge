@@ -110,12 +110,14 @@ export default function CampaignsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createAudience, setCreateAudience] = useState(null);
   const [linkClicksModal, setLinkClicksModal] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
-  const loadCampaigns = async (page = 1) => {
+  const loadCampaigns = async (page = 1, archived = showArchived) => {
     setLoading(true);
     try {
+      const archivedQuery = archived ? '&archived=true' : '';
       const [data, statsData] = await Promise.all([
-        api.get(`/campaigns?page=${page}&limit=20`),
+        api.get(`/campaigns?page=${page}&limit=20${archivedQuery}`),
         api.get('/campaigns/stats'),
       ]);
       setCampaigns(data.campaigns);
@@ -125,7 +127,7 @@ export default function CampaignsPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadCampaigns(); }, []);
+  useEffect(() => { loadCampaigns(1, showArchived); }, [showArchived]);
 
   useEffect(() => {
     if (searchParams.get('create') !== '1') return;
@@ -183,6 +185,15 @@ export default function CampaignsPage() {
       </div>
 
       <div className="card">
+        <div className="campaigns-list-toolbar" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button
+            type="button"
+            className={`btn btn-sm ${showArchived ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setShowArchived((v) => !v)}
+          >
+            {showArchived ? 'Show active campaigns' : 'Show archived'}
+          </button>
+        </div>
         {loading ? (
           <div className="page-loader">Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
@@ -190,8 +201,12 @@ export default function CampaignsPage() {
             <div className="empty-icon">
               <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <p>No campaigns yet</p>
-            <p className="muted">Create your first campaign to re-engage past customers</p>
+            <p>{showArchived ? 'No archived campaigns' : 'No campaigns yet'}</p>
+            <p className="muted">
+              {showArchived
+                ? 'Archived campaigns are hidden from the main list'
+                : 'Create your first campaign to re-engage past customers'}
+            </p>
           </div>
         ) : (
           <table className="leads-table">
@@ -204,9 +219,10 @@ export default function CampaignsPage() {
                   key={c.id}
                   campaign={c}
                   formatDate={formatDate}
-                  onRefresh={loadCampaigns}
+                  onRefresh={() => loadCampaigns(pagination.page || 1)}
                   onOpenLinkClicks={(camp) => setLinkClicksModal({ id: camp.id, name: camp.name })}
                   timezone={tenant?.timezone}
+                  showArchived={showArchived}
                 />
               ))}
             </tbody>
@@ -216,7 +232,7 @@ export default function CampaignsPage() {
         {pagination.totalPages > 1 && (
           <div className="pagination">
             {Array.from({ length: pagination.totalPages }, (_, i) => (
-              <button key={i} className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`} onClick={() => loadCampaigns(i + 1)}>{i + 1}</button>
+              <button key={i} className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`} onClick={() => loadCampaigns(i + 1, showArchived)}>{i + 1}</button>
             ))}
           </div>
         )}
@@ -241,11 +257,12 @@ export default function CampaignsPage() {
   );
 }
 
-function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezone }) {
+function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezone, showArchived }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
   const [audiencePreview, setAudiencePreview] = useState(null);
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const s = STATUS_STYLES[campaign.status] || STATUS_STYLES.draft;
 
   const unique = campaign.linkUniqueClicks ?? 0;
@@ -258,8 +275,47 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezo
     setExpanded(!expanded);
   };
 
-  const canLaunch = ['draft', 'sending', 'completed'].includes(campaign.status);
+  const canLaunch = !showArchived && ['draft', 'sending', 'completed'].includes(campaign.status);
   const launchLabel = campaign.status === 'draft' ? 'Launch' : 'Send next batch';
+  const canDelete = campaign.status === 'draft' && !campaign.launchedAt;
+
+  const handleArchive = async () => {
+    if (!window.confirm(`Archive "${campaign.name}"? It will be hidden from the main list.`)) return;
+    setActionBusy(true);
+    try {
+      await api.post(`/campaigns/${campaign.id}/archive`);
+      onRefresh();
+    } catch (err) {
+      alert(err.message || 'Could not archive campaign');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleUnarchive = async () => {
+    setActionBusy(true);
+    try {
+      await api.post(`/campaigns/${campaign.id}/unarchive`);
+      onRefresh();
+    } catch (err) {
+      alert(err.message || 'Could not restore campaign');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Permanently delete draft "${campaign.name}"? This cannot be undone.`)) return;
+    setActionBusy(true);
+    try {
+      await api.delete(`/campaigns/${campaign.id}`);
+      onRefresh();
+    } catch (err) {
+      alert(err.message || 'Could not delete campaign');
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   const waveCount = (campaign.schedule || []).length;
   const ch = campaign.channel || 'sms';
@@ -303,24 +359,56 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezo
         </td>
         <td className="muted">{formatDate(campaign.createdAt)}</td>
         <td onClick={(e) => e.stopPropagation()}>
-          {canLaunch && (
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {canLaunch && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setAudiencePreview({ id: campaign.id, name: campaign.name })}
+                >
+                  Recipients
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={() => setLaunchModalOpen(true)}
+                >
+                  {launchLabel}
+                </button>
+              </>
+            )}
+            {showArchived ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                disabled={actionBusy}
+                onClick={handleUnarchive}
+              >
+                Restore
+              </button>
+            ) : (
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
-                onClick={() => setAudiencePreview({ id: campaign.id, name: campaign.name })}
+                disabled={actionBusy}
+                onClick={handleArchive}
               >
-                Recipients
+                Archive
               </button>
+            )}
+            {canDelete && !showArchived && (
               <button
                 type="button"
-                className="btn btn-sm btn-primary"
-                onClick={() => setLaunchModalOpen(true)}
+                className="btn btn-sm btn-ghost"
+                disabled={actionBusy}
+                onClick={handleDelete}
+                style={{ color: 'var(--danger, #dc2626)' }}
               >
-                {launchLabel}
+                Delete
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </td>
       </tr>
       {expanded && (

@@ -9,6 +9,7 @@ router.get('/', async (req, res, next) => {
     const result = await campaignService.listCampaigns(req.tenantId, {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 20,
+      archived: req.query.archived,
     });
     res.json(result);
   } catch (err) { next(err); }
@@ -114,6 +115,27 @@ router.put('/:id', async (req, res, next) => {
   try {
     const campaign = await campaignService.updateCampaign(req.tenantId, req.params.id, req.body);
     res.json(campaign);
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/archive', async (req, res, next) => {
+  try {
+    const campaign = await campaignService.archiveCampaign(req.tenantId, req.params.id);
+    res.json({ message: 'Campaign archived', campaign });
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/unarchive', async (req, res, next) => {
+  try {
+    const campaign = await campaignService.unarchiveCampaign(req.tenantId, req.params.id);
+    res.json({ message: 'Campaign restored', campaign });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const result = await campaignService.deleteCampaign(req.tenantId, req.params.id);
+    res.json({ message: 'Campaign deleted', ...result });
   } catch (err) { next(err); }
 });
 
