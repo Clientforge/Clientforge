@@ -131,10 +131,15 @@
     (function () {
       var params = new URLSearchParams(window.location.search);
       var stars = parseInt(params.get('stars'), 10);
-      if (Number.isNaN(stars) || stars < 4) stars = 4;
-      if (stars > 5) stars = 5;
-      document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
-      document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
+
+      if (Number.isNaN(stars) || stars < 5) {
+        var redirectStars = Number.isNaN(stars) || stars < 1 ? 1 : Math.min(stars, 4);
+        window.location.replace('/sluice-review/feedback?stars=' + redirectStars);
+        return;
+      }
+
+      document.getElementById('stars-display').textContent = '★★★★★';
+      document.getElementById('rating-line').textContent = 'You chose 5 out of 5 stars.';
 
       /** Google Business Profile “Write a review” link */
       var GOOGLE_REVIEW_URL = 'https://g.page/r/CZsMV_W0SLSKEAE/review';
