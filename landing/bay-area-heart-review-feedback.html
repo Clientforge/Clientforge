@@ -182,10 +182,10 @@
 <body>
 
   <div class="card" id="form-panel">
-    <h1 id="page-title">We’re sorry we missed the mark</h1>
+    <h1>We’re sorry we missed the mark</h1>
     <div class="stars-display" id="stars-display" aria-hidden="true"></div>
     <p class="meta" id="rating-line"></p>
-    <p class="meta meta-tight" id="intro-line">Your notes go directly to our team so we can improve your care.</p>
+    <p class="meta meta-tight">Your notes go directly to our team so we can improve your care.</p>
 
     <form id="feedback-form">
       <p class="field-label" id="category-label">What can we improve? <span style="font-weight:500;color:var(--muted)">(select all that apply)</span></p>
@@ -234,9 +234,6 @@
       var messageLabel = document.getElementById('message-label');
       var formError = document.getElementById('form-error');
       if (structured) {
-        document.getElementById('page-title').textContent = 'Help us improve your care';
-        document.getElementById('intro-line').textContent =
-          'Select the areas below that matter most. Your feedback goes directly to our team.';
         categoryLabel.style.display = 'block';
         categorySection.style.display = 'grid';
         messageLabel.textContent = 'Anything else you’d like us to know?';
