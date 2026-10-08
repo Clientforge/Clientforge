@@ -73,6 +73,10 @@
       font-size: 0.9rem;
       margin-bottom: 12px;
     }
+    .field-label-hint {
+      font-weight: 500;
+      color: var(--muted);
+    }
     .category-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
@@ -177,6 +181,61 @@
     .back a { color: var(--accent-dark); font-weight: 600; }
     .thank { display: none; text-align: center; padding: 20px 0; }
     .thank h2 { font-family: 'Montserrat', system-ui, sans-serif; margin-bottom: 8px; }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 20px 14px 32px;
+        font-size: 16px;
+      }
+      .card {
+        padding: 20px 16px 26px;
+        border-radius: 14px;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin-bottom: 6px;
+      }
+      .stars-display {
+        font-size: 2.15rem;
+        letter-spacing: 0.08em;
+        margin: 10px 0 12px;
+      }
+      .meta {
+        font-size: 0.88rem;
+        margin-bottom: 14px;
+      }
+      .meta-tight { margin-bottom: 12px; }
+      .field-label {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+        line-height: 1.35;
+      }
+      .field-label-hint {
+        display: block;
+        font-size: 0.8rem;
+        margin-top: 2px;
+      }
+      .category-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+      .tile {
+        min-height: 44px;
+        padding: 9px 7px;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        border-radius: 10px;
+      }
+      .comments-block { margin-top: 14px; }
+      textarea {
+        min-height: 100px;
+        padding: 12px 14px;
+        font-size: 16px;
+        margin-bottom: 16px;
+      }
+      .btn { padding: 14px; font-size: 0.95rem; }
+      .back { margin-top: 16px; font-size: 0.85rem; }
+    }
   </style>
 </head>
 <body>
@@ -188,7 +247,7 @@
     <p class="meta meta-tight">Your notes go directly to our team so we can improve your care.</p>
 
     <form id="feedback-form">
-      <p class="field-label" id="category-label">What can we improve? <span style="font-weight:500;color:var(--muted)">(select all that apply)</span></p>
+      <p class="field-label" id="category-label">What can we improve? <span class="field-label-hint">(select all that apply)</span></p>
       <fieldset class="category-grid" id="category-section" aria-labelledby="category-label">
         <legend class="sr-only">Areas we can improve</legend>
         <label class="tile"><input type="checkbox" name="category" value="Front Desk Experience"> Front Desk Experience</label>
