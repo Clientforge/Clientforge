@@ -265,6 +265,15 @@ app.get('/soothing-intention-review/feedback', (req, res) => {
 app.get('/soothing-intention-review/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'soothing-intention-review-thanks.html'));
 });
+app.get('/bay-area-heart-review', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'bay-area-heart-review.html'));
+});
+app.get('/bay-area-heart-review/feedback', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'bay-area-heart-review-feedback.html'));
+});
+app.get('/bay-area-heart-review/thanks', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'bay-area-heart-review-thanks.html'));
+});
 app.get('/spatium-review', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'spatium-urgent-care-review.html'));
 });
@@ -430,6 +439,9 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/soothing-intention-review' || req.path.startsWith('/soothing-intention-review/')) {
+    return next();
+  }
+  if (req.path === '/bay-area-heart-review' || req.path.startsWith('/bay-area-heart-review/')) {
     return next();
   }
   if (req.path === '/spatium-review' || req.path.startsWith('/spatium-review/')) {

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Bay Area Heart — Share your cardiology visit experience. Rate your care in Texas.">
+  <title>How was your visit? — Bay Area Heart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f4f4;
+      --paper: #fffcfc;
+      --ink: #1a1416;
+      --muted: #5c5256;
+      --accent: #a61c2e;
+      --accent-dark: #7a1220;
+      --navy: #1e3a5f;
+      --gold: #ffd700;
+      --gold-light: #fff4a8;
+      --gold-mid: #ffd700;
+      --gold-dark: #b8860b;
+      --line: #e8dede;
+      --radius: 16px;
+      --shadow: 0 20px 48px rgba(26, 20, 22, 0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Source Sans 3', system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(166, 28, 46, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(30, 58, 95, 0.08), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 22px; position: relative; z-index: 1; }
+    header {
+      text-align: center;
+      padding: 48px 22px 36px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand-name {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: clamp(1.75rem, 5vw, 2.35rem);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--accent-dark);
+      margin-bottom: 8px;
+      line-height: 1.15;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: clamp(1.85rem, 5vw, 2.6rem);
+      line-height: 1.15;
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 540px;
+      margin: 0 auto 8px;
+    }
+    .tagline {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(166, 28, 46, 0.08);
+      color: var(--accent-dark);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .star-hint {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 28px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .star-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(6px, 2vw, 16px);
+      margin: 12px 0 28px;
+      padding: 8px 0 20px;
+    }
+    .star-row a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: clamp(3.25rem, 14vw, 6.5rem);
+      line-height: 1;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-mid) 35%, #e6b800 70%, var(--gold-dark) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 2px 6px rgba(184, 134, 11, 0.45));
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .star-row a:hover,
+    .star-row a:focus {
+      transform: scale(1.12);
+      filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.55));
+      outline: none;
+    }
+    .star-row a:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
+    .cta-block {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-ghost {
+      background: var(--paper);
+      color: var(--ink);
+      border: 1.5px solid var(--line);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      border: none;
+      box-shadow: 0 8px 24px rgba(122, 18, 32, 0.28);
+    }
+    section { padding: 40px 0; }
+    section h2 {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: 1.45rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .locations {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .card h3 {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+      color: var(--accent-dark);
+    }
+    .card p { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.5rem; }
+    .card a { color: var(--navy); font-weight: 600; text-decoration: none; }
+    .card a:hover { text-decoration: underline; }
+    footer {
+      text-align: center;
+      padding: 28px 22px 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <p class="brand-name">Bay Area Heart</p>
+    <p class="badge">Cardiology</p>
+    <h1>How was your visit?</h1>
+    <p class="sub">Your feedback helps us continue delivering trusted cardiovascular care across Texas. Tap a star—it only takes a moment.</p>
+    <p class="tagline">Texas Hearts, Expert Hands</p>
+
+    <p class="star-hint" id="star-label">Rate your visit</p>
+    <div class="star-row" role="group" aria-labelledby="star-label">
+      <a href="/bay-area-heart-review/feedback?stars=1" aria-label="1 out of 5 stars">★</a>
+      <a href="/bay-area-heart-review/feedback?stars=2" aria-label="2 out of 5 stars">★</a>
+      <a href="/bay-area-heart-review/feedback?stars=3" aria-label="3 out of 5 stars">★</a>
+      <a href="/bay-area-heart-review/feedback?stars=4" aria-label="4 out of 5 stars">★</a>
+      <a href="/bay-area-heart-review/thanks?stars=5" aria-label="5 out of 5 stars">★</a>
+    </div>
+
+    <div class="cta-block">
+      <a class="btn btn-primary" href="https://bayareaheart.com/" target="_blank" rel="noopener noreferrer">Schedule an appointment</a>
+      <a class="btn btn-ghost" href="https://bayareaheart.com/" target="_blank" rel="noopener noreferrer">Visit website</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>Our locations</h2>
+      <div class="locations">
+        <div class="card">
+          <h3>Webster</h3>
+          <p>450 Blossom St., Suite D<br>Webster, TX 77598</p>
+          <p><a href="tel:+18329055940">(832) 905-5940</a></p>
+        </div>
+        <div class="card">
+          <h3>Houston</h3>
+          <p>1213 Hermann Dr., Suite 340<br>Houston, TX 77004</p>
+          <p><a href="tel:+17137961116">(713) 796-1116</a></p>
+        </div>
+        <div class="card">
+          <h3>Texas City</h3>
+          <p>16807 Emmett Lowry Exp., Suite 302D<br>Texas City, TX 77591</p>
+          <p><a href="tel:+18329055940">(832) 905-5940</a></p>
+        </div>
+        <div class="card">
+          <h3>Baytown</h3>
+          <p>2000 Garth Rd., Suite 1<br>Baytown, TX 77520</p>
+          <p><a href="tel:+18329055940">(832) 905-5940</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="y"></span> Bay Area Heart · <a href="https://bayareaheart.com/" style="color: var(--navy);">bayareaheart.com</a>
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  </footer>
+
+</body>
+</html>
