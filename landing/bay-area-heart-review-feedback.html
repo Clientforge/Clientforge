@@ -34,7 +34,7 @@
       padding: 32px 22px 48px;
     }
     .card {
-      max-width: 560px;
+      max-width: 640px;
       margin: 0 auto;
       background: var(--paper);
       border: 1px solid var(--line);
@@ -66,15 +66,78 @@
       font-size: 0.95rem;
       margin-bottom: 24px;
     }
-    label {
+    .meta-tight { margin-bottom: 16px; }
+    .field-label {
       display: block;
       font-weight: 600;
       font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 10px;
       margin-bottom: 8px;
+      border: none;
+      padding: 0;
+      min-width: 0;
+    }
+    .tile {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 72px;
+      padding: 12px 14px;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.25;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tile input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+    .tile:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(166, 28, 46, 0.08);
+      box-shadow: 0 0 0 1px rgba(166, 28, 46, 0.2);
+    }
+    .tile:has(input:focus-visible) {
+      outline: 3px solid rgba(166, 28, 46, 0.35);
+      outline-offset: 2px;
+    }
+    .form-error {
+      display: none;
+      color: var(--accent-dark);
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .form-error.visible { display: block; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     textarea {
       width: 100%;
-      min-height: 160px;
+      min-height: 120px;
       padding: 14px 16px;
       border: 1.5px solid var(--line);
       border-radius: 10px;
@@ -88,6 +151,8 @@
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(166, 28, 46, 0.15);
     }
+    .comments-block { margin-top: 20px; }
+    .comments-block.hidden { display: none; }
     .btn {
       display: block;
       width: 100%;
@@ -117,14 +182,31 @@
 <body>
 
   <div class="card" id="form-panel">
-    <h1>We’re sorry we missed the mark</h1>
+    <h1 id="page-title">We’re sorry we missed the mark</h1>
     <div class="stars-display" id="stars-display" aria-hidden="true"></div>
     <p class="meta" id="rating-line"></p>
-    <p class="meta">Your notes go directly to our team so we can improve your care.</p>
+    <p class="meta meta-tight" id="intro-line">Your notes go directly to our team so we can improve your care.</p>
 
     <form id="feedback-form">
-      <label for="message">What could we do better?</label>
-      <textarea id="message" name="message" required placeholder="Share as much detail as you’re comfortable with…"></textarea>
+      <p class="field-label" id="category-label">What can we improve? <span style="font-weight:500;color:var(--muted)">(select all that apply)</span></p>
+      <fieldset class="category-grid" id="category-section" aria-labelledby="category-label">
+        <legend class="sr-only">Areas we can improve</legend>
+        <label class="tile"><input type="checkbox" name="category" value="Front Desk Experience"> Front Desk Experience</label>
+        <label class="tile"><input type="checkbox" name="category" value="Wait Time"> Wait Time</label>
+        <label class="tile"><input type="checkbox" name="category" value="Staff Communication"> Staff Communication</label>
+        <label class="tile"><input type="checkbox" name="category" value="Appointment Scheduling"> Appointment Scheduling</label>
+        <label class="tile"><input type="checkbox" name="category" value="Provider Experience"> Provider Experience</label>
+        <label class="tile"><input type="checkbox" name="category" value="Quality of Care"> Quality of Care</label>
+        <label class="tile"><input type="checkbox" name="category" value="Billing & Payments"> Billing &amp; Payments</label>
+        <label class="tile"><input type="checkbox" name="category" value="Overall Experience"> Overall Experience</label>
+        <label class="tile"><input type="checkbox" name="category" value="Other" id="category-other"> Other</label>
+      </fieldset>
+      <p class="form-error" id="form-error" role="alert"></p>
+
+      <div class="comments-block" id="comments-block">
+        <label for="message" id="message-label">Anything else you’d like us to know?</label>
+        <textarea id="message" name="message" placeholder="Share as much detail as you’re comfortable with…"></textarea>
+      </div>
       <button type="submit" class="btn">Send feedback</button>
     </form>
     <p class="back"><a href="/bay-area-heart-review">← Back to rating</a></p>
@@ -141,17 +223,87 @@
       var params = new URLSearchParams(window.location.search);
       var stars = parseInt(params.get('stars'), 10);
       if (Number.isNaN(stars) || stars < 1 || stars > 4) stars = 1;
+      var structured = stars <= 3;
+
       document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
       document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
+
+      var categorySection = document.getElementById('category-section');
+      var categoryLabel = document.getElementById('category-label');
+      var messageEl = document.getElementById('message');
+      var messageLabel = document.getElementById('message-label');
+      var formError = document.getElementById('form-error');
+      if (structured) {
+        document.getElementById('page-title').textContent = 'Help us improve your care';
+        document.getElementById('intro-line').textContent =
+          'Select the areas below that matter most. Your feedback goes directly to our team.';
+        categoryLabel.style.display = 'block';
+        categorySection.style.display = 'grid';
+        messageLabel.textContent = 'Anything else you’d like us to know?';
+        messageEl.removeAttribute('required');
+      } else {
+        categoryLabel.style.display = 'none';
+        categorySection.style.display = 'none';
+        messageLabel.textContent = 'What could we do better?';
+        messageEl.setAttribute('required', 'required');
+      }
+
+      function selectedCategories() {
+        var boxes = categorySection.querySelectorAll('input[name="category"]:checked');
+        var list = [];
+        for (var i = 0; i < boxes.length; i++) list.push(boxes[i].value);
+        return list;
+      }
+
+      function showError(text) {
+        formError.textContent = text;
+        formError.classList.add('visible');
+      }
+
+      function clearError() {
+        formError.textContent = '';
+        formError.classList.remove('visible');
+      }
+
+      categorySection.addEventListener('change', clearError);
 
       var FEEDBACK_EMAIL = 'infobah@qoroshealth.com';
 
       document.getElementById('feedback-form').addEventListener('submit', function (e) {
         e.preventDefault();
-        var msg = document.getElementById('message').value.trim();
-        if (!msg) return;
+        clearError();
+        var msg = messageEl.value.trim();
+        var categories = selectedCategories();
+
+        if (structured) {
+          if (categories.length === 0) {
+            showError('Please select at least one area we can improve.');
+            return;
+          }
+          if (categories.indexOf('Other') !== -1 && !msg) {
+            showError('Please tell us more when you select Other.');
+            messageEl.focus();
+            return;
+          }
+        } else if (!msg) {
+          return;
+        }
+
+        var bodyParts = ['Rating: ' + stars + ' / 5 stars', ''];
+        if (structured && categories.length) {
+          bodyParts.push('Areas to improve:');
+          for (var c = 0; c < categories.length; c++) {
+            bodyParts.push('- ' + categories[c]);
+          }
+          bodyParts.push('');
+        }
+        if (msg) {
+          bodyParts.push('Additional comments:');
+          bodyParts.push(msg);
+        }
+
         var subject = encodeURIComponent('Bay Area Heart feedback (' + stars + ' stars)');
-        var body = encodeURIComponent('Rating: ' + stars + ' / 5 stars\n\n' + msg);
+        var body = encodeURIComponent(bodyParts.join('\n'));
         window.location.href = 'mailto:' + FEEDBACK_EMAIL + '?subject=' + subject + '&body=' + body;
         document.getElementById('form-panel').style.display = 'none';
         document.getElementById('thank-panel').style.display = 'block';
