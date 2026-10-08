@@ -281,28 +281,18 @@
     (function () {
       var params = new URLSearchParams(window.location.search);
       var stars = parseInt(params.get('stars'), 10);
-      if (Number.isNaN(stars) || stars < 1 || stars > 4) stars = 1;
-      var structured = stars <= 3;
+      if (!Number.isNaN(stars) && stars >= 4) {
+        window.location.replace('/bay-area-heart-review/thanks?stars=' + Math.min(stars, 5));
+        return;
+      }
+      if (Number.isNaN(stars) || stars < 1 || stars > 3) stars = 1;
 
       document.getElementById('stars-display').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
       document.getElementById('rating-line').textContent = 'You chose ' + stars + ' out of 5 stars.';
 
       var categorySection = document.getElementById('category-section');
-      var categoryLabel = document.getElementById('category-label');
       var messageEl = document.getElementById('message');
-      var messageLabel = document.getElementById('message-label');
       var formError = document.getElementById('form-error');
-      if (structured) {
-        categoryLabel.style.display = 'block';
-        categorySection.style.display = 'grid';
-        messageLabel.textContent = 'Anything else you’d like us to know?';
-        messageEl.removeAttribute('required');
-      } else {
-        categoryLabel.style.display = 'none';
-        categorySection.style.display = 'none';
-        messageLabel.textContent = 'What could we do better?';
-        messageEl.setAttribute('required', 'required');
-      }
 
       function selectedCategories() {
         var boxes = categorySection.querySelectorAll('input[name="category"]:checked');
@@ -331,28 +321,22 @@
         var msg = messageEl.value.trim();
         var categories = selectedCategories();
 
-        if (structured) {
-          if (categories.length === 0) {
-            showError('Please select at least one area we can improve.');
-            return;
-          }
-          if (categories.indexOf('Other') !== -1 && !msg) {
-            showError('Please tell us more when you select Other.');
-            messageEl.focus();
-            return;
-          }
-        } else if (!msg) {
+        if (categories.length === 0) {
+          showError('Please select at least one area we can improve.');
+          return;
+        }
+        if (categories.indexOf('Other') !== -1 && !msg) {
+          showError('Please tell us more when you select Other.');
+          messageEl.focus();
           return;
         }
 
         var bodyParts = ['Rating: ' + stars + ' / 5 stars', ''];
-        if (structured && categories.length) {
-          bodyParts.push('Areas to improve:');
-          for (var c = 0; c < categories.length; c++) {
-            bodyParts.push('- ' + categories[c]);
-          }
-          bodyParts.push('');
+        bodyParts.push('Areas to improve:');
+        for (var c = 0; c < categories.length; c++) {
+          bodyParts.push('- ' + categories[c]);
         }
+        bodyParts.push('');
         if (msg) {
           bodyParts.push('Additional comments:');
           bodyParts.push(msg);
