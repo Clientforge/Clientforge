@@ -22,6 +22,32 @@ router.get('/g2g-estimate-snapshots', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/tenants', async (req, res, next) => {
+  try {
+    const {
+      businessName,
+      industry,
+      email,
+      password,
+      firstName,
+      lastName,
+      sendWelcomeEmail,
+      sendCredentialsEmail,
+    } = req.body || {};
+    const result = await adminService.createTenantByAdmin({
+      businessName,
+      industry,
+      email,
+      password,
+      firstName,
+      lastName,
+      sendWelcomeEmail: sendWelcomeEmail !== false,
+      sendCredentialsEmail: sendCredentialsEmail !== false,
+    });
+    res.status(201).json(result);
+  } catch (err) { next(err); }
+});
+
 router.get('/tenants', async (req, res, next) => {
   try {
     const { page, limit, search, sortBy, sortOrder } = req.query;

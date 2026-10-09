@@ -161,10 +161,26 @@ const sendTemporaryPasswordEmail = async ({
   tenantName,
   temporaryPassword,
   loginUrl,
+  isNewAccount = false,
 }) => {
   const name = recipientName || 'there';
-  const subject = `Your ClientForge password was reset — ${tenantName}`;
-  const body = `Hi ${name},
+  const subject = isNewAccount
+    ? `Your ClientForge account — ${tenantName}`
+    : `Your ClientForge password was reset — ${tenantName}`;
+  const body = isNewAccount
+    ? `Hi ${name},
+
+Your ClientForge account for ${tenantName} is ready.
+
+Sign-in email: ${toEmail}
+Temporary password: ${temporaryPassword}
+
+Sign in here: ${loginUrl}
+
+Please sign in and keep this password private. Contact us if you did not expect this message.
+
+— The ClientForge.ai Team`
+    : `Hi ${name},
 
 Your ClientForge password for ${tenantName} was reset by our support team.
 

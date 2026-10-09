@@ -34,7 +34,15 @@ const generateTokens = (user) => {
  * Register a new tenant and its first admin user.
  * This is a single atomic transaction — both are created or neither is.
  */
-const registerTenant = async ({ businessName, industry, email, password, firstName, lastName }) => {
+const registerTenant = async ({
+  businessName,
+  industry,
+  email,
+  password,
+  firstName,
+  lastName,
+  sendWelcomeEmail: shouldSendWelcomeEmail = true,
+}) => {
   const client = await db.getClient();
 
   try {
@@ -79,11 +87,13 @@ const registerTenant = async ({ businessName, industry, email, password, firstNa
     const recipientName = user.first_name || user.last_name
       ? [user.first_name, user.last_name].filter(Boolean).join(' ')
       : null;
-    sendWelcomeEmail({
-      tenantName: tenant.name,
-      toEmail: user.email,
-      recipientName,
-    }).catch((err) => console.error('[AUTH] Welcome email failed:', err.message));
+    if (shouldSendWelcomeEmail) {
+      sendWelcomeEmail({
+        tenantName: tenant.name,
+        toEmail: user.email,
+        recipientName,
+      }).catch((err) => console.error('[AUTH] Welcome email failed:', err.message));
+    }
 
     const tokens = generateTokens(user);
 

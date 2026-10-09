@@ -17,6 +17,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import AutomationsPage from './pages/AutomationsPage';
 import PlatformDashboard from './pages/admin/PlatformDashboard';
 import TenantListPage from './pages/admin/TenantListPage';
+import CreateTenantPage from './pages/admin/CreateTenantPage';
 import TenantDetailPage from './pages/admin/TenantDetailPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import PasswordRequestsPage from './pages/admin/PasswordRequestsPage';
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<PlatformDashboard />} />
             <Route path="tenants" element={<TenantListPage />} />
+            <Route path="tenants/new" element={<CreateTenantPage />} />
             <Route path="tenants/:id" element={<TenantDetailPage />} />
             <Route path="password-requests" element={<PasswordRequestsPage />} />
           </Route>

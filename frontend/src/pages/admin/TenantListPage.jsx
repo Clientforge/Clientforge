@@ -33,13 +33,16 @@ export default function TenantListPage() {
     <div className="tenant-list-page">
       <div className="page-header">
         <h1>Businesses</h1>
-        <form className="search-form" onSubmit={handleSearch}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+          <Link to="/admin/tenants/new" className="btn btn-primary btn-sm">Create business</Link>
+          <form className="search-form" onSubmit={handleSearch} style={{ margin: 0 }}>
           <input
             type="text" placeholder="Search by name or industry..."
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="search-input"
           />
-        </form>
+          </form>
+        </div>
       </div>
 
       {loading ? <div className="page-loader">Loading businesses...</div> : (

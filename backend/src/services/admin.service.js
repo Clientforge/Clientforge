@@ -1,6 +1,23 @@
+const crypto = require('crypto');
 const db = require('../db/connection');
 const tenantPhoneService = require('./tenant-phone.service');
-const { sendWelcomeEmail } = require('./email.service');
+const authService = require('./auth.service');
+const { sendWelcomeEmail, sendTemporaryPasswordEmail } = require('./email.service');
+
+function appBaseUrl() {
+  const base = process.env.APP_URL || process.env.PUBLIC_APP_BASE_URL || 'https://app.clientforge-ai.com';
+  return base.replace(/\/$/, '');
+}
+
+function generateTemporaryPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = crypto.randomBytes(14);
+  let out = '';
+  for (let i = 0; i < 14; i += 1) {
+    out += chars[bytes[i] % chars.length];
+  }
+  return out;
+}
 
 const PLATFORM_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -208,4 +225,80 @@ const sendWelcomeEmailToTenant = async (tenantId) => {
   return { sent: result.status === 'sent', to: user.email };
 };
 
-module.exports = { getPlatformStats, getTenantList, getTenantDetail, updateTenantPhone, updateTenantSmsProvider, sendWelcomeEmailToTenant };
+/**
+ * Superadmin: provision tenant + first admin user (works when public register is disabled).
+ */
+const createTenantByAdmin = async ({
+  businessName,
+  industry,
+  email,
+  password,
+  firstName,
+  lastName,
+  sendWelcomeEmail: shouldSendWelcomeEmail = true,
+  sendCredentialsEmail = true,
+}) => {
+  const name = String(businessName || '').trim();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!name) {
+    throw Object.assign(new Error('businessName is required'), { statusCode: 400, isOperational: true });
+  }
+  if (!normalizedEmail) {
+    throw Object.assign(new Error('email is required'), { statusCode: 400, isOperational: true });
+  }
+
+  let plainPassword = password != null ? String(password).trim() : '';
+  const generatedPassword = !plainPassword;
+  if (generatedPassword) {
+    plainPassword = generateTemporaryPassword();
+  }
+  if (plainPassword.length < 8) {
+    throw Object.assign(new Error('Password must be at least 8 characters'), {
+      statusCode: 400,
+      isOperational: true,
+    });
+  }
+
+  const result = await authService.registerTenant({
+    businessName: name,
+    industry: industry != null ? String(industry).trim() || null : null,
+    email: normalizedEmail,
+    password: plainPassword,
+    firstName: firstName != null ? String(firstName).trim() || null : null,
+    lastName: lastName != null ? String(lastName).trim() || null : null,
+    sendWelcomeEmail: shouldSendWelcomeEmail,
+  });
+
+  let credentialsEmailSent = false;
+  if (generatedPassword && sendCredentialsEmail) {
+    const recipientName = [result.user.firstName, result.user.lastName].filter(Boolean).join(' ') || null;
+    const emailResult = await sendTemporaryPasswordEmail({
+      toEmail: result.user.email,
+      recipientName,
+      tenantName: result.tenant.name,
+      temporaryPassword: plainPassword,
+      loginUrl: `${appBaseUrl()}/login`,
+      isNewAccount: true,
+    });
+    credentialsEmailSent = emailResult.status === 'sent';
+  }
+
+  return {
+    tenant: result.tenant,
+    user: result.user,
+    welcomeEmailRequested: shouldSendWelcomeEmail,
+    credentialsEmailSent,
+    /** Shown once when auto-generated and credentials email did not send */
+    temporaryPassword: generatedPassword && !credentialsEmailSent ? plainPassword : undefined,
+  };
+};
+
+module.exports = {
+  getPlatformStats,
+  getTenantList,
+  getTenantDetail,
+  updateTenantPhone,
+  updateTenantSmsProvider,
+  sendWelcomeEmailToTenant,
+  createTenantByAdmin,
+};
