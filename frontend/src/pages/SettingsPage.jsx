@@ -61,6 +61,17 @@ export default function SettingsPage() {
       setError(`Square Appointments: ${decodeURIComponent(reason)}`);
       window.history.replaceState({}, '', window.location.pathname);
     }
+    const ecw = params.get('ecw');
+    if (ecw === 'connected') {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (ecw === 'error') {
+      const reason = params.get('reason') || 'Connection failed';
+      setError(`eClinicalWorks: ${decodeURIComponent(reason)}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const save = async (payload) => {
@@ -790,10 +801,18 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
   const [optimantraCheckoutAutomations, setOptimantraCheckoutAutomations] = useState(
     !!settings.integration?.optimantraCheckoutAutomations,
   );
+  const [ecwCheckoutAutomations, setEcwCheckoutAutomations] = useState(
+    !!settings.integration?.ecwCheckoutAutomations,
+  );
   useEffect(() => {
     setOptimantraSecret(settings.integration?.optimantraWebhookSecret || '');
     setOptimantraCheckoutAutomations(!!settings.integration?.optimantraCheckoutAutomations);
-  }, [settings.integration?.optimantraWebhookSecret, settings.integration?.optimantraCheckoutAutomations]);
+    setEcwCheckoutAutomations(!!settings.integration?.ecwCheckoutAutomations);
+  }, [
+    settings.integration?.optimantraWebhookSecret,
+    settings.integration?.optimantraCheckoutAutomations,
+    settings.integration?.ecwCheckoutAutomations,
+  ]);
 
   const apiKey = settings.integration?.apiKey;
   const calendlyWebhookUrl = settings.integration?.calendlyWebhookUrl || '';
@@ -984,6 +1003,17 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
           {saving ? 'Saving...' : 'Save OptiMantra Config'}
         </button>
       </form>
+
+      <hr className="settings-divider" />
+
+      <EcwSection
+        settings={settings}
+        onReload={onReload}
+        ecwCheckoutAutomations={ecwCheckoutAutomations}
+        setEcwCheckoutAutomations={setEcwCheckoutAutomations}
+        onSaveCheckoutAutomations={() => onSave({ integration: { ecwCheckoutAutomations } })}
+        saving={saving}
+      />
 
       <hr className="settings-divider" />
 
@@ -1346,6 +1376,170 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
           </button>
         </form>
       )}
+
+      {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function EcwSection({
+  settings,
+  onReload,
+  ecwCheckoutAutomations,
+  setEcwCheckoutAutomations,
+  onSaveCheckoutAutomations,
+  saving,
+}) {
+  const ecw = settings.integration?.ecw || {};
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const [fhirBaseUrl, setFhirBaseUrl] = useState(ecw.fhirBaseUrl || '');
+  const [pollEnabled, setPollEnabled] = useState(ecw.pollEnabled !== false);
+
+  useEffect(() => {
+    setFhirBaseUrl(ecw.fhirBaseUrl || '');
+    setPollEnabled(ecw.pollEnabled !== false);
+  }, [ecw.fhirBaseUrl, ecw.pollEnabled]);
+
+  const connect = async () => {
+    setBusy('connect');
+    setMsg('');
+    try {
+      const body = fhirBaseUrl.trim() ? { fhirBaseUrl: fhirBaseUrl.trim() } : {};
+      const { url } = await api.post('/integrations/ecw/connect', body);
+      window.location.href = url;
+    } catch (err) {
+      setMsg(err.message);
+      setBusy('');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect eClinicalWorks? Encounter polling will stop.')) return;
+    setBusy('disconnect');
+    setMsg('');
+    try {
+      await api.post('/integrations/ecw/disconnect');
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const savePoll = async (e) => {
+    e.preventDefault();
+    setBusy('poll');
+    setMsg('');
+    try {
+      await api.put('/integrations/ecw', { pollEnabled });
+      await onReload();
+      setMsg('eClinicalWorks settings saved');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  if (!ecw.configured) {
+    return (
+      <div className="integration-block">
+        <h3>eClinicalWorks (FHIR)</h3>
+        <p className="settings-desc muted">
+          Server not configured. Set <code>ECW_CLIENT_ID</code>, <code>ECW_CLIENT_SECRET</code>, and{' '}
+          <code>ECW_FHIR_BASE_URL</code> on the backend (optional if you enter FHIR base below).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="integration-block">
+      <h3>eClinicalWorks (FHIR)</h3>
+      <p className="settings-desc">
+        Connect eClinicalWorks to detect completed visits and trigger post-visit review requests and follow-up
+        messaging. ClientForge polls for finished Encounters every few minutes.
+      </p>
+
+      {ecw.redirectUri && (
+        <div className="field" style={{ marginTop: 12 }}>
+          <label>OAuth redirect URL (register in eCW developer portal)</label>
+          <code className="key-value" style={{ fontSize: 12, display: 'block' }}>{ecw.redirectUri}</code>
+        </div>
+      )}
+
+      {!ecw.connected ? (
+        <>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>FHIR base URL (if not set on server)</label>
+            <input
+              value={fhirBaseUrl}
+              onChange={(e) => setFhirBaseUrl(e.target.value)}
+              placeholder="https://fhir4.eclinicalworks.com/fhir/r4/..."
+            />
+            <span className="field-hint">Practice-specific FHIR endpoint from eCW / your implementation guide.</span>
+          </div>
+          <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={connect} disabled={busy === 'connect'}>
+            {busy === 'connect' ? 'Redirecting…' : 'Connect eClinicalWorks'}
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>Connected</label>
+            <p style={{ margin: 0, fontSize: 14 }}>
+              {ecw.fhirBaseUrl || 'FHIR connected'}
+              {ecw.lastEncounterPollAt && (
+                <span className="field-hint" style={{ display: 'block' }}>
+                  Last poll: {new Date(ecw.lastEncounterPollAt).toLocaleString()}
+                </span>
+              )}
+              {ecw.lastPollError && (
+                <span className="field-hint" style={{ display: 'block', color: 'var(--danger, #c0392b)' }}>
+                  Last poll error: {ecw.lastPollError}
+                </span>
+              )}
+            </p>
+          </div>
+
+          <form onSubmit={savePoll} style={{ marginTop: 12 }}>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={pollEnabled} onChange={(e) => setPollEnabled(e.target.checked)} />
+              Poll eClinicalWorks for completed visits
+            </label>
+            <div className="modal-actions" style={{ marginTop: 12 }}>
+              <button type="submit" className="btn-primary" disabled={busy === 'poll'}>
+                {busy === 'poll' ? 'Saving…' : 'Save poll settings'}
+              </button>
+              <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={busy === 'disconnect'}>
+                {busy === 'disconnect' ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSaveCheckoutAutomations();
+        }}
+        style={{ marginTop: 20 }}
+      >
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={ecwCheckoutAutomations}
+            onChange={(e) => setEcwCheckoutAutomations(e.target.checked)}
+          />
+          Enable post-visit automations from eClinicalWorks checkouts (review requests, follow-up SMS)
+        </label>
+        <button type="submit" className="btn-primary" style={{ marginTop: 12 }} disabled={saving}>
+          {saving ? 'Saving…' : 'Save automation setting'}
+        </button>
+      </form>
 
       {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
     </div>

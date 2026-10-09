@@ -28,6 +28,7 @@ async function main() {
   }
   console.log('\n  Login URL: https://app.clientforge-ai.com/admin/login');
   console.log('  (Passwords are hashed in DB — not shown here.)');
+  console.log('  Reset lockout: SUPERADMIN_EMAIL=… SUPERADMIN_NEW_PASSWORD=… node scripts/resetSuperadminPassword.js');
   console.log('  Dev seed from migration 010: admin@clientforge.ai / admin123 (if never changed)\n');
 
   const g2gTenantId = process.env.G2G_SELL_INTENT_TENANT_ID?.trim() || PLATFORM_TENANT;

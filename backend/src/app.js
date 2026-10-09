@@ -88,6 +88,7 @@ app.use('/api/v1/voice',   require('./routes/voice.routes'));
 
 const googleCalendarService = require('./services/googleCalendar.service');
 const squareService = require('./services/square.service');
+const ecwService = require('./services/ecw.service');
 const instagramService = require('./services/instagram.service');
 app.get('/api/v1/integrations/google-calendar/callback', async (req, res) => {
   const { code, state, error } = req.query;
@@ -125,6 +126,25 @@ app.get('/api/v1/integrations/square/callback', async (req, res) => {
   }
 });
 
+app.get('/api/v1/integrations/ecw/oauth/callback', async (req, res) => {
+  const { code, state, error, error_description: errorDescription } = req.query;
+  if (error) {
+    return res.redirect(ecwService.appSettingsUrl(
+      `tab=integration&ecw=error&reason=${encodeURIComponent(errorDescription || error)}`,
+    ));
+  }
+  try {
+    if (!code || !state) throw new Error('Missing OAuth code or state');
+    await ecwService.handleOAuthCallback(code, state);
+    return res.redirect(ecwService.appSettingsUrl('tab=integration&ecw=connected'));
+  } catch (err) {
+    console.error('[ECW] OAuth callback failed:', err.message);
+    return res.redirect(
+      ecwService.appSettingsUrl(`tab=integration&ecw=error&reason=${encodeURIComponent(err.message)}`),
+    );
+  }
+});
+
 app.get('/api/v1/integrations/instagram/callback', async (req, res) => {
   const { code, state, error, error_description: errorDescription } = req.query;
   if (error) {
@@ -153,6 +173,7 @@ app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settin
 app.use('/api/v1/integrations/google-calendar', authenticate, tenantScope, require('./routes/googleCalendar.routes'));
 app.use('/api/v1/integrations/square', authenticate, tenantScope, require('./routes/square.routes'));
 app.use('/api/v1/integrations/shopmonkey', authenticate, tenantScope, require('./routes/shopmonkey.routes'));
+app.use('/api/v1/integrations/ecw', authenticate, tenantScope, require('./routes/ecw.routes'));
 app.use('/api/v1/integrations/instagram', authenticate, tenantScope, require('./routes/instagram.routes'));
 app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));
 app.use('/api/v1/conversations', authenticate, tenantScope, require('./routes/conversations.routes'));

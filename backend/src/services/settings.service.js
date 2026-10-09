@@ -6,6 +6,7 @@ const smsProviderService = require('./sms-provider.service');
 const googleCalendarService = require('./googleCalendar.service');
 const squareService = require('./square.service');
 const shopmonkeyService = require('./shopmonkey.service');
+const ecwService = require('./ecw.service');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
 const instagramService = require('./instagram.service');
 const { normalizePhone } = require('./lead.service');
@@ -36,6 +37,7 @@ const getSettings = async (tenantId) => {
             email_from_name, email_from_address, calendly_webhook_signing_key,
             optimantra_webhook_secret,
             optimantra_checkout_automations,
+            ecw_checkout_automations,
             ai_auto_reply_enabled, sms_keyword_opt_in_enabled, sms_keyword_opt_in_phrases,
             sms_keyword_welcome_message, ui_mode, automation_test_mode, automation_test_phone,
             automation_test_email, automation_live_at, created_at
@@ -87,6 +89,13 @@ const getSettings = async (tenantId) => {
     // ignore
   }
 
+  let ecw = { connected: false, configured: ecwService.isConfigured() };
+  try {
+    ecw = (await ecwService.getStatus(tenantId)) || ecw;
+  } catch {
+    // ignore
+  }
+
   return {
     business: {
       name: t.name,
@@ -119,6 +128,8 @@ const getSettings = async (tenantId) => {
       optimantraWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/optimantra/${tenantId}`,
       optimantraSuperbillWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/webhook/optimantra/${tenantId}/superbill`,
       optimantraCheckoutAutomations: !!t.optimantra_checkout_automations,
+      ecwCheckoutAutomations: !!t.ecw_checkout_automations,
+      ecw,
       voiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/inbound`,
       telnyxVoiceWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/voice/telnyx`,
       smsInboundWebhookUrl: `${process.env.BASE_URL || 'https://api.clientforge.ai'}/api/v1/sms/inbound`,
@@ -226,6 +237,10 @@ const updateSettings = async (tenantId, updates) => {
     if (updates.integration.optimantraCheckoutAutomations !== undefined) {
       sets.push(`optimantra_checkout_automations = $${idx++}`);
       params.push(!!updates.integration.optimantraCheckoutAutomations);
+    }
+    if (updates.integration.ecwCheckoutAutomations !== undefined) {
+      sets.push(`ecw_checkout_automations = $${idx++}`);
+      params.push(!!updates.integration.ecwCheckoutAutomations);
     }
   }
 

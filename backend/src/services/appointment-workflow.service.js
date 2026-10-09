@@ -142,7 +142,7 @@ const dispatchPostVisitWorkflows = async (tenantId, {
   const [tenantRow, contactRow, appointmentRow] = await Promise.all([
     db.query(
       `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
-              appointment_automation_config, optimantra_checkout_automations,
+              appointment_automation_config, optimantra_checkout_automations, ecw_checkout_automations,
               service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,
       [tenantId],
@@ -168,8 +168,15 @@ const dispatchPostVisitWorkflows = async (tenantId, {
     return { jobsScheduled: 0, skipped: 'checkout_mode_disabled' };
   }
 
-  if (!requireOptimantraCheckout && !isShopmonkeyAutoShopMode(appointment)) {
-    return { jobsScheduled: 0, skipped: 'not_shopmonkey_appointment' };
+  const isEcwCheckoutMode = appointment?.provider === 'ecw';
+
+  if (!requireOptimantraCheckout && !isShopmonkeyAutoShopMode(appointment) && !isEcwCheckoutMode) {
+    return { jobsScheduled: 0, skipped: 'unsupported_post_visit_provider' };
+  }
+
+  if (isEcwCheckoutMode && !tenant.ecw_checkout_automations) {
+    console.log('[APPT-WORKFLOW] eCW checkout workflows skipped — ecw_checkout_automations off');
+    return { jobsScheduled: 0, skipped: 'ecw_checkout_disabled' };
   }
 
   if (contact.unsubscribed) {

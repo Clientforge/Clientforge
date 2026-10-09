@@ -10,6 +10,7 @@ const googleCalendarWorker = require('./workers/googleCalendar.worker');
 const { isBookingEmailIngestEnabled } = require('./config/bookingEmailIngest');
 const birthdayWorker = require('./workers/birthday.worker');
 const noShowWorker = require('./workers/no-show.worker');
+const ecwEncounterWorker = require('./workers/ecwEncounter.worker');
 const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
 const startServer = async () => {
@@ -45,6 +46,7 @@ const startServer = async () => {
     googleCalendarWorker.startWorker();
     birthdayWorker.startWorker();
     noShowWorker.startWorker();
+    ecwEncounterWorker.startWorker();
   });
 };
 
