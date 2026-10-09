@@ -67,6 +67,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+// eClinicalWorks Backend Services — public JWKS (register URL in eCW dev portal)
+app.get('/.well-known/ecw-jwks.json', (req, res) => {
+  const ecwJwks = require('./utils/ecwJwks');
+  const jwks = ecwJwks.buildJwksDocument();
+  if (!jwks) {
+    return res.status(503).json({ error: 'JWKS not configured (set ECW_PRIVATE_KEY on server)' });
+  }
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.type('application/json').send(JSON.stringify(jwks));
+});
+
 // Public, unauthenticated helpers (CORS-friendly for static demo sites)
 app.use('/api/v1/public', require('./routes/public.routes'));
 

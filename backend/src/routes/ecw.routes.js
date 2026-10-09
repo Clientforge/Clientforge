@@ -13,6 +13,11 @@ router.get('/status', async (req, res, next) => {
 
 router.post('/connect', async (req, res, next) => {
   try {
+    if (ecwService.authMode() === 'backend') {
+      const { fhirBaseUrl, ecwPatientId } = req.body || {};
+      const status = await ecwService.connectBackend(req.tenantId, { fhirBaseUrl, ecwPatientId });
+      return res.json(status);
+    }
     const { fhirBaseUrl } = req.body || {};
     const url = ecwService.buildConnectUrl(req.tenantId, { fhirBaseUrl });
     res.json({ url });

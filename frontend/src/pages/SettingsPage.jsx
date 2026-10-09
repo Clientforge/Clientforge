@@ -1393,19 +1393,31 @@ function EcwSection({
   const ecw = settings.integration?.ecw || {};
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const backendMode = ecw.authMode === 'backend' || ecw.backendConfigured;
   const [fhirBaseUrl, setFhirBaseUrl] = useState(ecw.fhirBaseUrl || '');
+  const [ecwPatientId, setEcwPatientId] = useState(ecw.ecwPatientId || '');
   const [pollEnabled, setPollEnabled] = useState(ecw.pollEnabled !== false);
 
   useEffect(() => {
     setFhirBaseUrl(ecw.fhirBaseUrl || '');
+    setEcwPatientId(ecw.ecwPatientId || '');
     setPollEnabled(ecw.pollEnabled !== false);
-  }, [ecw.fhirBaseUrl, ecw.pollEnabled]);
+  }, [ecw.fhirBaseUrl, ecw.ecwPatientId, ecw.pollEnabled]);
 
   const connect = async () => {
     setBusy('connect');
     setMsg('');
     try {
-      const body = fhirBaseUrl.trim() ? { fhirBaseUrl: fhirBaseUrl.trim() } : {};
+      const body = {};
+      if (fhirBaseUrl.trim()) body.fhirBaseUrl = fhirBaseUrl.trim();
+      if (backendMode) {
+        if (ecwPatientId.trim()) body.ecwPatientId = ecwPatientId.trim();
+        await api.post('/integrations/ecw/connect', body);
+        await onReload();
+        setMsg('eClinicalWorks connected (backend auth).');
+        setBusy('');
+        return;
+      }
       const { url } = await api.post('/integrations/ecw/connect', body);
       window.location.href = url;
     } catch (err) {
@@ -1448,8 +1460,9 @@ function EcwSection({
       <div className="integration-block">
         <h3>eClinicalWorks (FHIR)</h3>
         <p className="settings-desc muted">
-          Server not configured. Set <code>ECW_CLIENT_ID</code>, <code>ECW_CLIENT_SECRET</code>, and{' '}
-          <code>ECW_FHIR_BASE_URL</code> on the backend (optional if you enter FHIR base below).
+          Server not configured. For Backend Single Patient: set <code>ECW_CLIENT_ID</code>,{' '}
+          <code>ECW_PRIVATE_KEY</code>, <code>ECW_JWKS_KID</code>, and <code>BASE_URL</code> on the backend.
+          For legacy OAuth: <code>ECW_CLIENT_SECRET</code> instead of the private key.
         </p>
       </div>
     );
@@ -1461,7 +1474,21 @@ function EcwSection({
       <p className="settings-desc">
         Connect eClinicalWorks to detect completed visits and trigger post-visit review requests and follow-up
         messaging. ClientForge polls for finished Encounters every few minutes.
+        {backendMode && (
+          <>
+            {' '}
+            Backend Single Patient: one eCW patient ID per connection (repeat for additional patients when eCW
+            activates them).
+          </>
+        )}
       </p>
+
+      {ecw.jwksUrl && backendMode && (
+        <div className="field" style={{ marginTop: 12 }}>
+          <label>JWK public key URL (register in eCW developer portal)</label>
+          <code className="key-value" style={{ fontSize: 12, display: 'block' }}>{ecw.jwksUrl}</code>
+        </div>
+      )}
 
       {ecw.redirectUri && (
         <div className="field" style={{ marginTop: 12 }}>
@@ -1479,10 +1506,23 @@ function EcwSection({
               onChange={(e) => setFhirBaseUrl(e.target.value)}
               placeholder="https://fhir4.eclinicalworks.com/fhir/r4/..."
             />
-            <span className="field-hint">Practice-specific FHIR endpoint from eCW / your implementation guide.</span>
+            <span className="field-hint">Practice issuer URL from eCW dev portal (Add Customer).</span>
           </div>
+          {backendMode && (
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>eCW Patient ID</label>
+              <input
+                value={ecwPatientId}
+                onChange={(e) => setEcwPatientId(e.target.value)}
+                placeholder="UUID or id from eCW patient activation"
+              />
+              <span className="field-hint">Required for Backend Single Patient API.</span>
+            </div>
+          )}
           <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={connect} disabled={busy === 'connect'}>
-            {busy === 'connect' ? 'Redirecting…' : 'Connect eClinicalWorks'}
+            {busy === 'connect'
+              ? (backendMode ? 'Connecting…' : 'Redirecting…')
+              : (backendMode ? 'Connect eClinicalWorks (backend)' : 'Connect eClinicalWorks')}
           </button>
         </>
       ) : (
@@ -1491,6 +1531,11 @@ function EcwSection({
             <label>Connected</label>
             <p style={{ margin: 0, fontSize: 14 }}>
               {ecw.fhirBaseUrl || 'FHIR connected'}
+              {ecw.ecwPatientId && (
+                <span className="field-hint" style={{ display: 'block' }}>
+                  Patient: {ecw.ecwPatientId}
+                </span>
+              )}
               {ecw.lastEncounterPollAt && (
                 <span className="field-hint" style={{ display: 'block' }}>
                   Last poll: {new Date(ecw.lastEncounterPollAt).toLocaleString()}

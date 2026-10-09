@@ -92,10 +92,10 @@ async function runPollCycle() {
 
 function startWorker() {
   if (!ecwService.isConfigured()) {
-    console.log('[ECW] Encounter worker not started — set ECW_CLIENT_ID and ECW_CLIENT_SECRET');
+    console.log('[ECW] Encounter worker not started — configure ECW_CLIENT_ID + ECW_PRIVATE_KEY (backend) or ECW_CLIENT_SECRET (OAuth)');
     return;
   }
-  console.log(`[ECW] Encounter worker started (poll every ${POLL_INTERVAL_MS / 1000}s)`);
+  console.log(`[ECW] Encounter worker started (auth=${ecwService.authMode()}, poll every ${POLL_INTERVAL_MS / 1000}s)`);
   runPollCycle().catch((err) => console.error('[ECW] Initial poll error:', err.message));
   setInterval(() => {
     runPollCycle().catch((err) => console.error('[ECW] Poll cycle error:', err.message));

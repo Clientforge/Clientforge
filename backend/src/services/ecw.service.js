@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const db = require('../db/connection');
 const { encrypt, decrypt } = require('../utils/tokenCrypto');
+const ecwJwks = require('../utils/ecwJwks');
 
 const DEFAULT_SCOPES = [
   'openid',
@@ -11,8 +12,32 @@ const DEFAULT_SCOPES = [
   'patient/Patient.read',
 ].join(' ');
 
-function isConfigured() {
+/** Backend Single Patient — no system/Group.read (bulk only). */
+const DEFAULT_BACKEND_SCOPES = [
+  'system/Encounter.read',
+  'system/Patient.read',
+].join(' ');
+
+const tokenUrlMetadataCache = new Map();
+
+function authMode() {
+  const forced = (process.env.ECW_AUTH_MODE || '').trim().toLowerCase();
+  if (forced === 'backend' || forced === 'oauth') return forced;
+  if (ecwJwks.isJwksConfigured() && process.env.ECW_CLIENT_ID) return 'backend';
+  if (process.env.ECW_CLIENT_SECRET) return 'oauth';
+  return ecwJwks.isJwksConfigured() ? 'backend' : 'oauth';
+}
+
+function isOAuthConfigured() {
   return !!(process.env.ECW_CLIENT_ID && process.env.ECW_CLIENT_SECRET);
+}
+
+function isBackendConfigured() {
+  return !!(process.env.ECW_CLIENT_ID && ecwJwks.isJwksConfigured());
+}
+
+function isConfigured() {
+  return isOAuthConfigured() || isBackendConfigured();
 }
 
 function authorizeUrl() {
@@ -25,8 +50,49 @@ function authorizeUrl() {
 function tokenUrl() {
   return (
     process.env.ECW_TOKEN_URL
-    || 'https://oauthserver.eclinicalworks.com/oauth2/v1/token'
+    || 'https://oauthserver.eclinicalworks.com/oauth/oauth2/token'
   );
+}
+
+function backendScopes() {
+  return (process.env.ECW_BACKEND_SCOPES || DEFAULT_BACKEND_SCOPES).trim();
+}
+
+async function resolveTokenUrl(fhirBaseUrl) {
+  const override = (process.env.ECW_TOKEN_URL || '').trim();
+  if (override) return override;
+
+  const issuer = (fhirBaseUrl || defaultFhirBaseUrl() || '').trim().replace(/\/$/, '');
+  if (!issuer) return tokenUrl();
+
+  const cached = tokenUrlMetadataCache.get(issuer);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.url;
+  }
+
+  try {
+    const metaUrl = `${issuer}/metadata?_format=json`;
+    const res = await fetch(metaUrl, {
+      headers: { Accept: 'application/fhir+json, application/json' },
+    });
+    if (!res.ok) throw new Error(`metadata ${res.status}`);
+    const data = await res.json();
+    const rest = Array.isArray(data.rest) ? data.rest[0] : null;
+    const extensions = rest?.security?.extension || [];
+    const oauthExt = extensions.find(
+      (e) => e.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
+    );
+    const tokenExt = oauthExt?.extension?.find((e) => e.url === 'token');
+    const discovered = tokenExt?.valueUri;
+    if (discovered) {
+      tokenUrlMetadataCache.set(issuer, { url: discovered, expiresAt: Date.now() + 60 * 60 * 1000 });
+      return discovered;
+    }
+  } catch (err) {
+    console.warn('[ECW] Token URL metadata discovery failed:', err.message);
+  }
+
+  return tokenUrl();
 }
 
 function redirectUri() {
@@ -45,18 +111,38 @@ function defaultFhirBaseUrl() {
   return (process.env.ECW_FHIR_BASE_URL || '').trim().replace(/\/$/, '') || null;
 }
 
+function connectionUsesBackend(row) {
+  if (!row) return authMode() === 'backend';
+  if (row.refresh_token_enc) return false;
+  if (authMode() === 'oauth' && row.access_token_enc && !row.ecw_patient_id) return false;
+  return authMode() === 'backend' || !!(row.ecw_patient_id && row.fhir_base_url && isBackendConfigured());
+}
+
+function isConnectionActive(row) {
+  if (!row) return false;
+  if (row.refresh_token_enc || row.access_token_enc) return true;
+  return connectionUsesBackend(row) && !!(row.fhir_base_url && row.ecw_patient_id);
+}
+
 function formatConnection(row, tenantFlags = {}) {
+  const mode = authMode();
   if (!row) {
     return {
       connected: false,
       configured: isConfigured(),
+      authMode: mode,
+      backendConfigured: isBackendConfigured(),
+      jwksUrl: ecwJwks.jwksPublicUrl(),
       pollEnabled: false,
       checkoutAutomations: !!tenantFlags.ecwCheckoutAutomations,
     };
   }
   return {
-    connected: !!(row.refresh_token_enc || row.access_token_enc),
+    connected: isConnectionActive(row),
     configured: isConfigured(),
+    authMode: connectionUsesBackend(row) ? 'backend' : mode,
+    backendConfigured: isBackendConfigured(),
+    jwksUrl: ecwJwks.jwksPublicUrl(),
     fhirBaseUrl: row.fhir_base_url || null,
     ecwPatientId: row.ecw_patient_id || null,
     pollEnabled: row.poll_enabled !== false,
@@ -64,7 +150,7 @@ function formatConnection(row, tenantFlags = {}) {
     lastPollError: row.last_poll_error || null,
     connectedAt: row.connected_at || null,
     checkoutAutomations: !!tenantFlags.ecwCheckoutAutomations,
-    redirectUri: redirectUri(),
+    redirectUri: mode === 'oauth' ? redirectUri() : null,
   };
 }
 
@@ -143,6 +229,31 @@ async function exchangeOAuthCode(code) {
   return data;
 }
 
+async function fetchBackendAccessToken(fhirBaseUrl) {
+  const clientId = process.env.ECW_CLIENT_ID;
+  const aud = await resolveTokenUrl(fhirBaseUrl);
+  const clientAssertion = ecwJwks.signClientAssertion({ clientId, tokenUrl: aud });
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    scope: backendScopes(),
+    client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+    client_assertion: clientAssertion,
+  });
+  const res = await fetch(aud, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw Object.assign(
+      new Error(data.error_description || data.error || 'eCW backend token request failed'),
+      { statusCode: res.status },
+    );
+  }
+  return data;
+}
+
 async function refreshAccessToken(refreshToken) {
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
@@ -200,21 +311,35 @@ async function getValidAccessToken(connection) {
   if (!connection) {
     throw Object.assign(new Error('eClinicalWorks not connected for tenant'), { statusCode: 400 });
   }
-  let accessToken = decrypt(connection.access_token_enc);
-  const refreshToken = decrypt(connection.refresh_token_enc);
+
+  const useBackend = connectionUsesBackend(connection);
+  let accessToken = connection.access_token_enc ? decrypt(connection.access_token_enc) : null;
+  const refreshToken = connection.refresh_token_enc ? decrypt(connection.refresh_token_enc) : null;
   const expiresAt = connection.token_expires_at ? new Date(connection.token_expires_at) : null;
   const needsRefresh = !accessToken || (expiresAt && expiresAt.getTime() < Date.now() + 60_000);
 
   if (needsRefresh) {
-    if (!refreshToken) {
+    if (useBackend) {
+      const fhirBase = connection.fhir_base_url || defaultFhirBaseUrl();
+      if (!fhirBase) {
+        throw Object.assign(new Error('FHIR base URL not configured for tenant'), { statusCode: 400 });
+      }
+      const refreshed = await fetchBackendAccessToken(fhirBase);
+      await saveTokens(connection.tenant_id, refreshed, {
+        fhirBaseUrl: connection.fhir_base_url,
+        ecwPatientId: connection.ecw_patient_id,
+      });
+      accessToken = refreshed.access_token;
+    } else if (refreshToken) {
+      const refreshed = await refreshAccessToken(refreshToken);
+      await saveTokens(connection.tenant_id, refreshed, {
+        fhirBaseUrl: connection.fhir_base_url,
+        ecwPatientId: connection.ecw_patient_id,
+      });
+      accessToken = refreshed.access_token;
+    } else {
       throw Object.assign(new Error('eCW access token expired and no refresh token'), { statusCode: 401 });
     }
-    const refreshed = await refreshAccessToken(refreshToken);
-    await saveTokens(connection.tenant_id, refreshed, {
-      fhirBaseUrl: connection.fhir_base_url,
-      ecwPatientId: connection.ecw_patient_id,
-    });
-    accessToken = refreshed.access_token;
   }
 
   return accessToken;
@@ -260,10 +385,59 @@ async function searchFinishedEncountersSince(connection, sinceIso) {
     _sort: '-_lastUpdated',
     _count: '50',
   });
+  if (connection.ecw_patient_id) {
+    const pid = String(connection.ecw_patient_id).trim();
+    const patientRef = pid.startsWith('Patient/') ? pid : `Patient/${pid}`;
+    params.set('patient', patientRef);
+  }
   if (sinceIso) {
     params.set('_lastUpdated', `gt${sinceIso}`);
   }
   return fhirGet(connection, `Encounter?${params.toString()}`);
+}
+
+async function connectBackend(tenantId, { fhirBaseUrl, ecwPatientId, testToken = true } = {}) {
+  if (!isBackendConfigured()) {
+    throw Object.assign(
+      new Error('eCW Backend auth is not configured (ECW_CLIENT_ID + ECW_PRIVATE_KEY)'),
+      { statusCode: 503, isOperational: true },
+    );
+  }
+  const aud = (fhirBaseUrl || defaultFhirBaseUrl() || '').trim().replace(/\/$/, '');
+  if (!aud) {
+    throw Object.assign(
+      new Error('FHIR base URL is required (practice issuer URL from eCW dev portal).'),
+      { statusCode: 400, isOperational: true },
+    );
+  }
+  const patientId = (ecwPatientId || '').trim();
+  if (!patientId) {
+    throw Object.assign(
+      new Error('eCW Patient ID is required for Backend Single Patient API.'),
+      { statusCode: 400, isOperational: true },
+    );
+  }
+
+  if (testToken) {
+    const tokenData = await fetchBackendAccessToken(aud);
+    await saveTokens(tenantId, tokenData, { fhirBaseUrl: aud, ecwPatientId: patientId });
+  } else {
+    await db.query(
+      `INSERT INTO tenant_ecw_connections
+         (tenant_id, fhir_base_url, ecw_patient_id, poll_enabled, connected_at, updated_at)
+       VALUES ($1, $2, $3, true, NOW(), NOW())
+       ON CONFLICT (tenant_id) DO UPDATE SET
+         fhir_base_url = EXCLUDED.fhir_base_url,
+         ecw_patient_id = EXCLUDED.ecw_patient_id,
+         refresh_token_enc = NULL,
+         poll_enabled = true,
+         connected_at = COALESCE(tenant_ecw_connections.connected_at, NOW()),
+         updated_at = NOW()`,
+      [tenantId, aud, patientId],
+    );
+  }
+
+  return getStatus(tenantId);
 }
 
 async function handleOAuthCallback(code, state) {
@@ -321,16 +495,27 @@ async function listPollableConnections() {
      JOIN tenants t ON t.id = c.tenant_id
      WHERE c.poll_enabled = true
        AND t.active = true
-       AND (c.refresh_token_enc IS NOT NULL OR c.access_token_enc IS NOT NULL)`,
+       AND (
+         c.refresh_token_enc IS NOT NULL
+         OR c.access_token_enc IS NOT NULL
+         OR (c.fhir_base_url IS NOT NULL AND c.ecw_patient_id IS NOT NULL)
+       )`,
   );
-  return result.rows;
+  if (!isBackendConfigured()) {
+    return result.rows.filter((row) => row.refresh_token_enc || row.access_token_enc);
+  }
+  return result.rows.filter((row) => isConnectionActive(row));
 }
 
 module.exports = {
+  authMode,
   isConfigured,
+  isBackendConfigured,
+  isOAuthConfigured,
   redirectUri,
   appSettingsUrl,
   buildConnectUrl,
+  connectBackend,
   handleOAuthCallback,
   getStatus,
   disconnect,
@@ -341,4 +526,6 @@ module.exports = {
   updatePollCursor,
   listPollableConnections,
   fhirGet,
+  fetchBackendAccessToken,
+  resolveTokenUrl,
 };
