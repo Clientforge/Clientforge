@@ -32,7 +32,7 @@ console.log(`ECW_JWKS_KID=${kid}`);
 console.log('ECW_JWT_ALG=RS384');
 console.log('ECW_PRIVATE_KEY="(paste private PEM; use \\n for newlines in Render)"');
 console.log('\nAfter deploy, register in eCW portal:');
-console.log('  https://app.clientforge-ai.com/.well-known/ecw-jwks.json');
+console.log('  https://app.clientforge-ai.com/api/v1/public/ecw-jwks');
 console.log('(or set ECW_JWKS_URL if you use a custom path)\n');
 
 if (!outDir) {

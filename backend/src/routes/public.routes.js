@@ -39,12 +39,17 @@ const {
   RevenueAssessmentError,
 } = require('../services/revenueAssessment.service');
 
+const ecwJwks = require('../utils/ecwJwks');
+
 const router = express.Router();
 
 /** SPA: whether /register is available (production defaults to false). */
 router.get('/auth-config', (req, res) => {
   res.json({ registrationEnabled: config.allowPublicRegister });
 });
+
+/** eClinicalWorks Backend Services — public JWKS (register URL in eCW dev portal). */
+router.get('/ecw-jwks', (req, res) => ecwJwks.sendJwksHttpResponse(res));
 
 const g2gPhotoUpload = multer({
   storage: multer.memoryStorage(),

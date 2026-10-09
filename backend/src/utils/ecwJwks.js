@@ -48,7 +48,16 @@ function jwksPublicUrl() {
   if (explicit) return explicit.replace(/\/$/, '');
   const base = (process.env.BASE_URL || '').trim().replace(/\/$/, '');
   if (!base) return null;
-  return `${base}/.well-known/ecw-jwks.json`;
+  return `${base}/api/v1/public/ecw-jwks`;
+}
+
+function sendJwksHttpResponse(res) {
+  const jwks = buildJwksDocument();
+  if (!jwks) {
+    return res.status(503).json({ error: 'JWKS not configured (set ECW_PRIVATE_KEY on server)' });
+  }
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  return res.type('application/json').send(JSON.stringify(jwks));
 }
 
 function buildJwksDocument() {
@@ -120,6 +129,7 @@ module.exports = {
   isJwksConfigured,
   jwksPublicUrl,
   keyId,
+  sendJwksHttpResponse,
   signClientAssertion,
   signingAlg,
 };
