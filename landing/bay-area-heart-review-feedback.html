@@ -307,7 +307,7 @@
 
       categorySection.addEventListener('change', clearError);
 
-      var FEEDBACK_EMAIL = 'infobah@qoroshealth.com';
+      var submitBtn = document.querySelector('#feedback-form .btn');
 
       document.getElementById('feedback-form').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -320,22 +320,34 @@
           return;
         }
 
-        var bodyParts = ['Rating: ' + stars + ' / 5 stars', ''];
-        bodyParts.push('Areas to improve:');
-        for (var c = 0; c < categories.length; c++) {
-          bodyParts.push('- ' + categories[c]);
-        }
-        bodyParts.push('');
-        if (msg) {
-          bodyParts.push('Additional comments:');
-          bodyParts.push(msg);
-        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending…';
 
-        var subject = encodeURIComponent('Bay Area Heart feedback (' + stars + ' stars)');
-        var body = encodeURIComponent(bodyParts.join('\n'));
-        window.location.href = 'mailto:' + FEEDBACK_EMAIL + '?subject=' + subject + '&body=' + body;
-        document.getElementById('form-panel').style.display = 'none';
-        document.getElementById('thank-panel').style.display = 'block';
+        fetch('/api/v1/public/patient-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reviewFlow: 'bay-area-heart-review',
+            stars: stars,
+            categories: categories,
+            comment: msg || null,
+          }),
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok) throw new Error(data.error || 'Could not send feedback');
+              return data;
+            });
+          })
+          .then(function () {
+            document.getElementById('form-panel').style.display = 'none';
+            document.getElementById('thank-panel').style.display = 'block';
+          })
+          .catch(function (err) {
+            showError(err.message || 'Something went wrong. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send feedback';
+          });
       });
     })();
   </script>

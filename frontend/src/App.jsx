@@ -12,6 +12,7 @@ import LeadsPage from './pages/LeadsPage';
 import LeadDetailPage from './pages/LeadDetailPage';
 import ConversationsPage from './pages/ConversationsPage';
 import SettingsPage from './pages/SettingsPage';
+import PatientFeedbackPage from './pages/PatientFeedbackPage';
 import ContactsPage from './pages/ContactsPage';
 import CampaignsPage from './pages/CampaignsPage';
 import AutomationsPage from './pages/AutomationsPage';
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="campaigns" element={<CampaignsPage />} />
             <Route path="retention" element={<Navigate to="/campaigns" replace />} />
             <Route path="automations" element={<AutomationsPage />} />
+            <Route path="patient-feedback" element={<PatientFeedbackPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

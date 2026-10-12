@@ -21,6 +21,10 @@ const SETTINGS_ICON = (
   <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
 
+const PATIENT_FEEDBACK_ICON = (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.8 5.7 21l2.3-7-6-4.6h7.6L12 2z" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" /></svg>
+);
+
 function NavLinkItem({ to, icon, label, badge, onNavigate }) {
   return (
     <NavLink to={to} onClick={onNavigate} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -31,8 +35,11 @@ function NavLinkItem({ to, icon, label, badge, onNavigate }) {
   );
 }
 
-function NavItems({ onNavigate, simple, needsReplyCount }) {
+function NavItems({ onNavigate, simple, needsReplyCount, patientFeedbackEnabled }) {
   const close = onNavigate || (() => {});
+  const feedbackNav = patientFeedbackEnabled ? (
+    <NavLinkItem to="/patient-feedback" icon={PATIENT_FEEDBACK_ICON} label="Patient Feedback" onNavigate={close} />
+  ) : null;
 
   if (simple) {
     return (
@@ -40,6 +47,7 @@ function NavItems({ onNavigate, simple, needsReplyCount }) {
         <NavLinkItem to="/conversations" icon={INBOX_ICONS} label="Inbox" badge={needsReplyCount} onNavigate={close} />
         <NavLinkItem to="/contacts" icon={CLIENTS_ICON} label="Clients" onNavigate={close} />
         <NavLinkItem to="/campaigns" icon={OUTREACH_ICON} label="Outreach" onNavigate={close} />
+        {feedbackNav}
         <NavLinkItem to="/settings" icon={SETTINGS_ICON} label="Settings" onNavigate={close} />
       </>
     );
@@ -62,6 +70,7 @@ function NavItems({ onNavigate, simple, needsReplyCount }) {
       />
       <NavLinkItem to="/contacts" icon={CLIENTS_ICON} label="Contacts" onNavigate={close} />
       <NavLinkItem to="/campaigns" icon={OUTREACH_ICON} label="Campaigns" onNavigate={close} />
+      {feedbackNav}
       <NavLinkItem
         to="/automations"
         icon={<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" /></svg>}
@@ -159,7 +168,12 @@ export default function AppLayout() {
         </div>
 
         <nav className="sidebar-nav">
-          <NavItems onNavigate={closeNav} simple={simple} needsReplyCount={needsReplyCount} />
+          <NavItems
+            onNavigate={closeNav}
+            simple={simple}
+            needsReplyCount={needsReplyCount}
+            patientFeedbackEnabled={!!tenant?.patientFeedbackEnabled}
+          />
         </nav>
 
         <div className="sidebar-footer">

@@ -38,6 +38,10 @@ const {
   submitAssessment,
   RevenueAssessmentError,
 } = require('../services/revenueAssessment.service');
+const {
+  submitFeedback,
+  PatientFeedbackError,
+} = require('../services/patientFeedback.service');
 
 const ecwJwks = require('../utils/ecwJwks');
 
@@ -419,6 +423,23 @@ router.get('/cherished-onboarding/config', (req, res) => {
 router.get('/spatium-checkin/config', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   return res.json(getSpatiumCheckInConfig());
+});
+
+/**
+ * Private review feedback (1–3 stars) — e.g. Bay Area Heart /bay-area-heart-review/feedback
+ */
+router.post('/patient-feedback', sellIntentLimiter, async (req, res) => {
+  try {
+    const { reviewFlow, stars, categories, comment } = req.body || {};
+    const result = await submitFeedback({ reviewFlow, stars, categories, comment });
+    return res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof PatientFeedbackError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error('[public/patient-feedback]', err);
+    return res.status(500).json({ error: 'Could not save feedback.' });
+  }
 });
 
 router.post('/spatium-checkin', sellIntentLimiter, async (req, res) => {
