@@ -250,15 +250,9 @@
       <p class="field-label" id="category-label">What can we improve? <span class="field-label-hint">(select all that apply)</span></p>
       <fieldset class="category-grid" id="category-section" aria-labelledby="category-label">
         <legend class="sr-only">Areas we can improve</legend>
-        <label class="tile"><input type="checkbox" name="category" value="Front Desk Experience"> Front Desk Experience</label>
-        <label class="tile"><input type="checkbox" name="category" value="Wait Time"> Wait Time</label>
-        <label class="tile"><input type="checkbox" name="category" value="Staff Communication"> Staff Communication</label>
-        <label class="tile"><input type="checkbox" name="category" value="Appointment Scheduling"> Appointment Scheduling</label>
+        <label class="tile"><input type="checkbox" name="category" value="Front Office Experience"> Front Office Experience</label>
+        <label class="tile"><input type="checkbox" name="category" value="Back Office Experience"> Back Office Experience</label>
         <label class="tile"><input type="checkbox" name="category" value="Provider Experience"> Provider Experience</label>
-        <label class="tile"><input type="checkbox" name="category" value="Quality of Care"> Quality of Care</label>
-        <label class="tile"><input type="checkbox" name="category" value="Billing & Payments"> Billing &amp; Payments</label>
-        <label class="tile"><input type="checkbox" name="category" value="Overall Experience"> Overall Experience</label>
-        <label class="tile"><input type="checkbox" name="category" value="Other" id="category-other"> Other</label>
       </fieldset>
       <p class="form-error" id="form-error" role="alert"></p>
 
@@ -323,11 +317,6 @@
 
         if (categories.length === 0) {
           showError('Please select at least one area we can improve.');
-          return;
-        }
-        if (categories.indexOf('Other') !== -1 && !msg) {
-          showError('Please tell us more when you select Other.');
-          messageEl.focus();
           return;
         }
 
