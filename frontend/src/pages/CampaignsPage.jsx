@@ -110,6 +110,7 @@ export default function CampaignsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createAudience, setCreateAudience] = useState(null);
   const [linkClicksModal, setLinkClicksModal] = useState(null);
+  const [campaignRepliesModal, setCampaignRepliesModal] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
   const loadCampaigns = async (page = 1, archived = showArchived) => {
@@ -221,6 +222,11 @@ export default function CampaignsPage() {
                   formatDate={formatDate}
                   onRefresh={() => loadCampaigns(pagination.page || 1)}
                   onOpenLinkClicks={(camp) => setLinkClicksModal({ id: camp.id, name: camp.name })}
+                  onOpenWaveReplies={(camp, step) => setCampaignRepliesModal({
+                    id: camp.id,
+                    name: camp.name,
+                    step,
+                  })}
                   timezone={tenant?.timezone}
                   showArchived={showArchived}
                 />
@@ -253,11 +259,21 @@ export default function CampaignsPage() {
           onClose={() => setLinkClicksModal(null)}
         />
       )}
+      {campaignRepliesModal && (
+        <CampaignRepliesModal
+          campaignId={campaignRepliesModal.id}
+          campaignName={campaignRepliesModal.name}
+          step={campaignRepliesModal.step}
+          waveLabel={`Wave ${campaignRepliesModal.step}`}
+          formatDate={formatDate}
+          onClose={() => setCampaignRepliesModal(null)}
+        />
+      )}
     </div>
   );
 }
 
-function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezone, showArchived }) {
+function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, onOpenWaveReplies, timezone, showArchived }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
   const [audiencePreview, setAudiencePreview] = useState(null);
@@ -412,7 +428,16 @@ function CampaignRow({ campaign, formatDate, onRefresh, onOpenLinkClicks, timezo
         </td>
       </tr>
       {expanded && (
-        <tr className="campaign-detail-row"><td colSpan="9"><CampaignDetail campaign={detail || campaign} formatDate={formatDate} timezone={timezone} /></td></tr>
+        <tr className="campaign-detail-row">
+          <td colSpan="9">
+            <CampaignDetail
+              campaign={detail || campaign}
+              formatDate={formatDate}
+              timezone={timezone}
+              onOpenWaveReplies={(step) => onOpenWaveReplies?.(campaign, step)}
+            />
+          </td>
+        </tr>
       )}
       {audiencePreview && (
         <AudiencePreviewModal
@@ -485,9 +510,15 @@ function withDefaultSendTime(wave) {
   return { ...wave, send_time: wave.send_time || DEFAULT_SEND_TIME };
 }
 
-function CampaignDetail({ campaign, formatDate, timezone }) {
+function replyCountForStep(replyStatsByStep, step) {
+  const row = (replyStatsByStep || []).find((r) => r.step === step);
+  return row?.replyCount ?? 0;
+}
+
+function CampaignDetail({ campaign, formatDate, timezone, onOpenWaveReplies }) {
   const schedule = campaign.schedule || [];
   const waveStats = campaign.waveStats || [];
+  const replyStatsByStep = campaign.replyStatsByStep || [];
   const ch = campaign.channel || 'sms';
   const showEmail = ch === 'email' || ch === 'both';
   const showSms = ch === 'sms' || ch === 'both';
@@ -520,6 +551,7 @@ function CampaignDetail({ campaign, formatDate, timezone }) {
                 skipped: (smsStats.skipped || 0) + (emailStats.skipped || 0),
               };
               const pct = combined && combined.total > 0 ? Math.round((combined.sent / combined.total) * 100) : 0;
+              const waveReplies = replyCountForStep(replyStatsByStep, wave.step);
 
               return (
                 <div key={i} className="wave-card">
@@ -547,6 +579,19 @@ function CampaignDetail({ campaign, formatDate, timezone }) {
                         <span>{combined.sent} sent</span>
                         <span>{combined.pending} pending</span>
                         <span>{combined.skipped} skipped</span>
+                        {combined.sent > 0 && onOpenWaveReplies && (
+                          <button
+                            type="button"
+                            className="link-clicks-trigger"
+                            style={{ marginLeft: 8 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenWaveReplies(wave.step);
+                            }}
+                          >
+                            {waveReplies} {waveReplies === 1 ? 'reply' : 'replies'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -571,6 +616,111 @@ function CampaignDetail({ campaign, formatDate, timezone }) {
           </span>
         )}
         <span>Opted out: {campaign.optoutCount}</span>
+      </div>
+    </div>
+  );
+}
+
+function downloadRepliesCsv(replies, filename) {
+  const escape = (val) => {
+    const s = String(val ?? '');
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const header = ['step', 'first_name', 'last_name', 'phone', 'replied_at', 'reply_body'];
+  const lines = [header.join(',')];
+  for (const row of replies) {
+    lines.push([
+      row.step,
+      escape(row.firstName),
+      escape(row.lastName),
+      escape(row.phone),
+      escape(row.repliedAt),
+      escape(row.replyBody),
+    ].join(','));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function CampaignRepliesModal({ campaignId, campaignName, step, waveLabel, formatDate, onClose }) {
+  const [replies, setReplies] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const q = step != null ? `?step=${encodeURIComponent(step)}` : '';
+        const data = await api.get(`/campaigns/${campaignId}/replies${q}`);
+        if (!cancelled) setReplies(data.replies || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load replies');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [campaignId, step]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal link-clicks-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>SMS replies · {waveLabel} · {campaignName}</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
+        </div>
+        <div className="modal-body">
+          <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+            First inbound text after this wave was sent, before the next wave (if any).
+          </p>
+          {error && <div className="form-error">{error}</div>}
+          {replies === null && !error && <div className="page-loader">Loading…</div>}
+          {replies && replies.length === 0 && !error && <p className="muted">No SMS replies attributed to this wave yet.</p>}
+          {replies && replies.length > 0 && (
+            <>
+              <div className="modal-actions" style={{ marginBottom: 12 }}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => downloadRepliesCsv(
+                    replies,
+                    `campaign-replies-${campaignName.replace(/[^\w.-]+/g, '-')}-wave-${step}.csv`,
+                  )}
+                >
+                  Export CSV
+                </button>
+              </div>
+              <div className="link-clicks-table-wrap">
+                <table className="link-clicks-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Replied</th>
+                      <th>Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {replies.map((row) => {
+                      const name = [row.firstName, row.lastName].filter(Boolean).join(' ') || '—';
+                      return (
+                        <tr key={`${row.contactId}-${row.repliedAt}`}>
+                          <td>{name}</td>
+                          <td>{row.phone || '—'}</td>
+                          <td className="muted">{formatDate(row.repliedAt)}</td>
+                          <td style={{ maxWidth: 280, whiteSpace: 'pre-wrap' }}>{row.replyBody || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1612,7 +1762,7 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
 
               <div className="review-note">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                <span>If a contact replies, remaining waves are skipped. Unsubscribed contacts are never messaged. When you launch, you can send in batches (e.g. 100 at a time) for better deliverability.</span>
+                <span>If a contact replies, remaining waves are skipped. Unsubscribed contacts are never messaged. When you launch, you can send in batches (e.g. 100 at a time) for better deliverability. After send, open the campaign row to see replies per wave.</span>
               </div>
 
               <div className="save-as-template-row">

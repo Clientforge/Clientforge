@@ -86,6 +86,27 @@ router.get('/:id/link-clicks', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:id/replies/export', async (req, res, next) => {
+  try {
+    const csv = await campaignService.getCampaignRepliesCsv(req.tenantId, req.params.id, {
+      step: req.query.step,
+    });
+    const stepSuffix = req.query.step ? `-wave-${req.query.step}` : '';
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="campaign-replies${stepSuffix}.csv"`);
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
+router.get('/:id/replies', async (req, res, next) => {
+  try {
+    const replies = await campaignService.getCampaignReplies(req.tenantId, req.params.id, {
+      step: req.query.step,
+    });
+    res.json({ replies });
+  } catch (err) { next(err); }
+});
+
 router.get('/:id/preview-audience', async (req, res, next) => {
   try {
     const data = await campaignService.previewAudienceForCampaign(

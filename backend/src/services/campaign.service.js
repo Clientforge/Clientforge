@@ -423,6 +423,7 @@ const getCampaign = async (tenantId, campaignId) => {
   );
 
   campaign.waveStats = waveStats.rows;
+  campaign.replyStatsByStep = await getCampaignReplyStatsByStep(tenantId, campaignId);
 
   const linkAgg = await db.query(
     `SELECT
@@ -738,7 +739,56 @@ const formatCampaign = (row) => ({
   linkUniqueClicks: row.link_unique_clicks != null ? Number(row.link_unique_clicks) : 0,
 });
 
-const getCampaignLinkClicks = async (tenantId, campaignId) => {
+/** Match inbound SMS to a campaign contact (same rules as reply attribution). */
+const INBOUND_MESSAGE_CONTACT_SQL = `
+  (
+    m.contact_id = c.id
+    OR (m.contact_id IS NULL AND c.phone IS NOT NULL AND m.from_number IS NOT NULL AND m.from_number = c.phone)
+  )
+`;
+
+const WAVE_REPLY_ATTRIBUTION_SQL = `
+  WITH wave_sends AS (
+    SELECT campaign_id, contact_id, step, MIN(sent_at) AS wave_sent_at
+    FROM campaign_messages
+    WHERE campaign_id = $1 AND tenant_id = $2 AND status = 'sent' AND sent_at IS NOT NULL
+    GROUP BY campaign_id, contact_id, step
+  ),
+  wave_windows AS (
+    SELECT
+      ws.campaign_id,
+      ws.contact_id,
+      ws.step,
+      ws.wave_sent_at,
+      (
+        SELECT MIN(w2.wave_sent_at)
+        FROM wave_sends w2
+        WHERE w2.campaign_id = ws.campaign_id
+          AND w2.contact_id = ws.contact_id
+          AND w2.step > ws.step
+      ) AS next_wave_sent_at
+    FROM wave_sends ws
+  ),
+  attributed AS (
+    SELECT DISTINCT ON (ww.contact_id, ww.step)
+      ww.step,
+      ww.contact_id,
+      ww.wave_sent_at,
+      m.id AS message_id,
+      m.created_at AS replied_at,
+      m.body AS reply_body
+    FROM wave_windows ww
+    JOIN contacts c ON c.id = ww.contact_id
+    JOIN messages m ON m.tenant_id = $2
+      AND m.direction = 'inbound'
+      AND ${INBOUND_MESSAGE_CONTACT_SQL.replace(/\n/g, ' ')}
+      AND m.created_at > ww.wave_sent_at
+      AND (ww.next_wave_sent_at IS NULL OR m.created_at < ww.next_wave_sent_at)
+    ORDER BY ww.contact_id, ww.step, m.created_at ASC
+  )
+`;
+
+async function assertCampaignExists(tenantId, campaignId) {
   const exists = await db.query(
     'SELECT 1 FROM campaigns WHERE tenant_id = $1 AND id = $2',
     [tenantId, campaignId],
@@ -746,6 +796,89 @@ const getCampaignLinkClicks = async (tenantId, campaignId) => {
   if (exists.rows.length === 0) {
     throw Object.assign(new Error('Campaign not found'), { statusCode: 404, isOperational: true });
   }
+}
+
+const getCampaignReplyStatsByStep = async (tenantId, campaignId) => {
+  await assertCampaignExists(tenantId, campaignId);
+  const result = await db.query(
+    `${WAVE_REPLY_ATTRIBUTION_SQL}
+     SELECT step, COUNT(*)::int AS reply_count
+     FROM attributed
+     GROUP BY step
+     ORDER BY step`,
+    [campaignId, tenantId],
+  );
+  return result.rows.map((r) => ({
+    step: r.step,
+    replyCount: r.reply_count,
+  }));
+};
+
+const getCampaignReplies = async (tenantId, campaignId, { step } = {}) => {
+  await assertCampaignExists(tenantId, campaignId);
+  const stepFilter = step != null && step !== '' ? parseInt(step, 10) : null;
+  const params = [campaignId, tenantId];
+  let stepClause = '';
+  if (stepFilter != null && !Number.isNaN(stepFilter)) {
+    params.push(stepFilter);
+    stepClause = `WHERE a.step = $${params.length}`;
+  }
+
+  const result = await db.query(
+    `${WAVE_REPLY_ATTRIBUTION_SQL}
+     SELECT
+       a.step,
+       a.contact_id,
+       a.wave_sent_at,
+       a.replied_at,
+       a.reply_body,
+       c.first_name,
+       c.last_name,
+       c.phone
+     FROM attributed a
+     JOIN contacts c ON c.id = a.contact_id
+     ${stepClause}
+     ORDER BY a.replied_at DESC`,
+    params,
+  );
+
+  return result.rows.map((r) => ({
+    step: r.step,
+    contactId: r.contact_id,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    phone: r.phone,
+    waveSentAt: r.wave_sent_at,
+    repliedAt: r.replied_at,
+    replyBody: r.reply_body,
+  }));
+};
+
+const getCampaignRepliesCsv = async (tenantId, campaignId, { step } = {}) => {
+  const rows = await getCampaignReplies(tenantId, campaignId, { step });
+  const escape = (val) => {
+    const s = String(val ?? '');
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const header = ['step', 'first_name', 'last_name', 'phone', 'replied_at', 'wave_sent_at', 'reply_body'];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    lines.push([
+      r.step,
+      escape(r.firstName),
+      escape(r.lastName),
+      escape(r.phone),
+      escape(r.repliedAt),
+      escape(r.waveSentAt),
+      escape(r.replyBody),
+    ].join(','));
+  }
+  return lines.join('\n');
+};
+
+const getCampaignLinkClicks = async (tenantId, campaignId) => {
+  await assertCampaignExists(tenantId, campaignId);
 
   const result = await db.query(
     `SELECT
@@ -867,6 +1000,9 @@ module.exports = {
   launchCampaign,
   getCampaignStats,
   getCampaignLinkClicks,
+  getCampaignReplies,
+  getCampaignRepliesCsv,
+  getCampaignReplyStatsByStep,
   buildAudienceWhere,
   normalizeAudienceTags,
   normalizeAudienceFilter,

@@ -128,9 +128,13 @@ const hasContactReplied = async (campaignId, contactId) => {
   const result = await db.query(
     `SELECT 1 FROM campaign_messages cm
      JOIN contacts c ON c.id = cm.contact_id
-     JOIN messages m ON m.to_number = c.phone AND m.direction = 'inbound'
+     JOIN messages m ON m.direction = 'inbound'
        AND m.tenant_id = cm.tenant_id
        AND m.created_at > cm.sent_at
+       AND (
+         m.contact_id = c.id
+         OR (m.contact_id IS NULL AND c.phone IS NOT NULL AND m.from_number = c.phone)
+       )
      WHERE cm.campaign_id = $1
        AND cm.contact_id = $2
        AND cm.status = 'sent'
