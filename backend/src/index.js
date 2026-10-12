@@ -7,7 +7,7 @@ const followupWorker = require('./workers/followup.worker');
 const campaignWorker = require('./workers/campaign.worker');
 const appointmentWorker = require('./workers/appointment.worker');
 const googleCalendarWorker = require('./workers/googleCalendar.worker');
-const { isBookingEmailIngestEnabled } = require('./config/bookingEmailIngest');
+const { isInboundEmailIngestEnabled } = require('./services/inboundEmailIngest.service');
 const birthdayWorker = require('./workers/birthday.worker');
 const noShowWorker = require('./workers/no-show.worker');
 const ecwEncounterWorker = require('./workers/ecwEncounter.worker');
@@ -38,10 +38,12 @@ const startServer = async () => {
     followupWorker.startWorker();
     campaignWorker.startWorker();
     appointmentWorker.startWorker();
-    if (isBookingEmailIngestEnabled()) {
+    if (isInboundEmailIngestEnabled()) {
       require('./workers/bookingEmail.worker').startWorker();
     } else {
-      console.log('[BOOKING-EMAIL] Ingest disabled (set BOOKING_EMAIL_INGEST_ENABLED=true to enable)');
+      console.log(
+        '[BOOKING-EMAIL] Ingest disabled (BOOKING_EMAIL_INGEST_ENABLED or VISIT_LIST_EMAIL_ENABLED)',
+      );
     }
     googleCalendarWorker.startWorker();
     birthdayWorker.startWorker();

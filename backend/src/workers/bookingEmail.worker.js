@@ -1,12 +1,14 @@
 const { pollBookingInboxOnce, imapConfigured } = require('../services/bookingEmailImap.service');
 const { inboxEmail } = require('../services/bookingEmailIngest.service');
-const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
+const { isInboundEmailIngestEnabled } = require('../services/inboundEmailIngest.service');
 
 const POLL_MS = Number(process.env.BOOKING_INBOX_IMAP_POLL_MS || 120000);
 
 const startWorker = () => {
-  if (!isBookingEmailIngestEnabled()) {
-    console.log('[BOOKING-EMAIL] IMAP worker not started — booking email ingest is disabled');
+  if (!isInboundEmailIngestEnabled()) {
+    console.log(
+      '[BOOKING-EMAIL] IMAP worker not started — set BOOKING_EMAIL_INGEST_ENABLED or VISIT_LIST_EMAIL_ENABLED',
+    );
     return;
   }
 

@@ -1,6 +1,5 @@
 const crypto = require('crypto');
-const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
-const { processInboundBookingEmail } = require('../services/bookingEmailIngest.service');
+const { isInboundEmailIngestEnabled, processInboundEmail } = require('../services/inboundEmailIngest.service');
 const { stripHtml } = require('../services/bookingEmailParse.service');
 
 function verifyWebhookSecret(req) {
@@ -27,11 +26,23 @@ function messageIdFromPayload(body, headers = {}) {
  * Accepts:
  * - Simple JSON: { messageId?, from, subject, text|bodyText, html|bodyHtml, date? }
  * - SendGrid-ish: { from, subject, text, html, headers }
+ * - Visit list CSV: attachments: [{ filename, content (base64 or utf8), encoding? }]
  */
+function normalizeWebhookAttachments(body) {
+  const raw = body.attachments || body.files || [];
+  if (!Array.isArray(raw)) return [];
+  return raw.map((att) => ({
+    filename: att.filename || att.name || 'attachment.csv',
+    content: att.content || att.data || att.body,
+    contentType: att.contentType || att.type,
+    encoding: att.encoding || (typeof att.content === 'string' ? 'base64' : undefined),
+  }));
+}
+
 async function handleBookingEmailWebhook(req, res, next) {
   try {
-    if (!isBookingEmailIngestEnabled()) {
-      return res.status(503).json({ error: 'Booking email ingest is disabled' });
+    if (!isInboundEmailIngestEnabled()) {
+      return res.status(503).json({ error: 'Inbound email ingest is disabled' });
     }
 
     if (!verifyWebhookSecret(req)) {
@@ -51,13 +62,14 @@ async function handleBookingEmailWebhook(req, res, next) {
 
     const messageId = messageIdFromPayload(body, body.headers || req.headers);
 
-    const result = await processInboundBookingEmail({
+    const result = await processInboundEmail({
       messageId,
       fromAddress,
       subject,
       bodyText: bodyText || stripHtml(bodyHtml),
       bodyHtml,
       receivedAt,
+      attachments: normalizeWebhookAttachments(body),
     });
 
     return res.status(200).json(result);

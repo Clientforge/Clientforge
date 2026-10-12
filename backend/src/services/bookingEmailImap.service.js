@@ -1,6 +1,6 @@
 const db = require('../db/connection');
-const { isBookingEmailIngestEnabled } = require('../config/bookingEmailIngest');
-const { processInboundBookingEmail, inboxEmail } = require('../services/bookingEmailIngest.service');
+const { isInboundEmailIngestEnabled, processInboundEmail } = require('./inboundEmailIngest.service');
+const { inboxEmail } = require('./bookingEmailIngest.service');
 
 const INBOX_KEY = 'default';
 
@@ -33,8 +33,17 @@ function imapConfigured() {
 /**
  * Poll IMAP inbox for new messages (requires imapflow + mailparser).
  */
+function mapMailparserAttachments(parsed) {
+  const list = parsed.attachments || [];
+  return list.map((att) => ({
+    filename: att.filename || att.cid || 'attachment',
+    content: att.content,
+    contentType: att.contentType,
+  }));
+}
+
 async function pollBookingInboxOnce() {
-  if (!isBookingEmailIngestEnabled()) {
+  if (!isInboundEmailIngestEnabled()) {
     return { skipped: true, reason: 'ingest_disabled' };
   }
 
@@ -88,13 +97,14 @@ async function pollBookingInboxOnce() {
         const bodyHtml = parsed.html || '';
         const receivedAt = parsed.date || new Date();
 
-        await processInboundBookingEmail({
+        await processInboundEmail({
           messageId,
           fromAddress,
           subject,
           bodyText,
           bodyHtml,
           receivedAt,
+          attachments: mapMailparserAttachments(parsed),
         });
         processed += 1;
       }

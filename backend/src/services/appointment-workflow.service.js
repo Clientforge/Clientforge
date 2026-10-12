@@ -143,7 +143,7 @@ const dispatchPostVisitWorkflows = async (tenantId, {
     db.query(
       `SELECT name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
               appointment_automation_config, optimantra_checkout_automations, ecw_checkout_automations,
-              service_followup_campaigns_enabled
+              visit_list_email_automations, service_followup_campaigns_enabled
        FROM tenants WHERE id = $1`,
       [tenantId],
     ),
@@ -169,14 +169,25 @@ const dispatchPostVisitWorkflows = async (tenantId, {
   }
 
   const isEcwCheckoutMode = appointment?.provider === 'ecw';
+  const isVisitListMode = appointment?.provider === 'visit_list';
 
-  if (!requireOptimantraCheckout && !isShopmonkeyAutoShopMode(appointment) && !isEcwCheckoutMode) {
+  if (
+    !requireOptimantraCheckout
+    && !isShopmonkeyAutoShopMode(appointment)
+    && !isEcwCheckoutMode
+    && !isVisitListMode
+  ) {
     return { jobsScheduled: 0, skipped: 'unsupported_post_visit_provider' };
   }
 
   if (isEcwCheckoutMode && !tenant.ecw_checkout_automations) {
     console.log('[APPT-WORKFLOW] eCW checkout workflows skipped — ecw_checkout_automations off');
     return { jobsScheduled: 0, skipped: 'ecw_checkout_disabled' };
+  }
+
+  if (isVisitListMode && !tenant.visit_list_email_automations) {
+    console.log('[APPT-WORKFLOW] Visit list workflows skipped — visit_list_email_automations off');
+    return { jobsScheduled: 0, skipped: 'visit_list_disabled' };
   }
 
   if (contact.unsubscribed) {

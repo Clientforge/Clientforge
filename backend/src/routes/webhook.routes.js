@@ -6,7 +6,7 @@ const { handleBookingEmailWebhook } = require('./bookingEmail.webhook');
 
 /**
  * POST /api/v1/webhook/booking-email
- * Forwarded booking confirmations (info@clientforge-ai.com).
+ * Forwarded mail to info@clientforge-ai.com (booking NLP and/or visit-list CSV attachments).
  */
 router.post('/booking-email', express.json({ limit: '5mb' }), handleBookingEmailWebhook);
 
