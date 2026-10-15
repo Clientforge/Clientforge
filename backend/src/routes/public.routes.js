@@ -490,4 +490,32 @@ router.post('/revenue-assessment', sellIntentLimiter, async (req, res) => {
   }
 });
 
+const {
+  listPublishedLocations,
+  getPublishedLocationBySlug,
+  getPublishedSlugsByList,
+} = require('../services/g2gSeoLocations.service');
+
+router.get('/g2g/locations', async (req, res, next) => {
+  try {
+    const locations = await listPublishedLocations();
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    return res.json({ locations });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/g2g/locations/:slug', async (req, res, next) => {
+  try {
+    const loc = await getPublishedLocationBySlug(req.params.slug);
+    if (!loc) return res.status(404).json({ error: 'Location not found' });
+    const nearby = await getPublishedSlugsByList(loc.nearbySlugs);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    return res.json({ location: { ...loc, nearby } });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = router;

@@ -10,6 +10,8 @@ const tenantScope = require('./middleware/tenantScope');
 const requireSuperAdmin = require('./middleware/superadmin');
 const config = require('./config');
 const { isG2gPublicHost, g2gCanonicalOrigin } = require('./config/g2gPublicHost');
+const { buildSitemapXml } = require('./services/g2gSeoLocations.service');
+const { buildG2gSpaIndexForPath } = require('./services/g2gSeoHtml.service');
 const trackedLinkService = require('./services/trackedLink.service');
 
 const app = express();
@@ -430,14 +432,35 @@ app.get(/^\/amy-app\/?.*$/, (req, res, next) => {
 const FRONTEND_DIR = path.join(__dirname, '../../frontend/dist');
 app.use(staticWithFreshIndex(FRONTEND_DIR));
 
+app.get('/sitemap.xml', async (req, res, next) => {
+  if (!isG2gPublicHost(req.hostname)) return next();
+  try {
+    const xml = await buildSitemapXml();
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(xml);
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // G2G public host — SPA fallback (after landing + subpath routes)
-app.get(/^\/(?!api).*/, (req, res, next) => {
+app.get(/^\/(?!api).*/, async (req, res, next) => {
   if (!isG2gPublicHost(req.hostname)) return next();
   if (req.path.startsWith('/g2g-review/')) return next();
   if (req.path.startsWith('/r/')) return next();
   const lastSeg = req.path.split('/').filter(Boolean).pop() || '';
   if (lastSeg.includes('.')) {
     return res.status(404).type('text').send('Not found');
+  }
+  try {
+    const seoHtml = await buildG2gSpaIndexForPath(req.path);
+    if (seoHtml) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.type('html').send(seoHtml);
+    }
+  } catch (err) {
+    console.warn('[G2G-SEO] SPA meta inject failed:', err.message);
   }
   return sendG2gRootSpaIndex(res);
 });

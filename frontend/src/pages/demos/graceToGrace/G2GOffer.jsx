@@ -22,6 +22,7 @@ import {
 } from './graceEstimateApi';
 import { getOrCreateG2gSessionId } from './g2gSession';
 import { loadG2gContact, saveG2gContact } from './g2gContactStorage';
+import { saveG2gSeoLocationSlug } from './g2gSeoStorage';
 import { BRAND } from './constants';
 import { lookupUsZipCityState } from './zipLookup';
 import { decodeVin, isValidVinFormat, normalizeVin } from './vinDecode';
@@ -411,6 +412,16 @@ export default function G2GOffer() {
   const [leadZip, setLeadZip] = useState(() => loadG2gContact()?.zip || '');
   const [leadCity, setLeadCity] = useState(() => loadG2gContact()?.city || '');
   const [leadState, setLeadState] = useState(() => loadG2gContact()?.state || '');
+
+  useEffect(() => {
+    const loc = searchParams.get('location');
+    const zipParam = searchParams.get('zip');
+    if (loc) saveG2gSeoLocationSlug(loc);
+    if (zipParam) {
+      const digits = zipParam.replace(/\D/g, '').slice(0, 5);
+      if (digits.length === 5) setLeadZip(digits);
+    }
+  }, [searchParams]);
   const [zipLookupBusy, setZipLookupBusy] = useState(false);
   const [zipLookupErr, setZipLookupErr] = useState('');
   const [contactBusy, setContactBusy] = useState(false);

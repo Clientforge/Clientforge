@@ -78,6 +78,9 @@ export default function G2GLayout() {
               <Link to={`${g2gPath()}#faq`} className="g2g-nav-hash">
                 FAQ
               </Link>
+              <NavLink to={g2gPath('cash-for-junk-cars')} className={navClass}>
+                Service areas
+              </NavLink>
               <NavLink to={g2gPath('contact')} className={navClass}>
                 Contact
               </NavLink>
@@ -108,6 +111,9 @@ export default function G2GLayout() {
               <Link to={`${g2gPath()}#faq`} className="g2g-nav-hash" onClick={closeMenu}>
                 FAQ
               </Link>
+              <NavLink to={g2gPath('cash-for-junk-cars')} className={navClass} onClick={closeMenu}>
+                Service areas
+              </NavLink>
               <NavLink to={g2gPath('contact')} className={navClass} onClick={closeMenu}>
                 Contact now
               </NavLink>
