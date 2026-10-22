@@ -379,21 +379,41 @@ async function fetchPatient(connection, patientId) {
   return fhirGet(connection, `Patient/${encodeURIComponent(patientId)}`);
 }
 
-async function searchFinishedEncountersSince(connection, sinceIso) {
-  const params = new URLSearchParams({
-    status: 'finished',
-    _sort: '-_lastUpdated',
-    _count: '50',
-  });
-  if (connection.ecw_patient_id) {
-    const pid = String(connection.ecw_patient_id).trim();
-    const patientRef = pid.startsWith('Patient/') ? pid : `Patient/${pid}`;
-    params.set('patient', patientRef);
+const ECW_ENCOUNTER_SEARCH_MAX_PAGES = 10;
+
+/**
+ * eCW Encounter search supports patient (and date/page) — not status/_lastUpdated/_sort/_count.
+ * Finished status and poll window are applied in ecwEncounter.worker.
+ */
+async function searchFinishedEncountersSince(connection, _sinceIso) {
+  const pid = String(connection.ecw_patient_id || '').trim();
+  if (!pid) {
+    throw Object.assign(
+      new Error('eCW Patient ID is required for Encounter search'),
+      { statusCode: 400, isOperational: true },
+    );
   }
-  if (sinceIso) {
-    params.set('_lastUpdated', `gt${sinceIso}`);
+  const patientRef = pid.startsWith('Patient/') ? pid : `Patient/${pid}`;
+  const params = new URLSearchParams({ patient: patientRef });
+
+  let bundle = await fhirGet(connection, `Encounter?${params.toString()}`);
+  const allEntries = [...(bundle.entry || [])];
+  let pages = 1;
+
+  while (pages < ECW_ENCOUNTER_SEARCH_MAX_PAGES) {
+    const nextLink = (bundle.link || []).find((l) => l.relation === 'next');
+    if (!nextLink?.url) break;
+    bundle = await fhirGet(connection, nextLink.url);
+    allEntries.push(...(bundle.entry || []));
+    pages += 1;
   }
-  return fhirGet(connection, `Encounter?${params.toString()}`);
+
+  return {
+    ...bundle,
+    resourceType: 'Bundle',
+    type: bundle.type || 'searchset',
+    entry: allEntries,
+  };
 }
 
 async function connectBackend(tenantId, { fhirBaseUrl, ecwPatientId, testToken = true } = {}) {

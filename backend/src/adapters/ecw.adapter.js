@@ -54,6 +54,24 @@ function isFinishedEncounter(encounter) {
   return FINISHED_STATUSES.has(status);
 }
 
+/** Best-effort encounter time for poll window (eCW may not support _lastUpdated search). */
+function encounterRelevantSince(encounter, sinceDate) {
+  if (!sinceDate || !(sinceDate instanceof Date) || Number.isNaN(sinceDate.getTime())) {
+    return true;
+  }
+  const end = encounter?.period?.end;
+  if (end) {
+    const d = new Date(end);
+    if (!Number.isNaN(d.getTime())) return d >= sinceDate;
+  }
+  const updated = encounter?.meta?.lastUpdated;
+  if (updated) {
+    const d = new Date(updated);
+    if (!Number.isNaN(d.getTime())) return d >= sinceDate;
+  }
+  return false;
+}
+
 function patientIdFromEncounter(encounter) {
   const ref = encounter?.subject?.reference || '';
   const m = ref.match(/Patient\/(.+)/i);
@@ -105,6 +123,7 @@ function normalizeEcwCheckout(encounter, patient) {
 module.exports = {
   normalizeEcwCheckout,
   isFinishedEncounter,
+  encounterRelevantSince,
   patientIdFromEncounter,
   pickPatientPhone,
 };

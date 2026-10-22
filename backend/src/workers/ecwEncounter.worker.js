@@ -1,6 +1,10 @@
 const ecwService = require('../services/ecw.service');
 const { processEcwEncounterCheckout } = require('../services/ecw-checkout.service');
-const { patientIdFromEncounter, isFinishedEncounter } = require('../adapters/ecw.adapter');
+const {
+  patientIdFromEncounter,
+  isFinishedEncounter,
+  encounterRelevantSince,
+} = require('../adapters/ecw.adapter');
 
 const POLL_INTERVAL_MS = Math.max(
   60_000,
@@ -28,6 +32,7 @@ async function pollTenantEncounters(connection) {
   }
 
   const sinceIso = sinceIsoForConnection(connection);
+  const sinceDate = new Date(sinceIso);
   let bundle;
   try {
     bundle = await ecwService.searchFinishedEncountersSince(connection, sinceIso);
@@ -43,6 +48,10 @@ async function pollTenantEncounters(connection) {
 
   for (const encounter of encounters) {
     if (!isFinishedEncounter(encounter)) {
+      skipped += 1;
+      continue;
+    }
+    if (!encounterRelevantSince(encounter, sinceDate)) {
       skipped += 1;
       continue;
     }
