@@ -11,6 +11,7 @@ const { isInboundEmailIngestEnabled } = require('./services/inboundEmailIngest.s
 const birthdayWorker = require('./workers/birthday.worker');
 const noShowWorker = require('./workers/no-show.worker');
 const ecwEncounterWorker = require('./workers/ecwEncounter.worker');
+const ecwBulkExportWorker = require('./workers/ecwBulkExport.worker');
 const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
 const startServer = async () => {
@@ -49,6 +50,7 @@ const startServer = async () => {
     birthdayWorker.startWorker();
     noShowWorker.startWorker();
     ecwEncounterWorker.startWorker();
+    ecwBulkExportWorker.startWorker();
   });
 };
 

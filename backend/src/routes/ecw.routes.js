@@ -14,8 +14,13 @@ router.get('/status', async (req, res, next) => {
 router.post('/connect', async (req, res, next) => {
   try {
     if (ecwService.authMode() === 'backend') {
-      const { fhirBaseUrl, ecwPatientId } = req.body || {};
-      const status = await ecwService.connectBackend(req.tenantId, { fhirBaseUrl, ecwPatientId });
+      const { fhirBaseUrl, ecwPatientId, ecwGroupId, connectionMode } = req.body || {};
+      const status = await ecwService.connectBackend(req.tenantId, {
+        fhirBaseUrl,
+        ecwPatientId,
+        ecwGroupId,
+        connectionMode,
+      });
       return res.json(status);
     }
     const { fhirBaseUrl } = req.body || {};

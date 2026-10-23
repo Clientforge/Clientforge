@@ -18,6 +18,15 @@ const DEFAULT_BACKEND_SCOPES = [
   'system/Patient.read',
 ].join(' ');
 
+const DEFAULT_BACKEND_BULK_SCOPES = [
+  'system/Group.read',
+  'system/Patient.read',
+  'system/Encounter.read',
+].join(' ');
+
+const CONNECTION_MODE_SINGLE = 'single_patient';
+const CONNECTION_MODE_BULK = 'bulk';
+
 const tokenUrlMetadataCache = new Map();
 
 function authMode() {
@@ -56,6 +65,21 @@ function tokenUrl() {
 
 function backendScopes() {
   return (process.env.ECW_BACKEND_SCOPES || DEFAULT_BACKEND_SCOPES).trim();
+}
+
+function backendBulkScopes() {
+  return (process.env.ECW_BACKEND_BULK_SCOPES || DEFAULT_BACKEND_BULK_SCOPES).trim();
+}
+
+function backendScopesForConnection(connection) {
+  if (connection?.connection_mode === CONNECTION_MODE_BULK) {
+    return backendBulkScopes();
+  }
+  return backendScopes();
+}
+
+function isBulkConnection(row) {
+  return row?.connection_mode === CONNECTION_MODE_BULK;
 }
 
 async function resolveTokenUrl(fhirBaseUrl) {
@@ -121,7 +145,11 @@ function connectionUsesBackend(row) {
 function isConnectionActive(row) {
   if (!row) return false;
   if (row.refresh_token_enc || row.access_token_enc) return true;
-  return connectionUsesBackend(row) && !!(row.fhir_base_url && row.ecw_patient_id);
+  if (!connectionUsesBackend(row) || !row.fhir_base_url) return false;
+  if (isBulkConnection(row)) {
+    return !!row.ecw_group_id;
+  }
+  return !!row.ecw_patient_id;
 }
 
 function formatConnection(row, tenantFlags = {}) {
@@ -144,9 +172,12 @@ function formatConnection(row, tenantFlags = {}) {
     backendConfigured: isBackendConfigured(),
     jwksUrl: ecwJwks.jwksPublicUrl(),
     fhirBaseUrl: row.fhir_base_url || null,
+    connectionMode: row.connection_mode || CONNECTION_MODE_SINGLE,
     ecwPatientId: row.ecw_patient_id || null,
+    ecwGroupId: row.ecw_group_id || null,
     pollEnabled: row.poll_enabled !== false,
     lastEncounterPollAt: row.last_encounter_poll_at || null,
+    lastBulkExportAt: row.last_bulk_export_at || null,
     lastPollError: row.last_poll_error || null,
     connectedAt: row.connected_at || null,
     checkoutAutomations: !!tenantFlags.ecwCheckoutAutomations,
@@ -229,13 +260,13 @@ async function exchangeOAuthCode(code) {
   return data;
 }
 
-async function fetchBackendAccessToken(fhirBaseUrl) {
+async function fetchBackendAccessToken(fhirBaseUrl, { scope } = {}) {
   const clientId = process.env.ECW_CLIENT_ID;
   const aud = await resolveTokenUrl(fhirBaseUrl);
   const clientAssertion = ecwJwks.signClientAssertion({ clientId, tokenUrl: aud });
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
-    scope: backendScopes(),
+    scope: (scope || backendScopes()).trim(),
     client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
     client_assertion: clientAssertion,
   });
@@ -276,19 +307,31 @@ async function refreshAccessToken(refreshToken) {
   return data;
 }
 
-async function saveTokens(tenantId, tokenData, { fhirBaseUrl, ecwPatientId } = {}) {
+async function saveTokens(
+  tenantId,
+  tokenData,
+  {
+    fhirBaseUrl,
+    ecwPatientId,
+    ecwGroupId,
+    connectionMode,
+  } = {},
+) {
   const expiresIn = Number(tokenData.expires_in) || 3600;
   const expiresAt = new Date(Date.now() + expiresIn * 1000);
+  const mode = connectionMode === CONNECTION_MODE_BULK ? CONNECTION_MODE_BULK : CONNECTION_MODE_SINGLE;
 
   await db.query(
     `INSERT INTO tenant_ecw_connections
-       (tenant_id, fhir_base_url, ecw_patient_id, scope,
+       (tenant_id, fhir_base_url, connection_mode, ecw_patient_id, ecw_group_id, scope,
         access_token_enc, refresh_token_enc, token_expires_at,
         poll_enabled, connected_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
      ON CONFLICT (tenant_id) DO UPDATE SET
        fhir_base_url = COALESCE(EXCLUDED.fhir_base_url, tenant_ecw_connections.fhir_base_url),
-       ecw_patient_id = COALESCE(EXCLUDED.ecw_patient_id, tenant_ecw_connections.ecw_patient_id),
+       connection_mode = COALESCE(EXCLUDED.connection_mode, tenant_ecw_connections.connection_mode),
+       ecw_patient_id = EXCLUDED.ecw_patient_id,
+       ecw_group_id = EXCLUDED.ecw_group_id,
        scope = COALESCE(EXCLUDED.scope, tenant_ecw_connections.scope),
        access_token_enc = EXCLUDED.access_token_enc,
        refresh_token_enc = COALESCE(EXCLUDED.refresh_token_enc, tenant_ecw_connections.refresh_token_enc),
@@ -298,7 +341,9 @@ async function saveTokens(tenantId, tokenData, { fhirBaseUrl, ecwPatientId } = {
     [
       tenantId,
       fhirBaseUrl || null,
+      mode,
       ecwPatientId || null,
+      ecwGroupId || null,
       tokenData.scope || null,
       encrypt(tokenData.access_token),
       encrypt(tokenData.refresh_token || ''),
@@ -324,10 +369,14 @@ async function getValidAccessToken(connection) {
       if (!fhirBase) {
         throw Object.assign(new Error('FHIR base URL not configured for tenant'), { statusCode: 400 });
       }
-      const refreshed = await fetchBackendAccessToken(fhirBase);
+      const refreshed = await fetchBackendAccessToken(fhirBase, {
+        scope: backendScopesForConnection(connection),
+      });
       await saveTokens(connection.tenant_id, refreshed, {
         fhirBaseUrl: connection.fhir_base_url,
         ecwPatientId: connection.ecw_patient_id,
+        ecwGroupId: connection.ecw_group_id,
+        connectionMode: connection.connection_mode,
       });
       accessToken = refreshed.access_token;
     } else if (refreshToken) {
@@ -345,19 +394,32 @@ async function getValidAccessToken(connection) {
   return accessToken;
 }
 
-async function fhirGet(connection, pathAndQuery) {
+async function fhirRequest(connection, pathAndQuery, options = {}) {
+  const {
+    method = 'GET',
+    headers: extraHeaders = {},
+    body,
+    returnResponse = false,
+  } = options;
+
   const accessToken = await getValidAccessToken(connection);
   const base = (connection.fhir_base_url || defaultFhirBaseUrl() || '').replace(/\/$/, '');
-  if (!base) {
+  if (!base && !pathAndQuery.startsWith('http')) {
     throw Object.assign(new Error('FHIR base URL not configured for tenant'), { statusCode: 400 });
   }
   const url = pathAndQuery.startsWith('http') ? pathAndQuery : `${base}/${pathAndQuery.replace(/^\//, '')}`;
   const res = await fetch(url, {
+    method,
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/fhir+json',
+      ...extraHeaders,
     },
+    body,
   });
+
+  if (returnResponse) return res;
+
   const text = await res.text();
   let data = null;
   try {
@@ -372,6 +434,10 @@ async function fhirGet(connection, pathAndQuery) {
     throw err;
   }
   return data;
+}
+
+async function fhirGet(connection, pathAndQuery) {
+  return fhirRequest(connection, pathAndQuery);
 }
 
 async function fetchPatient(connection, patientId) {
@@ -416,7 +482,16 @@ async function searchFinishedEncountersSince(connection, _sinceIso) {
   };
 }
 
-async function connectBackend(tenantId, { fhirBaseUrl, ecwPatientId, testToken = true } = {}) {
+async function connectBackend(
+  tenantId,
+  {
+    fhirBaseUrl,
+    ecwPatientId,
+    ecwGroupId,
+    connectionMode,
+    testToken = true,
+  } = {},
+) {
   if (!isBackendConfigured()) {
     throw Object.assign(
       new Error('eCW Backend auth is not configured (ECW_CLIENT_ID + ECW_PRIVATE_KEY)'),
@@ -430,30 +505,50 @@ async function connectBackend(tenantId, { fhirBaseUrl, ecwPatientId, testToken =
       { statusCode: 400, isOperational: true },
     );
   }
+
+  const mode = connectionMode === CONNECTION_MODE_BULK ? CONNECTION_MODE_BULK : CONNECTION_MODE_SINGLE;
   const patientId = (ecwPatientId || '').trim();
-  if (!patientId) {
+  const groupId = (ecwGroupId || '').trim();
+
+  if (mode === CONNECTION_MODE_BULK) {
+    if (!groupId) {
+      throw Object.assign(
+        new Error('eCW Group ID is required for Backend Bulk API.'),
+        { statusCode: 400, isOperational: true },
+      );
+    }
+  } else if (!patientId) {
     throw Object.assign(
       new Error('eCW Patient ID is required for Backend Single Patient API.'),
       { statusCode: 400, isOperational: true },
     );
   }
 
+  const scope = mode === CONNECTION_MODE_BULK ? backendBulkScopes() : backendScopes();
+
   if (testToken) {
-    const tokenData = await fetchBackendAccessToken(aud);
-    await saveTokens(tenantId, tokenData, { fhirBaseUrl: aud, ecwPatientId: patientId });
+    const tokenData = await fetchBackendAccessToken(aud, { scope });
+    await saveTokens(tenantId, tokenData, {
+      fhirBaseUrl: aud,
+      ecwPatientId: mode === CONNECTION_MODE_SINGLE ? patientId : null,
+      ecwGroupId: mode === CONNECTION_MODE_BULK ? groupId : null,
+      connectionMode: mode,
+    });
   } else {
     await db.query(
       `INSERT INTO tenant_ecw_connections
-         (tenant_id, fhir_base_url, ecw_patient_id, poll_enabled, connected_at, updated_at)
-       VALUES ($1, $2, $3, true, NOW(), NOW())
+         (tenant_id, fhir_base_url, connection_mode, ecw_patient_id, ecw_group_id, poll_enabled, connected_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
        ON CONFLICT (tenant_id) DO UPDATE SET
          fhir_base_url = EXCLUDED.fhir_base_url,
+         connection_mode = EXCLUDED.connection_mode,
          ecw_patient_id = EXCLUDED.ecw_patient_id,
+         ecw_group_id = EXCLUDED.ecw_group_id,
          refresh_token_enc = NULL,
          poll_enabled = true,
          connected_at = COALESCE(tenant_ecw_connections.connected_at, NOW()),
          updated_at = NOW()`,
-      [tenantId, aud, patientId],
+      [tenantId, aud, mode, mode === CONNECTION_MODE_SINGLE ? patientId : null, mode === CONNECTION_MODE_BULK ? groupId : null],
     );
   }
 
@@ -508,6 +603,24 @@ async function updatePollCursor(tenantId, { lastPollAt, error }) {
   );
 }
 
+async function updateBulkExportCursor(tenantId, { lastExportAt, error }) {
+  if (error) {
+    await db.query(
+      `UPDATE tenant_ecw_connections SET last_poll_error = $2, updated_at = NOW() WHERE tenant_id = $1`,
+      [tenantId, String(error).slice(0, 2000)],
+    );
+    return;
+  }
+  await db.query(
+    `UPDATE tenant_ecw_connections SET
+       last_bulk_export_at = $2,
+       last_poll_error = NULL,
+       updated_at = NOW()
+     WHERE tenant_id = $1`,
+    [tenantId, lastExportAt || new Date()],
+  );
+}
+
 async function listPollableConnections() {
   const result = await db.query(
     `SELECT c.*, t.ecw_checkout_automations, t.automation_test_mode
@@ -515,6 +628,7 @@ async function listPollableConnections() {
      JOIN tenants t ON t.id = c.tenant_id
      WHERE c.poll_enabled = true
        AND t.active = true
+       AND COALESCE(c.connection_mode, 'single_patient') = 'single_patient'
        AND (
          c.refresh_token_enc IS NOT NULL
          OR c.access_token_enc IS NOT NULL
@@ -524,7 +638,24 @@ async function listPollableConnections() {
   if (!isBackendConfigured()) {
     return result.rows.filter((row) => row.refresh_token_enc || row.access_token_enc);
   }
-  return result.rows.filter((row) => isConnectionActive(row));
+  return result.rows.filter((row) => isConnectionActive(row) && !isBulkConnection(row));
+}
+
+async function listBulkExportConnections() {
+  const result = await db.query(
+    `SELECT c.*, t.ecw_checkout_automations, t.automation_test_mode
+     FROM tenant_ecw_connections c
+     JOIN tenants t ON t.id = c.tenant_id
+     WHERE c.poll_enabled = true
+       AND t.active = true
+       AND c.connection_mode = 'bulk'
+       AND c.fhir_base_url IS NOT NULL
+       AND c.ecw_group_id IS NOT NULL`,
+  );
+  if (!isBackendConfigured()) {
+    return result.rows.filter((row) => row.refresh_token_enc || row.access_token_enc);
+  }
+  return result.rows.filter((row) => isConnectionActive(row) && isBulkConnection(row));
 }
 
 module.exports = {
@@ -544,8 +675,14 @@ module.exports = {
   searchFinishedEncountersSince,
   fetchPatient,
   updatePollCursor,
+  updateBulkExportCursor,
   listPollableConnections,
+  listBulkExportConnections,
   fhirGet,
+  fhirRequest,
   fetchBackendAccessToken,
   resolveTokenUrl,
+  backendBulkScopes,
+  CONNECTION_MODE_BULK,
+  CONNECTION_MODE_SINGLE,
 };

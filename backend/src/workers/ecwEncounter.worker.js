@@ -27,6 +27,9 @@ function sinceIsoForConnection(connection) {
 
 async function pollTenantEncounters(connection) {
   const tenantId = connection.tenant_id;
+  if (connection.connection_mode === 'bulk') {
+    return { tenantId, skipped: 'bulk_connection' };
+  }
   if (!connection.ecw_checkout_automations) {
     return { tenantId, skipped: 'ecw_checkout_automations_off' };
   }

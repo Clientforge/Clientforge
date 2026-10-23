@@ -57,6 +57,9 @@ check('since accepts all when since invalid', encounterRelevantSince({ id: 'x' }
 const params = new URLSearchParams({ patient: 'Patient/test-id' });
 check('encounter query is patient-only', params.toString(), 'patient=Patient%2Ftest-id');
 
+const bulkParams = new URLSearchParams({ _type: 'Patient,Encounter' });
+check('bulk export type param', bulkParams.get('_type'), 'Patient,Encounter');
+
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
   process.exit(1);

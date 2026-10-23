@@ -1395,14 +1395,18 @@ function EcwSection({
   const [msg, setMsg] = useState('');
   const backendMode = ecw.authMode === 'backend' || ecw.backendConfigured;
   const [fhirBaseUrl, setFhirBaseUrl] = useState(ecw.fhirBaseUrl || '');
+  const [connectionMode, setConnectionMode] = useState(ecw.connectionMode || 'single_patient');
   const [ecwPatientId, setEcwPatientId] = useState(ecw.ecwPatientId || '');
+  const [ecwGroupId, setEcwGroupId] = useState(ecw.ecwGroupId || '');
   const [pollEnabled, setPollEnabled] = useState(ecw.pollEnabled !== false);
 
   useEffect(() => {
     setFhirBaseUrl(ecw.fhirBaseUrl || '');
+    setConnectionMode(ecw.connectionMode || 'single_patient');
     setEcwPatientId(ecw.ecwPatientId || '');
+    setEcwGroupId(ecw.ecwGroupId || '');
     setPollEnabled(ecw.pollEnabled !== false);
-  }, [ecw.fhirBaseUrl, ecw.ecwPatientId, ecw.pollEnabled]);
+  }, [ecw.fhirBaseUrl, ecw.connectionMode, ecw.ecwPatientId, ecw.ecwGroupId, ecw.pollEnabled]);
 
   const connect = async () => {
     setBusy('connect');
@@ -1411,7 +1415,12 @@ function EcwSection({
       const body = {};
       if (fhirBaseUrl.trim()) body.fhirBaseUrl = fhirBaseUrl.trim();
       if (backendMode) {
-        if (ecwPatientId.trim()) body.ecwPatientId = ecwPatientId.trim();
+        body.connectionMode = connectionMode === 'bulk' ? 'bulk' : 'single_patient';
+        if (connectionMode === 'bulk') {
+          if (ecwGroupId.trim()) body.ecwGroupId = ecwGroupId.trim();
+        } else if (ecwPatientId.trim()) {
+          body.ecwPatientId = ecwPatientId.trim();
+        }
         await api.post('/integrations/ecw/connect', body);
         await onReload();
         setMsg('eClinicalWorks connected (backend auth).');
@@ -1477,8 +1486,8 @@ function EcwSection({
         {backendMode && (
           <>
             {' '}
-            Backend Single Patient: one eCW patient ID per connection (repeat for additional patients when eCW
-            activates them).
+            Backend Single Patient: one patient ID per connection. Backend Bulk: practice-enabled FHIR Group
+            export (~30 min) for all patients in the group.
           </>
         )}
       </p>
@@ -1509,15 +1518,39 @@ function EcwSection({
             <span className="field-hint">Practice issuer URL from eCW dev portal (Add Customer).</span>
           </div>
           {backendMode && (
-            <div className="field" style={{ marginTop: 12 }}>
-              <label>eCW Patient ID</label>
-              <input
-                value={ecwPatientId}
-                onChange={(e) => setEcwPatientId(e.target.value)}
-                placeholder="UUID or id from eCW patient activation"
-              />
-              <span className="field-hint">Required for Backend Single Patient API.</span>
-            </div>
+            <>
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>Connection type</label>
+                <select
+                  value={connectionMode}
+                  onChange={(e) => setConnectionMode(e.target.value)}
+                >
+                  <option value="single_patient">Backend Single Patient</option>
+                  <option value="bulk">Backend Bulk (Group export)</option>
+                </select>
+              </div>
+              {connectionMode === 'bulk' ? (
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label>eCW Group ID</label>
+                  <input
+                    value={ecwGroupId}
+                    onChange={(e) => setEcwGroupId(e.target.value)}
+                    placeholder="Group id from eCW Enabled Groups"
+                  />
+                  <span className="field-hint">Required for Backend Bulk. Practice must enable this group for your app.</span>
+                </div>
+              ) : (
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label>eCW Patient ID</label>
+                  <input
+                    value={ecwPatientId}
+                    onChange={(e) => setEcwPatientId(e.target.value)}
+                    placeholder="UUID or id from eCW patient activation"
+                  />
+                  <span className="field-hint">Required for Backend Single Patient API.</span>
+                </div>
+              )}
+            </>
           )}
           <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={connect} disabled={busy === 'connect'}>
             {busy === 'connect'
@@ -1531,12 +1564,27 @@ function EcwSection({
             <label>Connected</label>
             <p style={{ margin: 0, fontSize: 14 }}>
               {ecw.fhirBaseUrl || 'FHIR connected'}
+              {ecw.connectionMode === 'bulk' && (
+                <span className="field-hint" style={{ display: 'block' }}>
+                  Mode: Backend Bulk (Group export)
+                </span>
+              )}
+              {ecw.ecwGroupId && (
+                <span className="field-hint" style={{ display: 'block' }}>
+                  Group: {ecw.ecwGroupId}
+                </span>
+              )}
               {ecw.ecwPatientId && (
                 <span className="field-hint" style={{ display: 'block' }}>
                   Patient: {ecw.ecwPatientId}
                 </span>
               )}
-              {ecw.lastEncounterPollAt && (
+              {ecw.lastBulkExportAt && (
+                <span className="field-hint" style={{ display: 'block' }}>
+                  Last bulk export: {new Date(ecw.lastBulkExportAt).toLocaleString()}
+                </span>
+              )}
+              {ecw.lastEncounterPollAt && ecw.connectionMode !== 'bulk' && (
                 <span className="field-hint" style={{ display: 'block' }}>
                   Last poll: {new Date(ecw.lastEncounterPollAt).toLocaleString()}
                 </span>
@@ -1552,7 +1600,9 @@ function EcwSection({
           <form onSubmit={savePoll} style={{ marginTop: 12 }}>
             <label className="checkbox-label">
               <input type="checkbox" checked={pollEnabled} onChange={(e) => setPollEnabled(e.target.checked)} />
-              Poll eClinicalWorks for completed visits
+              {ecw.connectionMode === 'bulk'
+                ? 'Run scheduled Group bulk export for completed visits'
+                : 'Poll eClinicalWorks for completed visits'}
             </label>
             <div className="modal-actions" style={{ marginTop: 12 }}>
               <button type="submit" className="btn-primary" disabled={busy === 'poll'}>
