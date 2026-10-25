@@ -603,7 +603,14 @@ async function updatePollCursor(tenantId, { lastPollAt, error }) {
   );
 }
 
-async function updateBulkExportCursor(tenantId, { lastExportAt, error }) {
+async function updateBulkExportCursor(tenantId, { lastExportAt, error, clearPollError }) {
+  if (clearPollError) {
+    await db.query(
+      `UPDATE tenant_ecw_connections SET last_poll_error = NULL, updated_at = NOW() WHERE tenant_id = $1`,
+      [tenantId],
+    );
+    return;
+  }
   if (error) {
     await db.query(
       `UPDATE tenant_ecw_connections SET last_poll_error = $2, updated_at = NOW() WHERE tenant_id = $1`,
@@ -615,9 +622,36 @@ async function updateBulkExportCursor(tenantId, { lastExportAt, error }) {
     `UPDATE tenant_ecw_connections SET
        last_bulk_export_at = $2,
        last_poll_error = NULL,
+       bulk_export_status_url = NULL,
+       bulk_export_job_started_at = NULL,
        updated_at = NOW()
      WHERE tenant_id = $1`,
     [tenantId, lastExportAt || new Date()],
+  );
+}
+
+async function setBulkExportJob(tenantId, { statusUrl, startedAt }) {
+  const url = String(statusUrl || '').trim();
+  if (!url) return;
+  await db.query(
+    `UPDATE tenant_ecw_connections SET
+       bulk_export_status_url = $2,
+       bulk_export_job_started_at = COALESCE($3, bulk_export_job_started_at, NOW()),
+       last_poll_error = NULL,
+       updated_at = NOW()
+     WHERE tenant_id = $1`,
+    [tenantId, url.slice(0, 4000), startedAt || null],
+  );
+}
+
+async function clearBulkExportJob(tenantId) {
+  await db.query(
+    `UPDATE tenant_ecw_connections SET
+       bulk_export_status_url = NULL,
+       bulk_export_job_started_at = NULL,
+       updated_at = NOW()
+     WHERE tenant_id = $1`,
+    [tenantId],
   );
 }
 
@@ -676,6 +710,8 @@ module.exports = {
   fetchPatient,
   updatePollCursor,
   updateBulkExportCursor,
+  setBulkExportJob,
+  clearBulkExportJob,
   listPollableConnections,
   listBulkExportConnections,
   fhirGet,

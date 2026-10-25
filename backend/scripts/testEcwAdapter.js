@@ -60,6 +60,44 @@ check('encounter query is patient-only', params.toString(), 'patient=Patient%2Ft
 const bulkParams = new URLSearchParams({ _type: 'Patient,Encounter' });
 check('bulk export type param', bulkParams.get('_type'), 'Patient,Encounter');
 
+const {
+  isBulkExportInProgressOutcome,
+  extractStatusUrlFromHeaders,
+} = require('../src/services/ecw-bulk-export.service');
+
+check(
+  'bulk in-progress OperationOutcome',
+  isBulkExportInProgressOutcome({
+    resourceType: 'OperationOutcome',
+    issue: [{ code: 'duplicate', diagnostics: 'Bulk operation is already in progress for the group' }],
+  }),
+  true,
+);
+check(
+  'bulk unrelated OperationOutcome',
+  isBulkExportInProgressOutcome({
+    resourceType: 'OperationOutcome',
+    issue: [{ code: 'not-found', diagnostics: 'Group missing' }],
+  }),
+  false,
+);
+
+const mockRes = {
+  headers: {
+    get(name) {
+      if (name === 'content-location' || name === 'Content-Location') {
+        return 'https://staging-fhir.ecwcloud.com/fhir/r4/FFBJCD/$export-poll-status?_job=abc';
+      }
+      return null;
+    },
+  },
+};
+check(
+  'bulk status URL from Content-Location',
+  extractStatusUrlFromHeaders(mockRes),
+  'https://staging-fhir.ecwcloud.com/fhir/r4/FFBJCD/$export-poll-status?_job=abc',
+);
+
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
   process.exit(1);

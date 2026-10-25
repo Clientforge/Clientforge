@@ -96,6 +96,43 @@ function bulkKickoffErrorMessage(res, bodyText, baseMessage) {
   return truncateText(msg, 2000);
 }
 
+function extractStatusUrlFromHeaders(res) {
+  const candidates = [
+    res.headers.get('content-location'),
+    res.headers.get('Content-Location'),
+    res.headers.get('location'),
+    res.headers.get('Location'),
+  ];
+  for (const value of candidates) {
+    const trimmed = String(value || '').trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
+}
+
+function isBulkExportInProgressOutcome(data) {
+  if (data?.resourceType !== 'OperationOutcome') return false;
+  return (data.issue || []).some((issue) => {
+    const code = String(issue.code || '').toLowerCase();
+    const diag = String(issue.diagnostics || '').toLowerCase();
+    return code === 'duplicate'
+      || diag.includes('already in progress')
+      || diag.includes('in progress');
+  });
+}
+
+function storedBulkStatusUrl(connection) {
+  return String(connection?.bulk_export_status_url || '').trim() || null;
+}
+
+function isBulkJobNotFoundError(err) {
+  return err?.code === 'BULK_JOB_NOT_FOUND';
+}
+
+function isBulkPollInProgressError(err) {
+  return err?.code === 'BULK_POLL_IN_PROGRESS';
+}
+
 /**
  * Kick off Group/$export (async). Returns Content-Location URL for status polling.
  */
@@ -147,6 +184,11 @@ async function kickoffGroupExport(connection, { sinceIso } = {}) {
       );
     }
     if (data.output) return { immediate: true, body: data };
+    if (isBulkExportInProgressOutcome(data)) {
+      const statusUrl = extractStatusUrlFromHeaders(res);
+      logBulkExportKickoffResponse(connection, path, res, bodyText, 'export_already_in_progress');
+      return { inProgress: true, statusUrl };
+    }
     logBulkExportKickoffResponse(connection, path, res, bodyText, 'sync_unexpected_shape');
     throw new Error(
       bulkKickoffErrorMessage(res, bodyText, 'Unexpected synchronous bulk export response'),
@@ -186,10 +228,14 @@ async function pollExportJob(connection, statusUrl) {
       return body;
     }
 
+    if (res.status === 404 || res.status === 410) {
+      throw Object.assign(new Error('Bulk export job not found'), { code: 'BULK_JOB_NOT_FOUND' });
+    }
+
     const errText = await res.text().catch(() => '');
     throw new Error(errText.slice(0, 500) || `Export status poll failed (${res.status})`);
   }
-  throw new Error('Bulk export job timed out');
+  throw Object.assign(new Error('Bulk export job timed out'), { code: 'BULK_POLL_IN_PROGRESS' });
 }
 
 async function downloadExportOutputs(connection, exportResult) {
@@ -279,6 +325,50 @@ async function processBulkResources(tenantId, connection, resources, sinceDate) 
   return { processed, duplicates, skipped, scanned: encounters.length, patients: patientsById.size };
 }
 
+async function completeBulkExportRun(tenantId, connection, exportResult, sinceDate) {
+  let resources;
+  try {
+    resources = await downloadExportOutputs(connection, exportResult);
+  } catch (err) {
+    await ecwService.updateBulkExportCursor(tenantId, { error: err.message });
+    throw err;
+  }
+
+  const summary = await processBulkResources(tenantId, connection, resources, sinceDate);
+  await ecwService.clearBulkExportJob(tenantId);
+  await ecwService.updateBulkExportCursor(tenantId, { lastExportAt: new Date() });
+  return { tenantId, ...summary };
+}
+
+async function pollAndCompleteBulkExport(tenantId, connection, statusUrl, sinceDate) {
+  const exportResult = await pollExportJob(connection, statusUrl);
+  return completeBulkExportRun(tenantId, connection, exportResult, sinceDate);
+}
+
+async function resumeStoredBulkExport(connection, sinceDate) {
+  const tenantId = connection.tenant_id;
+  const statusUrl = storedBulkStatusUrl(connection);
+  if (!statusUrl) return null;
+
+  try {
+    console.log(`[ECW] bulk tenant=${tenantId} resuming export job`);
+    return await pollAndCompleteBulkExport(tenantId, connection, statusUrl, sinceDate);
+  } catch (err) {
+    if (isBulkJobNotFoundError(err)) {
+      console.warn(`[ECW] bulk tenant=${tenantId} stored export job not found — clearing`);
+      await ecwService.clearBulkExportJob(tenantId);
+      return null;
+    }
+    if (isBulkPollInProgressError(err)) {
+      console.log(`[ECW] bulk tenant=${tenantId} export still in progress (will resume next cycle)`);
+      await ecwService.updateBulkExportCursor(tenantId, { clearPollError: true });
+      return { tenantId, skipped: 'bulk_job_in_progress' };
+    }
+    await ecwService.updateBulkExportCursor(tenantId, { error: err.message });
+    throw err;
+  }
+}
+
 async function runBulkExportForConnection(connection) {
   const tenantId = connection.tenant_id;
   if (!connection.ecw_checkout_automations) {
@@ -291,6 +381,9 @@ async function runBulkExportForConnection(connection) {
   const sinceIso = sinceIsoForBulk(connection);
   const sinceDate = sinceIso ? new Date(sinceIso) : null;
 
+  const resumed = await resumeStoredBulkExport(connection, sinceDate);
+  if (resumed) return resumed;
+
   let kickoff;
   try {
     kickoff = await kickoffGroupExport(connection, { sinceIso });
@@ -299,30 +392,47 @@ async function runBulkExportForConnection(connection) {
     throw err;
   }
 
+  if (kickoff?.inProgress) {
+    const statusUrl = kickoff.statusUrl || storedBulkStatusUrl(connection);
+    if (!statusUrl) {
+      console.warn(
+        `[ECW] bulk tenant=${tenantId} eCW reports export in progress but no status URL — waiting`,
+      );
+      await ecwService.updateBulkExportCursor(tenantId, { clearPollError: true });
+      return { tenantId, skipped: 'bulk_duplicate_no_status_url' };
+    }
+    await ecwService.setBulkExportJob(tenantId, { statusUrl });
+    try {
+      return await pollAndCompleteBulkExport(tenantId, connection, statusUrl, sinceDate);
+    } catch (err) {
+      if (isBulkPollInProgressError(err)) {
+        await ecwService.updateBulkExportCursor(tenantId, { clearPollError: true });
+        return { tenantId, skipped: 'bulk_job_in_progress' };
+      }
+      await ecwService.updateBulkExportCursor(tenantId, { error: err.message });
+      throw err;
+    }
+  }
+
   let exportResult;
   try {
     if (kickoff.immediate) {
       exportResult = kickoff.body;
     } else {
-      exportResult = await pollExportJob(connection, kickoff);
+      const statusUrl = typeof kickoff === 'string' ? kickoff : kickoff.statusUrl;
+      await ecwService.setBulkExportJob(tenantId, { statusUrl });
+      exportResult = await pollExportJob(connection, statusUrl);
     }
   } catch (err) {
+    if (isBulkPollInProgressError(err)) {
+      await ecwService.updateBulkExportCursor(tenantId, { clearPollError: true });
+      return { tenantId, skipped: 'bulk_job_in_progress' };
+    }
     await ecwService.updateBulkExportCursor(tenantId, { error: err.message });
     throw err;
   }
 
-  let resources;
-  try {
-    resources = await downloadExportOutputs(connection, exportResult);
-  } catch (err) {
-    await ecwService.updateBulkExportCursor(tenantId, { error: err.message });
-    throw err;
-  }
-
-  const summary = await processBulkResources(tenantId, connection, resources, sinceDate);
-  await ecwService.updateBulkExportCursor(tenantId, { lastExportAt: new Date() });
-
-  return { tenantId, ...summary };
+  return completeBulkExportRun(tenantId, connection, exportResult, sinceDate);
 }
 
 function bulkExportIntervalMs() {
@@ -342,4 +452,6 @@ module.exports = {
   groupResourceId,
   summarizeBulkKickoffBody,
   truncateText,
+  isBulkExportInProgressOutcome,
+  extractStatusUrlFromHeaders,
 };

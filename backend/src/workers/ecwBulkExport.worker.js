@@ -15,6 +15,8 @@ async function runExportCycle() {
         console.log(
           `[ECW] bulk tenant=${summary.tenantId} processed=${summary.processed} dup=${summary.duplicates}`,
         );
+      } else if (summary.skipped === 'bulk_job_in_progress') {
+        console.log(`[ECW] bulk tenant=${summary.tenantId} waiting on in-progress export`);
       }
     } catch (err) {
       console.error(`[ECW] Bulk export failed tenant=${connection.tenant_id}:`, err.message);
