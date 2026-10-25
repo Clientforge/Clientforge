@@ -30,6 +30,20 @@ function staticWithFreshIndex(rootDir) {
   });
 }
 
+/** Email clients (Outlook, Gmail) load images cross-origin — CORP must not be same-origin. */
+function staticNewsletterAssets(rootDir) {
+  return express.static(rootDir, {
+    setHeaders(res, filePath) {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      if (path.basename(filePath) === 'index.html') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (/\.(png|jpe?g|gif|webp|svg)$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  });
+}
+
 // --------------- GLOBAL MIDDLEWARE ---------------
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -369,6 +383,7 @@ app.get('/services/marketing-automation', (req, res) => {
 app.get('/services/performance-tracking', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'services/performance-tracking.html'));
 });
+app.use('/newsletters', staticNewsletterAssets(path.join(LANDING_DIR, 'newsletters')));
 app.use(express.static(LANDING_DIR));
 
 /** Redirect legacy /grace-to-grace on ClientForge host to G2G_CANONICAL_ORIGIN. */

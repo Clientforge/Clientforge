@@ -7,6 +7,7 @@
 3. Confirm:
    - https://app.clientforge-ai.com/newsletters/sluice-october-2026/
    - https://app.clientforge-ai.com/newsletters/sluice-october-2026/images/logo.png
+4. After changing image headers, send a **new** test email (Outlook caches broken images on the old message).
 
 Image URLs in `index.html` already point at `app.clientforge-ai.com`.
 
