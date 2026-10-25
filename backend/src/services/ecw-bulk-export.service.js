@@ -8,6 +8,8 @@ const {
 const DEFAULT_BULK_INTERVAL_MS = 30 * 60 * 1000;
 const EXPORT_POLL_MS = 5000;
 const EXPORT_POLL_MAX_ATTEMPTS = 120;
+const BULK_KICKOFF_LOG_BODY_MAX = 8000;
+const BULK_KICKOFF_ERROR_BODY_MAX = 900;
 
 function groupResourceId(groupId) {
   const raw = String(groupId || '').trim();
@@ -33,6 +35,65 @@ async function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function truncateText(text, maxLen) {
+  const s = String(text ?? '').trim();
+  if (s.length <= maxLen) return s;
+  return `${s.slice(0, maxLen)}…(+${s.length - maxLen} chars)`;
+}
+
+function responseHeadersObject(res) {
+  const headers = {};
+  if (res?.headers?.forEach) {
+    res.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+  }
+  return headers;
+}
+
+function summarizeBulkKickoffBody(bodyText) {
+  const trimmed = String(bodyText || '').trim();
+  if (!trimmed) return '(empty body)';
+  try {
+    const data = JSON.parse(trimmed);
+    if (data.resourceType === 'OperationOutcome') {
+      const parts = (data.issue || []).map((issue) => {
+        return issue.diagnostics || issue.details?.text || issue.code;
+      }).filter(Boolean);
+      return parts.length ? parts.join('; ') : 'OperationOutcome';
+    }
+    if (data.output) return 'includes output';
+    const keys = Object.keys(data);
+    return keys.length ? `JSON keys: ${keys.slice(0, 16).join(', ')}` : 'empty JSON object';
+  } catch {
+    return truncateText(trimmed, 240);
+  }
+}
+
+function logBulkExportKickoffResponse(connection, path, res, bodyText, reason) {
+  console.warn('[ECW] Bulk export kickoff response', {
+    reason,
+    tenantId: connection?.tenant_id,
+    fhirBase: connection?.fhir_base_url,
+    path,
+    status: res.status,
+    statusText: res.statusText,
+    headers: responseHeadersObject(res),
+    body: truncateText(bodyText, BULK_KICKOFF_LOG_BODY_MAX),
+  });
+}
+
+function bulkKickoffErrorMessage(res, bodyText, baseMessage) {
+  const summary = summarizeBulkKickoffBody(bodyText);
+  const detail = `HTTP ${res.status}${summary ? `: ${summary}` : ''}`;
+  const bodySnippet = truncateText(bodyText, BULK_KICKOFF_ERROR_BODY_MAX);
+  const withBody = bodySnippet && bodySnippet !== summary
+    ? `${detail} — ${bodySnippet}`
+    : detail;
+  const msg = `${baseMessage} (${withBody})`;
+  return truncateText(msg, 2000);
 }
 
 /**
@@ -65,18 +126,35 @@ async function kickoffGroupExport(connection, { sinceIso } = {}) {
   if (res.status === 202) {
     const contentLocation = res.headers.get('content-location') || res.headers.get('Content-Location');
     if (!contentLocation) {
-      throw new Error('Bulk export accepted but Content-Location header missing');
+      const bodyText = await res.text().catch(() => '');
+      logBulkExportKickoffResponse(connection, path, res, bodyText, 'missing_content_location');
+      throw new Error(
+        bulkKickoffErrorMessage(res, bodyText, 'Bulk export accepted but Content-Location header missing'),
+      );
     }
     return contentLocation.trim();
   }
 
   if (res.status >= 200 && res.status < 300) {
-    const data = await res.json().catch(() => ({}));
+    const bodyText = await res.text().catch(() => '');
+    let data = {};
+    try {
+      data = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      logBulkExportKickoffResponse(connection, path, res, bodyText, 'sync_non_json');
+      throw new Error(
+        bulkKickoffErrorMessage(res, bodyText, 'Unexpected synchronous bulk export response'),
+      );
+    }
     if (data.output) return { immediate: true, body: data };
-    throw new Error('Unexpected synchronous bulk export response');
+    logBulkExportKickoffResponse(connection, path, res, bodyText, 'sync_unexpected_shape');
+    throw new Error(
+      bulkKickoffErrorMessage(res, bodyText, 'Unexpected synchronous bulk export response'),
+    );
   }
 
   const errText = await res.text().catch(() => '');
+  logBulkExportKickoffResponse(connection, path, res, errText, 'kickoff_failed');
   let msg = res.statusText || 'Bulk export kickoff failed';
   try {
     const parsed = JSON.parse(errText);
@@ -84,7 +162,7 @@ async function kickoffGroupExport(connection, { sinceIso } = {}) {
   } catch {
     if (errText) msg = errText.slice(0, 500);
   }
-  throw new Error(msg);
+  throw new Error(truncateText(`${msg} (HTTP ${res.status})`, 2000));
 }
 
 async function pollExportJob(connection, statusUrl) {
@@ -262,4 +340,6 @@ module.exports = {
   processBulkResources,
   bulkExportIntervalMs,
   groupResourceId,
+  summarizeBulkKickoffBody,
+  truncateText,
 };
