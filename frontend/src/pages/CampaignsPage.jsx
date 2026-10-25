@@ -1515,9 +1515,20 @@ function CreateCampaignModal({ onClose, onSuccess, initialAudience = null }) {
                         <textarea
                           value={wave.email_body || (form.channel === 'email' ? wave.message : '')}
                           onChange={(e) => updateWave(i, form.channel === 'email' ? 'message' : 'email_body', e.target.value)}
-                          placeholder="Email body (can be longer and more detailed)..."
-                          rows={4}
+                          placeholder={
+                            form.channel === 'email'
+                              ? 'Plain text or full HTML newsletter (paste HTML starting with <!DOCTYPE html>)...'
+                              : 'Email body (can be longer and more detailed)...'
+                          }
+                          rows={form.channel === 'email' ? 10 : 4}
+                          className={form.channel === 'email' ? 'email-body-html' : undefined}
                         />
+                        {form.channel === 'email' && (
+                          <p className="muted" style={{ fontSize: '12px', marginTop: '6px' }}>
+                            HTML newsletters: paste the full <code>index.html</code> from{' '}
+                            <code>landing/newsletters/…</code> after deploy so image links load.
+                          </p>
+                        )}
                       </div>
                     )}
 

@@ -7,7 +7,21 @@ const getEmailFromDefault = (defaultFrom) => {
   return match ? match[1] : defaultFrom;
 };
 
-const sendEmail = async ({ tenantId, to, contactId, fromName, fromAddress, subject, body }) => {
+const isHtmlEmailBody = (body) => {
+  const trimmed = (body || '').trimStart();
+  return /^<!DOCTYPE\s+html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed);
+};
+
+const sendEmail = async ({
+  tenantId,
+  to,
+  contactId,
+  fromName,
+  fromAddress,
+  subject,
+  body,
+  textBody,
+}) => {
   const defaultEmail = getEmailFromDefault(config.email.defaultFrom);
   const safeName = (fromName || '').replace(/[<>[\]]/g, '').trim();
   const from = safeName
@@ -37,12 +51,19 @@ const sendEmail = async ({ tenantId, to, contactId, fromName, fromAddress, subje
       const { Resend } = require('resend');
       const resend = new Resend(config.email.resendApiKey);
 
-      const { data, error } = await resend.emails.send({
+      const payload = {
         from,
         to: [destinationTo],
         subject: destinationSubject,
-        html: formatEmailHtml(destinationBody, destinationSubject),
-      });
+      };
+      if (isHtmlEmailBody(destinationBody)) {
+        payload.html = destinationBody;
+        if (textBody) payload.text = textBody;
+      } else {
+        payload.html = formatEmailHtml(destinationBody, destinationSubject);
+      }
+
+      const { data, error } = await resend.emails.send(payload);
 
       // Resend SDK does NOT throw - it returns { data, error }
       if (error) {
@@ -204,6 +225,7 @@ We recommend changing this password after you log in (when that option is availa
 
 module.exports = {
   sendEmail,
+  isHtmlEmailBody,
   sendWelcomeEmail,
   sendPasswordHelpNotifyEmail,
   sendTemporaryPasswordEmail,
