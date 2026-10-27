@@ -1285,6 +1285,7 @@ module.exports = {
   CANCELLATION_FOLLOWUP_JOB_TYPE,
   computeCancellationFollowUpAt,
   dispatchWorkflows,
+  dispatchPostVisitWorkflows,
   dispatchCheckoutWorkflows,
   dispatchCheckInWorkflows,
   dispatchPostServiceCompletionWorkflows,
