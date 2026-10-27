@@ -133,6 +133,12 @@ function isBulkPollInProgressError(err) {
   return err?.code === 'BULK_POLL_IN_PROGRESS';
 }
 
+/** FHIR bulk status manifest: `error` is an array; empty array means success. */
+function bulkExportStatusHasErrors(body) {
+  const errors = Array.isArray(body?.error) ? body.error : [];
+  return errors.length > 0;
+}
+
 /**
  * Kick off Group/$export (async). Returns Content-Location URL for status polling.
  */
@@ -222,8 +228,9 @@ async function pollExportJob(connection, statusUrl) {
 
     if (res.status >= 200 && res.status < 300) {
       const body = await res.json().catch(() => ({}));
-      if (body.error) {
-        throw new Error(body.error?.[0]?.message || 'Bulk export job failed');
+      if (bulkExportStatusHasErrors(body)) {
+        const errors = Array.isArray(body.error) ? body.error : [];
+        throw new Error(errors[0]?.message || 'Bulk export job failed');
       }
       return body;
     }
@@ -454,4 +461,5 @@ module.exports = {
   truncateText,
   isBulkExportInProgressOutcome,
   extractStatusUrlFromHeaders,
+  bulkExportStatusHasErrors,
 };

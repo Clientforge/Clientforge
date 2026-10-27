@@ -63,6 +63,7 @@ check('bulk export type param', bulkParams.get('_type'), 'Patient,Encounter');
 const {
   isBulkExportInProgressOutcome,
   extractStatusUrlFromHeaders,
+  bulkExportStatusHasErrors,
 } = require('../src/services/ecw-bulk-export.service');
 
 check(
@@ -97,6 +98,18 @@ check(
   extractStatusUrlFromHeaders(mockRes),
   'https://staging-fhir.ecwcloud.com/fhir/r4/FFBJCD/$export-poll-status?_job=abc',
 );
+
+check(
+  'bulk manifest error:[] is not failure',
+  bulkExportStatusHasErrors({ output: [{ type: 'Patient', url: 'https://x' }], error: [] }),
+  false,
+);
+check(
+  'bulk manifest with error entry is failure',
+  bulkExportStatusHasErrors({ error: [{ message: 'export failed' }] }),
+  true,
+);
+check('bulk manifest missing error is not failure', bulkExportStatusHasErrors({ output: [] }), false);
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
