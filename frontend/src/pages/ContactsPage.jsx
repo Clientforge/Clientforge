@@ -17,15 +17,6 @@ function showsVisitScheduleColumns(tenant) {
   return /bay area heart/i.test(name) || /farm\s*artist/i.test(name);
 }
 
-function clinicTodayIso() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
-
 /** eCW auto-tags use `service:` / `provider:` prefixes; show the label only in the list. */
 function formatContactTagLabel(tag) {
   const s = String(tag || '');
@@ -133,13 +124,6 @@ export default function ContactsPage() {
   };
 
   const hasActiveFilters = search || tagFilter || lastVisitFilter || visitFromDate || visitToDate;
-
-  const applyToday = () => {
-    const today = clinicTodayIso();
-    setVisitFromDate(today);
-    setVisitToDate(today);
-    loadContacts(1, { visitFrom: today, visitTo: today });
-  };
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -267,9 +251,6 @@ export default function ContactsPage() {
           </select>
           {visitSchedule && (
             <>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={applyToday}>
-                Today
-              </button>
               <input
                 type="date"
                 className="filter-select"
