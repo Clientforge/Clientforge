@@ -287,8 +287,8 @@ export default function ContactsPage() {
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Email</th>
-                  <th>Next visit</th>
                   <th>Last visit</th>
+                  <th>Next visit</th>
                   <th>Tags</th>
                   <th>Source</th>
                   <th>Added</th>
@@ -312,8 +312,8 @@ export default function ContactsPage() {
                     </td>
                     <td className="mono">{c.phone}</td>
                     <td>{c.email || '—'}</td>
-                    <td className="muted">{c.nextVisitAt ? formatDate(c.nextVisitAt) : '—'}</td>
                     <td className="muted">{c.lastVisitAt ? formatDate(c.lastVisitAt) : '—'}</td>
+                    <td className="muted">{c.nextVisitAt ? formatDate(c.nextVisitAt) : '—'}</td>
                     <td>
                       <div className="tag-list">
                         {(c.tags || []).map((t, i) => (
