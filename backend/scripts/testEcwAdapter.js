@@ -3,6 +3,8 @@
  */
 const {
   isFinishedEncounter,
+  isUpcomingEncounter,
+  isCancelledEncounter,
   encounterRelevantSince,
   patientIdFromEncounter,
   practitionerIdFromEncounter,
@@ -23,6 +25,13 @@ function check(label, actual, expected) {
 check('finished status', isFinishedEncounter({ status: 'finished' }), true);
 check('completed status', isFinishedEncounter({ status: 'completed' }), true);
 check('in-progress skipped', isFinishedEncounter({ status: 'in-progress' }), false);
+
+const futureStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+const pastStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+check('upcoming planned', isUpcomingEncounter({ status: 'planned', period: { start: futureStart } }), true);
+check('past planned is not upcoming', isUpcomingEncounter({ status: 'planned', period: { start: pastStart } }), false);
+check('cancelled is not upcoming', isUpcomingEncounter({ status: 'cancelled', period: { start: futureStart } }), false);
+check('cancelled status', isCancelledEncounter({ status: 'cancelled' }), true);
 
 check(
   'patient ref parsed',

@@ -11,9 +11,9 @@ async function runExportCycle() {
   for (const connection of connections) {
     try {
       const summary = await runBulkExportForConnection(connection);
-      if (summary.processed > 0) {
+      if (summary.processed > 0 || summary.upcoming > 0) {
         console.log(
-          `[ECW] bulk tenant=${summary.tenantId} processed=${summary.processed} dup=${summary.duplicates}`,
+          `[ECW] bulk tenant=${summary.tenantId} processed=${summary.processed} dup=${summary.duplicates} upcoming=${summary.upcoming || 0}`,
         );
       } else if (summary.skipped === 'bulk_job_in_progress') {
         console.log(`[ECW] bulk tenant=${summary.tenantId} waiting on in-progress export`);

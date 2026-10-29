@@ -316,7 +316,18 @@ const listContacts = async (tenantId, {
   const [countRes, dataRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int FROM contacts WHERE ${where}`, params),
     db.query(
-      `SELECT * FROM contacts WHERE ${where} ORDER BY ${orderBy} LIMIT $${idx} OFFSET $${idx + 1}`,
+      `SELECT contacts.*, (
+         SELECT MIN(a.scheduled_at)
+         FROM appointments a
+         WHERE a.tenant_id = contacts.tenant_id
+           AND a.contact_id = contacts.id
+           AND a.scheduled_at > NOW()
+           AND a.status IN ('scheduled', 'confirmed', 'rescheduled')
+       ) AS next_visit_at
+       FROM contacts
+       WHERE ${where}
+       ORDER BY ${orderBy}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, offset],
     ),
   ]);
@@ -497,6 +508,7 @@ const formatContact = (row) => ({
   notes: row.notes,
   unsubscribed: row.unsubscribed,
   lastVisitAt: row.last_visit_at,
+  nextVisitAt: row.next_visit_at || null,
   createdAt: row.created_at,
 });
 

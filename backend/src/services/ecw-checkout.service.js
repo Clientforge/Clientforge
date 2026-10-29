@@ -5,6 +5,7 @@ const ecwService = require('./ecw.service');
 const contactService = require('./contact.service');
 const {
   normalizeEcwCheckout,
+  normalizeEcwUpcomingEncounter,
   patientIdFromEncounter,
   practitionerIdFromEncounter,
   pickPractitionerName,
@@ -127,6 +128,91 @@ async function processEcwEncounterCheckout(tenantId, encounter, patient) {
   };
 }
 
+/**
+ * Save a future eCW encounter as a scheduled appointment. Does not check out or send post-visit messages.
+ * A completed checkout for the same encounter id is left as-is.
+ */
+async function processEcwUpcomingEncounter(tenantId, encounter, patient) {
+  const normalized = normalizeEcwUpcomingEncounter(encounter, patient);
+  if (!normalized.contact.phone) {
+    return { skipped: 'no_phone', encounterId: encounter.id };
+  }
+
+  const contactId = await upsertContactFromEcw(tenantId, normalized.contact);
+  const appt = normalized.appointment;
+  const result = await db.query(
+    `INSERT INTO appointments
+       (tenant_id, contact_id, external_id, provider, status, scheduled_at, timezone, service_name, duration_minutes, raw_payload)
+     VALUES ($1, $2, $3, 'ecw', 'scheduled', $4, $5, $6, $7, $8)
+     ON CONFLICT (tenant_id, external_id) DO UPDATE SET
+       contact_id = CASE
+         WHEN appointments.status = 'completed' THEN appointments.contact_id
+         ELSE EXCLUDED.contact_id
+       END,
+       scheduled_at = CASE
+         WHEN appointments.status = 'completed' THEN appointments.scheduled_at
+         ELSE EXCLUDED.scheduled_at
+       END,
+       timezone = CASE
+         WHEN appointments.status = 'completed' THEN appointments.timezone
+         ELSE EXCLUDED.timezone
+       END,
+       service_name = CASE
+         WHEN appointments.status = 'completed' THEN appointments.service_name
+         ELSE EXCLUDED.service_name
+       END,
+       duration_minutes = CASE
+         WHEN appointments.status = 'completed' THEN appointments.duration_minutes
+         ELSE EXCLUDED.duration_minutes
+       END,
+       raw_payload = CASE
+         WHEN appointments.status = 'completed' THEN appointments.raw_payload
+         ELSE EXCLUDED.raw_payload
+       END,
+       status = CASE
+         WHEN appointments.status = 'completed' THEN appointments.status
+         ELSE 'scheduled'
+       END,
+       updated_at = NOW()
+     RETURNING id`,
+    [
+      tenantId,
+      contactId,
+      appt.externalId,
+      appt.scheduledAt,
+      appt.timezone || 'America/New_York',
+      appt.serviceName || null,
+      appt.durationMinutes,
+      appt.rawPayload ? JSON.stringify(appt.rawPayload) : null,
+    ],
+  );
+
+  return {
+    upcoming: true,
+    contactId,
+    appointmentId: result.rows[0].id,
+    encounterId: encounter.id,
+  };
+}
+
+/** Drop a previously saved upcoming visit when eCW marks that encounter cancelled. */
+async function cancelEcwEncounterAppointment(tenantId, encounter) {
+  if (!encounter?.id) return { skipped: 'no_id' };
+  const externalId = `ecw:encounter:${encounter.id}`;
+  const result = await db.query(
+    `UPDATE appointments
+     SET status = 'cancelled', updated_at = NOW()
+     WHERE tenant_id = $1 AND external_id = $2 AND status <> 'completed'
+     RETURNING id`,
+    [tenantId, externalId],
+  );
+  return result.rows[0]
+    ? { cancelled: true, appointmentId: result.rows[0].id, encounterId: encounter.id }
+    : { skipped: 'no_appointment', encounterId: encounter.id };
+}
+
 module.exports = {
   processEcwEncounterCheckout,
+  processEcwUpcomingEncounter,
+  cancelEcwEncounterAppointment,
 };

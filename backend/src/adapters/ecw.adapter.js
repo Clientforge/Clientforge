@@ -3,6 +3,7 @@
  */
 
 const FINISHED_STATUSES = new Set(['finished', 'completed']);
+const UPCOMING_STATUSES = new Set(['planned', 'arrived', 'triaged', 'in-progress', 'onleave']);
 
 function pickPatientPhone(telecom) {
   if (!Array.isArray(telecom)) return null;
@@ -52,6 +53,22 @@ function encounterCheckedOutAt(encounter) {
 function isFinishedEncounter(encounter) {
   const status = String(encounter?.status || '').toLowerCase();
   return FINISHED_STATUSES.has(status);
+}
+
+function isCancelledEncounter(encounter) {
+  return String(encounter?.status || '').toLowerCase() === 'cancelled';
+}
+
+/** Planned (or in-progress) encounter whose start is still in the future. */
+function isUpcomingEncounter(encounter, now = new Date()) {
+  const status = String(encounter?.status || '').toLowerCase();
+  if (!UPCOMING_STATUSES.has(status)) return false;
+  const start = encounter?.period?.start;
+  if (!start) return false;
+  const d = new Date(start);
+  if (Number.isNaN(d.getTime())) return false;
+  const asOf = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+  return d > asOf;
 }
 
 /** Best-effort encounter time for poll window (eCW may not support _lastUpdated search). */
@@ -128,6 +145,40 @@ function pickPractitionerName(practitioner) {
   return combined || null;
 }
 
+function normalizeEcwUpcomingEncounter(encounter, patient) {
+  if (!encounter?.id) {
+    throw new Error('Encounter missing id');
+  }
+  const start = encounter?.period?.start;
+  const scheduled = start ? new Date(start) : null;
+  if (!scheduled || Number.isNaN(scheduled.getTime())) {
+    throw new Error(`Encounter ${encounter.id} has no start`);
+  }
+
+  const { firstName, lastName } = pickPatientName(patient);
+  const telecom = patient?.telecom;
+  const externalId = `ecw:encounter:${encounter.id}`;
+
+  return {
+    contact: {
+      firstName,
+      lastName,
+      phone: pickPatientPhone(telecom),
+      email: pickPatientEmail(telecom),
+      ecwPatientId: patient?.id || patientIdFromEncounter(encounter),
+    },
+    appointment: {
+      externalId,
+      provider: 'ecw',
+      scheduledAt: scheduled.toISOString(),
+      timezone: 'America/New_York',
+      serviceName: encounterServiceLabel(encounter),
+      durationMinutes: null,
+      rawPayload: encounter,
+    },
+  };
+}
+
 function normalizeEcwCheckout(encounter, patient) {
   if (!encounter?.id) {
     throw new Error('Encounter missing id');
@@ -172,7 +223,10 @@ function normalizeEcwCheckout(encounter, patient) {
 
 module.exports = {
   normalizeEcwCheckout,
+  normalizeEcwUpcomingEncounter,
   isFinishedEncounter,
+  isCancelledEncounter,
+  isUpcomingEncounter,
   encounterRelevantSince,
   patientIdFromEncounter,
   practitionerIdFromEncounter,

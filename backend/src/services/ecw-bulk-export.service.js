@@ -1,8 +1,15 @@
 const ecwService = require('./ecw.service');
-const { processEcwEncounterCheckout } = require('./ecw-checkout.service');
+const {
+  processEcwEncounterCheckout,
+  processEcwUpcomingEncounter,
+  cancelEcwEncounterAppointment,
+} = require('./ecw-checkout.service');
 const {
   isFinishedEncounter,
+  isCancelledEncounter,
+  isUpcomingEncounter,
   encounterRelevantSince,
+  patientIdFromEncounter,
 } = require('../adapters/ecw.adapter');
 
 const DEFAULT_BULK_INTERVAL_MS = 30 * 60 * 1000;
@@ -142,7 +149,7 @@ function bulkExportStatusHasErrors(body) {
 /**
  * Kick off Group/$export (async). Returns Content-Location URL for status polling.
  */
-async function kickoffGroupExport(connection, { sinceIso } = {}) {
+async function kickoffGroupExport(connection) {
   const base = (connection.fhir_base_url || '').replace(/\/$/, '');
   const gid = groupResourceId(connection.ecw_group_id);
   if (!base || !gid) {
@@ -151,10 +158,8 @@ async function kickoffGroupExport(connection, { sinceIso } = {}) {
     });
   }
 
+  // No _since: planned visits booked earlier would be left out of an incremental file.
   const params = new URLSearchParams({ _type: 'Patient,Encounter' });
-  if (sinceIso) {
-    params.set('_since', sinceIso);
-  }
 
   const path = `Group/${encodeURIComponent(gid)}/$export?${params.toString()}`;
   const res = await ecwService.fhirRequest(connection, path, {
@@ -295,8 +300,44 @@ async function processBulkResources(tenantId, connection, resources, sinceDate) 
   let processed = 0;
   let duplicates = 0;
   let skipped = 0;
+  let upcoming = 0;
+
+  async function patientForEncounter(encounter) {
+    const patientId = patientIdFromEncounter(encounter);
+    let patient = patientId ? patientsById.get(patientId) : null;
+    if (!patient && patientId && connection) {
+      try {
+        patient = await ecwService.fetchPatient(connection, patientId);
+      } catch (err) {
+        console.warn(`[ECW] Bulk Patient fetch failed ${patientId}:`, err.message);
+      }
+    }
+    return patient;
+  }
 
   for (const encounter of encounters) {
+    if (isCancelledEncounter(encounter)) {
+      try {
+        await cancelEcwEncounterAppointment(tenantId, encounter);
+      } catch (err) {
+        console.error(`[ECW] Bulk cancel failed tenant=${tenantId} encounter=${encounter.id}:`, err.message);
+      }
+      continue;
+    }
+
+    if (isUpcomingEncounter(encounter)) {
+      try {
+        const patient = await patientForEncounter(encounter);
+        const result = await processEcwUpcomingEncounter(tenantId, encounter, patient);
+        if (result.skipped) skipped += 1;
+        else upcoming += 1;
+      } catch (err) {
+        console.error(`[ECW] Bulk upcoming failed tenant=${tenantId} encounter=${encounter.id}:`, err.message);
+        skipped += 1;
+      }
+      continue;
+    }
+
     if (!isFinishedEncounter(encounter)) {
       skipped += 1;
       continue;
@@ -306,19 +347,8 @@ async function processBulkResources(tenantId, connection, resources, sinceDate) 
       continue;
     }
 
-    const subjectRef = encounter?.subject?.reference || '';
-    const m = subjectRef.match(/Patient\/(.+)/i);
-    const patientId = m ? m[1] : null;
-    let patient = patientId ? patientsById.get(patientId) : null;
-    if (!patient && patientId && connection) {
-      try {
-        patient = await ecwService.fetchPatient(connection, patientId);
-      } catch (err) {
-        console.warn(`[ECW] Bulk Patient fetch failed ${patientId}:`, err.message);
-      }
-    }
-
     try {
+      const patient = await patientForEncounter(encounter);
       const result = await processEcwEncounterCheckout(tenantId, encounter, patient);
       if (result.duplicate) duplicates += 1;
       else if (result.skipped) skipped += 1;
@@ -329,7 +359,14 @@ async function processBulkResources(tenantId, connection, resources, sinceDate) 
     }
   }
 
-  return { processed, duplicates, skipped, scanned: encounters.length, patients: patientsById.size };
+  return {
+    processed,
+    duplicates,
+    skipped,
+    upcoming,
+    scanned: encounters.length,
+    patients: patientsById.size,
+  };
 }
 
 async function completeBulkExportRun(tenantId, connection, exportResult, sinceDate) {
@@ -393,7 +430,7 @@ async function runBulkExportForConnection(connection) {
 
   let kickoff;
   try {
-    kickoff = await kickoffGroupExport(connection, { sinceIso });
+    kickoff = await kickoffGroupExport(connection);
   } catch (err) {
     await ecwService.updateBulkExportCursor(tenantId, { error: err.message });
     throw err;
