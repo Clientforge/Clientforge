@@ -281,6 +281,43 @@ const importShopmonkeyFromCSV = async (
   };
 };
 
+const VISIT_SCHEDULE_TENANT_IDS = new Set([
+  '04acaef1-89cd-4b2e-8409-f10da5bdabb0',
+]);
+
+function parseVisitDay(value) {
+  if (!value || typeof value !== 'string') return null;
+  const v = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const [year, month, day] = v.split('-').map(Number);
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
+    return null;
+  }
+  return v;
+}
+
+async function tenantShowsVisitSchedule(tenantId) {
+  if (VISIT_SCHEDULE_TENANT_IDS.has(tenantId)) return true;
+  const result = await db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]);
+  const name = String(result.rows[0]?.name || '');
+  return /bay area heart/i.test(name) || /farm\s*artist/i.test(name);
+}
+
+/** Inclusive clinic-local dates. Ignored unless this tenant uses the visit schedule columns. */
+async function visitDateRangeForTenant(tenantId, visitFrom, visitTo) {
+  let from = parseVisitDay(visitFrom);
+  let to = parseVisitDay(visitTo);
+  if (!from && !to) return null;
+  if (!(await tenantShowsVisitSchedule(tenantId))) return null;
+  if (from && to && from > to) {
+    const swap = from;
+    from = to;
+    to = swap;
+  }
+  return { from, to };
+}
+
 const listContacts = async (tenantId, {
   page = 1,
   limit = 25,
@@ -288,6 +325,8 @@ const listContacts = async (tenantId, {
   tag,
   lastVisit,
   sortBy,
+  visitFrom,
+  visitTo,
 }) => {
   const offset = (page - 1) * limit;
   const params = [tenantId];
@@ -307,6 +346,38 @@ const listContacts = async (tenantId, {
   }
 
   appendLastVisitCondition(conditions, lastVisit);
+
+  const visitRange = await visitDateRangeForTenant(tenantId, visitFrom, visitTo);
+  if (visitRange) {
+    const fromIdx = visitRange.from ? idx : null;
+    if (visitRange.from) {
+      params.push(visitRange.from);
+      idx += 1;
+    }
+    const toIdx = visitRange.to ? idx : null;
+    if (visitRange.to) {
+      params.push(visitRange.to);
+      idx += 1;
+    }
+    const bounds = (expr) => {
+      const bits = [];
+      if (fromIdx) bits.push(`${expr} >= $${fromIdx}::date`);
+      if (toIdx) bits.push(`${expr} <= $${toIdx}::date`);
+      return bits.join(' AND ');
+    };
+    const lastExpr = bounds(`(last_visit_at AT TIME ZONE 'America/New_York')::date`);
+    const apptExpr = bounds(`(a.scheduled_at AT TIME ZONE 'America/New_York')::date`);
+    conditions.push(`(
+      (${lastExpr})
+      OR EXISTS (
+        SELECT 1 FROM appointments a
+        WHERE a.tenant_id = contacts.tenant_id
+          AND a.contact_id = contacts.id
+          AND a.status IN ('scheduled', 'confirmed', 'rescheduled', 'completed')
+          AND ${apptExpr}
+      )
+    )`);
+  }
 
   const where = conditions.join(' AND ');
   const orderBy = sortBy === 'last_visit_at' || lastVisit

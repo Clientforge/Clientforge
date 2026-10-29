@@ -12,7 +12,7 @@ function isShopmonkeyCustomerCsv(buffer) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { page, limit, search, tag, lastVisit, sortBy } = req.query;
+    const { page, limit, search, tag, lastVisit, sortBy, visitFrom, visitTo } = req.query;
     const result = await contactService.listContacts(req.tenantId, {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 25,
@@ -20,6 +20,8 @@ router.get('/', async (req, res, next) => {
       tag,
       lastVisit,
       sortBy,
+      visitFrom,
+      visitTo,
     });
     res.json(result);
   } catch (err) { next(err); }

@@ -17,6 +17,15 @@ function showsVisitScheduleColumns(tenant) {
   return /bay area heart/i.test(name) || /farm\s*artist/i.test(name);
 }
 
+function clinicTodayIso() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 /** eCW auto-tags use `service:` / `provider:` prefixes; show the label only in the list. */
 function formatContactTagLabel(tag) {
   const s = String(tag || '');
@@ -36,6 +45,8 @@ export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [lastVisitFilter, setLastVisitFilter] = useState('');
+  const [visitFromDate, setVisitFromDate] = useState('');
+  const [visitToDate, setVisitToDate] = useState('');
   const [tagOptions, setTagOptions] = useState([]);
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -43,7 +54,9 @@ export default function ContactsPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  const loadContacts = async (page = 1) => {
+  const loadContacts = async (page = 1, overrides = {}) => {
+    const from = overrides.visitFrom !== undefined ? overrides.visitFrom : visitFromDate;
+    const to = overrides.visitTo !== undefined ? overrides.visitTo : visitToDate;
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 25 });
@@ -52,6 +65,10 @@ export default function ContactsPage() {
       if (lastVisitFilter) params.set('lastVisit', lastVisitFilter);
       if (lastVisitFilter && lastVisitFilter !== 'none') {
         params.set('sortBy', 'last_visit_at');
+      }
+      if (visitSchedule) {
+        if (from) params.set('visitFrom', from);
+        if (to) params.set('visitTo', to);
       }
       const [data, statsData] = await Promise.all([
         api.get(`/contacts?${params}`),
@@ -98,6 +115,8 @@ export default function ContactsPage() {
     setSearch('');
     setTagFilter('');
     setLastVisitFilter('');
+    setVisitFromDate('');
+    setVisitToDate('');
     setLoading(true);
     const params = new URLSearchParams({ page: 1, limit: 25 });
     Promise.all([
@@ -113,7 +132,14 @@ export default function ContactsPage() {
       .finally(() => setLoading(false));
   };
 
-  const hasActiveFilters = search || tagFilter || lastVisitFilter;
+  const hasActiveFilters = search || tagFilter || lastVisitFilter || visitFromDate || visitToDate;
+
+  const applyToday = () => {
+    const today = clinicTodayIso();
+    setVisitFromDate(today);
+    setVisitToDate(today);
+    loadContacts(1, { visitFrom: today, visitTo: today });
+  };
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -239,6 +265,27 @@ export default function ContactsPage() {
               <option key={opt.value || 'any'} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {visitSchedule && (
+            <>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={applyToday}>
+                Today
+              </button>
+              <input
+                type="date"
+                className="filter-select"
+                value={visitFromDate}
+                onChange={(e) => setVisitFromDate(e.target.value)}
+                aria-label="Visits from"
+              />
+              <input
+                type="date"
+                className="filter-select"
+                value={visitToDate}
+                onChange={(e) => setVisitToDate(e.target.value)}
+                aria-label="Visits to"
+              />
+            </>
+          )}
           <button type="submit" className="btn btn-secondary btn-sm">Apply</button>
           {hasActiveFilters && (
             <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilters}>
