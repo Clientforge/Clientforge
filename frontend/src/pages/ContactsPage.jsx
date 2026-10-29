@@ -5,6 +5,13 @@ import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS } from '../utils/lastVisitFilter';
 import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
 
+/** eCW auto-tags use `service:` prefix; show the label only in the list. */
+function formatContactTagLabel(tag) {
+  const s = String(tag || '');
+  if (s.startsWith('service:')) return s.slice('service:'.length) || s;
+  return s;
+}
+
 export default function ContactsPage() {
   const { tenant } = useAuth();
   const simple = isSimpleMode(tenant);
@@ -309,7 +316,7 @@ export default function ContactsPage() {
                     <td>
                       <div className="tag-list">
                         {(c.tags || []).map((t, i) => (
-                          <span key={i} className="tag-chip">{t}</span>
+                          <span key={i} className="tag-chip" title={t}>{formatContactTagLabel(t)}</span>
                         ))}
                       </div>
                     </td>

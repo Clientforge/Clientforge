@@ -2,6 +2,7 @@ const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
 const { parse } = require('csv-parse/sync');
 const { appendLastVisitCondition } = require('../utils/lastVisitFilter');
+const { mergeEcwServiceTag } = require('../utils/ecwServiceTags');
 
 /** Normalize CSV header for flexible matching (case, spaces, underscores, Shopmonkey suffixes). */
 function normalizeCsvKey(key) {
@@ -499,6 +500,25 @@ const formatContact = (row) => ({
   createdAt: row.created_at,
 });
 
+/** Set latest eCW visit service on contact tags (preserves non-service tags). */
+const applyEcwServiceTag = async (tenantId, contactId, serviceLabel) => {
+  const existing = await db.query(
+    'SELECT tags FROM contacts WHERE tenant_id = $1 AND id = $2',
+    [tenantId, contactId],
+  );
+  if (existing.rows.length === 0) {
+    throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
+  }
+  const row = existing.rows[0];
+  const tags = mergeEcwServiceTag(row.tags, serviceLabel);
+  await db.query(
+    `UPDATE contacts SET tags = $1::jsonb, updated_at = NOW()
+     WHERE tenant_id = $2 AND id = $3`,
+    [JSON.stringify(tags), tenantId, contactId],
+  );
+  return tags;
+};
+
 /** Distinct tag strings across all contacts (for pickers, filters). */
 const listContactTags = async (tenantId) => {
   const result = await db.query(
@@ -526,4 +546,5 @@ module.exports = {
   bulkDeleteContacts,
   getContactStats,
   listContactTags,
+  applyEcwServiceTag,
 };

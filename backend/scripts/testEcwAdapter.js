@@ -111,6 +111,29 @@ check(
 );
 check('bulk manifest missing error is not failure', bulkExportStatusHasErrors({ output: [] }), false);
 
+const {
+  mergeEcwServiceTag,
+  ecwServiceTag,
+  formatEcwServiceTagForDisplay,
+} = require('../src/utils/ecwServiceTags');
+
+check('ecw service tag prefix', ecwServiceTag('Consult'), 'service:Consult');
+check(
+  'merge replaces prior service tag',
+  JSON.stringify(mergeEcwServiceTag(['vip', 'service:Consult'], 'Follow Up Visit')),
+  JSON.stringify(['vip', 'service:Follow Up Visit']),
+);
+check(
+  'merge keeps manual tags',
+  JSON.stringify(mergeEcwServiceTag(['promo'], 'Annual Visit')),
+  JSON.stringify(['promo', 'service:Annual Visit']),
+);
+check(
+  'display strips service prefix',
+  formatEcwServiceTagForDisplay('service:Follow Up Visit'),
+  'Follow Up Visit',
+);
+
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
   process.exit(1);

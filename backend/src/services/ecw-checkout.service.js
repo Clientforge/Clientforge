@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const contactService = require('./contact.service');
 const { normalizeEcwCheckout, patientIdFromEncounter } = require('../adapters/ecw.adapter');
 
 async function findCheckoutByExternalId(tenantId, externalId) {
@@ -74,6 +75,10 @@ async function processEcwEncounterCheckout(tenantId, encounter, patient) {
        WHERE id = $1 AND tenant_id = $2`,
       [contactId, tenantId, when],
     );
+  }
+
+  if (normalized.primaryServiceName) {
+    await contactService.applyEcwServiceTag(tenantId, contactId, normalized.primaryServiceName);
   }
 
   const workflowResult = await appointmentWorkflowService.dispatchPostVisitWorkflows(tenantId, {
