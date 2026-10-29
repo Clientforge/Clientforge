@@ -5,6 +5,18 @@ import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS } from '../utils/lastVisitFilter';
 import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
 
+/** Bay Area Heart eCW tenant. Farmartist is matched by name until an id is confirmed. */
+const VISIT_SCHEDULE_TENANT_IDS = new Set([
+  '04acaef1-89cd-4b2e-8409-f10da5bdabb0',
+]);
+
+function showsVisitScheduleColumns(tenant) {
+  if (!tenant) return false;
+  if (VISIT_SCHEDULE_TENANT_IDS.has(tenant.id)) return true;
+  const name = String(tenant.name || '');
+  return /bay area heart/i.test(name) || /farm\s*artist/i.test(name);
+}
+
 /** eCW auto-tags use `service:` / `provider:` prefixes; show the label only in the list. */
 function formatContactTagLabel(tag) {
   const s = String(tag || '');
@@ -16,6 +28,7 @@ function formatContactTagLabel(tag) {
 export default function ContactsPage() {
   const { tenant } = useAuth();
   const simple = isSimpleMode(tenant);
+  const visitSchedule = showsVisitScheduleColumns(tenant);
   const [contacts, setContacts] = useState([]);
   const [stats, setStats] = useState({});
   const [pagination, setPagination] = useState({});
@@ -287,8 +300,17 @@ export default function ContactsPage() {
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Email</th>
-                  <th>Last visit</th>
-                  <th>Next visit</th>
+                  {visitSchedule ? (
+                    <>
+                      <th>Last visit</th>
+                      <th>Next visit</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>Birthday</th>
+                      <th>Last visit</th>
+                    </>
+                  )}
                   <th>Tags</th>
                   <th>Source</th>
                   <th>Added</th>
@@ -312,8 +334,17 @@ export default function ContactsPage() {
                     </td>
                     <td className="mono">{c.phone}</td>
                     <td>{c.email || '—'}</td>
-                    <td className="muted">{c.lastVisitAt ? formatDate(c.lastVisitAt) : '—'}</td>
-                    <td className="muted">{c.nextVisitAt ? formatDate(c.nextVisitAt) : '—'}</td>
+                    {visitSchedule ? (
+                      <>
+                        <td className="muted">{c.lastVisitAt ? formatDate(c.lastVisitAt) : '—'}</td>
+                        <td className="muted">{c.nextVisitAt ? formatDate(c.nextVisitAt) : '—'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="muted">{c.dateOfBirth ? formatDate(c.dateOfBirth) : '—'}</td>
+                        <td className="muted">{c.lastVisitAt ? formatDate(c.lastVisitAt) : '—'}</td>
+                      </>
+                    )}
                     <td>
                       <div className="tag-list">
                         {(c.tags || []).map((t, i) => (
