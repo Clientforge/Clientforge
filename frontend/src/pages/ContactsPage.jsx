@@ -5,10 +5,11 @@ import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS } from '../utils/lastVisitFilter';
 import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
 
-/** eCW auto-tags use `service:` prefix; show the label only in the list. */
+/** eCW auto-tags use `service:` / `provider:` prefixes; show the label only in the list. */
 function formatContactTagLabel(tag) {
   const s = String(tag || '');
   if (s.startsWith('service:')) return s.slice('service:'.length) || s;
+  if (s.startsWith('provider:')) return s.slice('provider:'.length) || s;
   return s;
 }
 

@@ -1,8 +1,14 @@
 const db = require('../db/connection');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const ecwService = require('./ecw.service');
 const contactService = require('./contact.service');
-const { normalizeEcwCheckout, patientIdFromEncounter } = require('../adapters/ecw.adapter');
+const {
+  normalizeEcwCheckout,
+  patientIdFromEncounter,
+  practitionerIdFromEncounter,
+  pickPractitionerName,
+} = require('../adapters/ecw.adapter');
 
 async function findCheckoutByExternalId(tenantId, externalId) {
   const result = await db.query(
@@ -77,8 +83,28 @@ async function processEcwEncounterCheckout(tenantId, encounter, patient) {
     );
   }
 
-  if (normalized.primaryServiceName) {
-    await contactService.applyEcwServiceTag(tenantId, contactId, normalized.primaryServiceName);
+  let practitionerName = null;
+  const practitionerId = practitionerIdFromEncounter(encounter);
+  if (practitionerId) {
+    try {
+      const connection = await ecwService.getConnection(tenantId);
+      if (connection) {
+        const practitioner = await ecwService.fetchPractitioner(connection, practitionerId);
+        practitionerName = pickPractitionerName(practitioner);
+      }
+    } catch (err) {
+      console.warn(
+        `[ECW] Practitioner fetch failed tenant=${tenantId} encounter=${encounter.id}:`,
+        err.message,
+      );
+    }
+  }
+
+  if (normalized.primaryServiceName || practitionerName) {
+    await contactService.applyEcwEncounterTags(tenantId, contactId, {
+      serviceLabel: normalized.primaryServiceName || undefined,
+      practitionerName: practitionerName || undefined,
+    });
   }
 
   const workflowResult = await appointmentWorkflowService.dispatchPostVisitWorkflows(tenantId, {

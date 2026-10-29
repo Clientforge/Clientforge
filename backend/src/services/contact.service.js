@@ -2,7 +2,7 @@ const db = require('../db/connection');
 const { normalizePhone } = require('./lead.service');
 const { parse } = require('csv-parse/sync');
 const { appendLastVisitCondition } = require('../utils/lastVisitFilter');
-const { mergeEcwServiceTag } = require('../utils/ecwServiceTags');
+const { mergeEcwEncounterTags, mergeEcwServiceTag } = require('../utils/ecwServiceTags');
 
 /** Normalize CSV header for flexible matching (case, spaces, underscores, Shopmonkey suffixes). */
 function normalizeCsvKey(key) {
@@ -502,6 +502,11 @@ const formatContact = (row) => ({
 
 /** Set latest eCW visit service on contact tags (preserves non-service tags). */
 const applyEcwServiceTag = async (tenantId, contactId, serviceLabel) => {
+  return applyEcwEncounterTags(tenantId, contactId, { serviceLabel });
+};
+
+/** Set eCW service and/or practitioner on contact tags (preserves manual tags). */
+const applyEcwEncounterTags = async (tenantId, contactId, { serviceLabel, practitionerName } = {}) => {
   const existing = await db.query(
     'SELECT tags FROM contacts WHERE tenant_id = $1 AND id = $2',
     [tenantId, contactId],
@@ -510,7 +515,10 @@ const applyEcwServiceTag = async (tenantId, contactId, serviceLabel) => {
     throw Object.assign(new Error('Contact not found'), { statusCode: 404, isOperational: true });
   }
   const row = existing.rows[0];
-  const tags = mergeEcwServiceTag(row.tags, serviceLabel);
+  const patch = {};
+  if (serviceLabel !== undefined) patch.serviceLabel = serviceLabel;
+  if (practitionerName !== undefined) patch.practitionerName = practitionerName;
+  const tags = mergeEcwEncounterTags(row.tags, patch);
   await db.query(
     `UPDATE contacts SET tags = $1::jsonb, updated_at = NOW()
      WHERE tenant_id = $2 AND id = $3`,
@@ -547,4 +555,5 @@ module.exports = {
   getContactStats,
   listContactTags,
   applyEcwServiceTag,
+  applyEcwEncounterTags,
 };

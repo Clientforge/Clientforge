@@ -5,6 +5,8 @@ const {
   isFinishedEncounter,
   encounterRelevantSince,
   patientIdFromEncounter,
+  practitionerIdFromEncounter,
+  pickPractitionerName,
 } = require('../src/adapters/ecw.adapter');
 
 let failed = 0;
@@ -26,6 +28,21 @@ check(
   'patient ref parsed',
   patientIdFromEncounter({ subject: { reference: 'Patient/abc-123' } }),
   'abc-123',
+);
+check(
+  'practitioner ref from participant',
+  practitionerIdFromEncounter({
+    participant: [{
+      type: [{ coding: [{ code: 'PPRF' }] }],
+      individual: { reference: 'Practitioner/pract-99' },
+    }],
+  }),
+  'pract-99',
+);
+check(
+  'practitioner display name',
+  pickPractitionerName({ name: [{ given: ['Jane'], family: 'Doe' }] }),
+  'Jane Doe',
 );
 
 const since = new Date('2026-10-22T12:00:00.000Z');
@@ -113,8 +130,11 @@ check('bulk manifest missing error is not failure', bulkExportStatusHasErrors({ 
 
 const {
   mergeEcwServiceTag,
+  mergeEcwEncounterTags,
   ecwServiceTag,
+  ecwPractitionerTag,
   formatEcwServiceTagForDisplay,
+  formatEcwPractitionerTagForDisplay,
 } = require('../src/utils/ecwServiceTags');
 
 check('ecw service tag prefix', ecwServiceTag('Consult'), 'service:Consult');
@@ -132,6 +152,25 @@ check(
   'display strips service prefix',
   formatEcwServiceTagForDisplay('service:Follow Up Visit'),
   'Follow Up Visit',
+);
+check('ecw practitioner tag prefix', ecwPractitionerTag('Jane Doe'), 'provider:Jane Doe');
+check(
+  'merge encounter tags service + provider',
+  JSON.stringify(mergeEcwEncounterTags(['vip'], {
+    serviceLabel: 'Consult',
+    practitionerName: 'Jane Doe',
+  })),
+  JSON.stringify(['vip', 'service:Consult', 'provider:Jane Doe']),
+);
+check(
+  'merge service only keeps prior provider tag',
+  JSON.stringify(mergeEcwEncounterTags(['service:Old', 'provider:Dr A'], { serviceLabel: 'Consult' })),
+  JSON.stringify(['service:Consult', 'provider:Dr A']),
+);
+check(
+  'display strips provider prefix',
+  formatEcwPractitionerTagForDisplay('provider:Jane Doe'),
+  'Jane Doe',
 );
 
 if (failed > 0) {

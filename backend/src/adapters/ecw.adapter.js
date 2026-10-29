@@ -78,6 +78,56 @@ function patientIdFromEncounter(encounter) {
   return m ? m[1] : null;
 }
 
+function practitionerRefId(reference) {
+  const m = String(reference || '').match(/Practitioner\/(.+)/i);
+  return m ? m[1] : null;
+}
+
+function practitionerIdFromEncounter(encounter) {
+  for (const ext of encounter?.extension || []) {
+    const url = String(ext?.url || '');
+    if (url.includes('Encounter/resource/provider') && ext.valueReference?.reference) {
+      const id = practitionerRefId(ext.valueReference.reference);
+      if (id) return id;
+    }
+  }
+
+  for (const part of encounter?.participant || []) {
+    const types = Array.isArray(part?.type) ? part.type : [];
+    const isPrimary = types.some((t) => {
+      const codings = Array.isArray(t?.coding) ? t.coding : [];
+      if (codings.some((c) => String(c?.code || '').toUpperCase() === 'PPRF')) return true;
+      return /primary/i.test(String(t?.text || ''));
+    });
+    if (isPrimary && part.individual?.reference) {
+      const id = practitionerRefId(part.individual.reference);
+      if (id) return id;
+    }
+  }
+
+  for (const part of encounter?.participant || []) {
+    if (part?.individual?.reference) {
+      const id = practitionerRefId(part.individual.reference);
+      if (id) return id;
+    }
+  }
+
+  return null;
+}
+
+function pickPractitionerName(practitioner) {
+  const name = Array.isArray(practitioner?.name) ? practitioner.name[0] : null;
+  if (!name) return null;
+  if (name.text) {
+    const text = String(name.text).trim();
+    if (text) return text;
+  }
+  const given = (name.given || []).map((g) => String(g).trim()).filter(Boolean).join(' ');
+  const family = name.family ? String(name.family).trim() : '';
+  const combined = [given, family].filter(Boolean).join(' ');
+  return combined || null;
+}
+
 function normalizeEcwCheckout(encounter, patient) {
   if (!encounter?.id) {
     throw new Error('Encounter missing id');
@@ -125,5 +175,7 @@ module.exports = {
   isFinishedEncounter,
   encounterRelevantSince,
   patientIdFromEncounter,
+  practitionerIdFromEncounter,
+  pickPractitionerName,
   pickPatientPhone,
 };

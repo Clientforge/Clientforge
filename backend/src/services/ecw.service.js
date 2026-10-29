@@ -22,6 +22,7 @@ const DEFAULT_BACKEND_BULK_SCOPES = [
   'system/Group.read',
   'system/Patient.read',
   'system/Encounter.read',
+  'system/Practitioner.read',
 ].join(' ');
 
 const CONNECTION_MODE_SINGLE = 'single_patient';
@@ -445,6 +446,11 @@ async function fetchPatient(connection, patientId) {
   return fhirGet(connection, `Patient/${encodeURIComponent(patientId)}`);
 }
 
+async function fetchPractitioner(connection, practitionerId) {
+  if (!practitionerId) return null;
+  return fhirGet(connection, `Practitioner/${encodeURIComponent(practitionerId)}`);
+}
+
 const ECW_ENCOUNTER_SEARCH_MAX_PAGES = 10;
 
 /**
@@ -708,6 +714,7 @@ module.exports = {
   getConnection,
   searchFinishedEncountersSince,
   fetchPatient,
+  fetchPractitioner,
   updatePollCursor,
   updateBulkExportCursor,
   setBulkExportJob,
