@@ -590,6 +590,25 @@ function planAutomationSteps(
   return planned;
 }
 
+function postVisitAlreadyHasCurrentMessage(existingJobs, plannedJob) {
+  const wanted = String(plannedJob.messageBody || '').trim();
+  if (!wanted) return false;
+  return existingJobs.some((job) => (
+    job.job_type === plannedJob.jobType
+    && job.channel === plannedJob.channel
+    && (job.status === 'sent' || job.status === 'pending')
+    && String(job.message_body || '').trim() === wanted
+  ));
+}
+
+function savedPostAppointmentIsLegacy(config) {
+  const steps = (config?.post_appointment?.steps || []).filter((step) => step.enabled && step.message);
+  if (steps.length === 0) return false;
+  return steps.every((step) => (
+    /hope your visit/i.test(step.message) && /book anytime/i.test(step.message)
+  ));
+}
+
 function plannedPostVisitJobsMatch(existingRows, plannedJobs) {
   if (plannedJobs.length === 0) return existingRows.length === 0;
   if (existingRows.length !== plannedJobs.length) return false;
@@ -1666,10 +1685,218 @@ async function refreshPendingPostAppointments(tenantId, { dryRun = false } = {})
   };
 }
 
+/**
+ * Send Bay Area Heart's current post-appointment text to recent visits that
+ * already have an older sent or pending post-appointment job.
+ * A channel that already has this exact message stays as it is.
+ * Pending copies of the old message are cancelled before the new one is queued.
+ */
+async function resendUpdatedPostAppointments(tenantId, { withinDays = 7, dryRun = false } = {}) {
+  const days = Math.max(1, Math.min(30, Number(withinDays) || 7));
+  const tenantRow = await db.query(
+    `SELECT id, name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
+            appointment_automation_config, automation_test_mode
+     FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+  const tenant = tenantRow.rows[0];
+  if (!tenant) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404 });
+  }
+  if (!isBayAreaHeartTenant(tenant)) {
+    throw Object.assign(new Error('Post-appointment resend is limited to Bay Area Heart'), { statusCode: 403 });
+  }
+
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  const messagePreview = (config.post_appointment?.steps || [])
+    .filter((step) => step.enabled && step.message)
+    .map((step) => step.message);
+  if (!config.post_appointment?.enabled) {
+    return {
+      dryRun,
+      testMode: !!tenant.automation_test_mode,
+      tenantName: tenant.name,
+      skipped: 'post_appointment_disabled',
+      messagePreview,
+      contacts: 0,
+      scheduled: 0,
+      outcomes: [],
+    };
+  }
+  if (savedPostAppointmentIsLegacy(config)) {
+    return {
+      dryRun,
+      testMode: !!tenant.automation_test_mode,
+      tenantName: tenant.name,
+      skipped: 'saved_message_is_still_the_old_template',
+      messagePreview,
+      contacts: 0,
+      scheduled: 0,
+      outcomes: [],
+    };
+  }
+
+  const visits = await db.query(
+    `SELECT DISTINCT ON (c.id)
+            c.id AS contact_id,
+            c.first_name,
+            c.last_name,
+            c.phone,
+            c.email,
+            c.unsubscribed,
+            a.id AS appointment_id,
+            a.scheduled_at,
+            a.completed_at,
+            a.service_name,
+            a.timezone,
+            a.provider,
+            a.matched_service_id
+     FROM appointment_workflow_jobs j
+     JOIN appointments a
+       ON a.id = j.appointment_id
+      AND a.tenant_id = j.tenant_id
+      AND a.status = 'completed'
+      AND a.provider IN ('ecw', 'visit_list')
+     JOIN contacts c
+       ON c.id = j.contact_id
+      AND c.tenant_id = j.tenant_id
+     WHERE j.tenant_id = $1
+       AND j.job_type = 'post_visit'
+       AND j.status IN ('sent', 'pending')
+       AND c.last_visit_at >= NOW() - ($2::int * INTERVAL '1 day')
+       AND COALESCE(a.completed_at, a.scheduled_at) >= NOW() - ($2::int * INTERVAL '1 day')
+     ORDER BY c.id, COALESCE(a.completed_at, a.scheduled_at) DESC`,
+    [tenantId, days],
+  );
+
+  const outcomes = [];
+  let scheduled = 0;
+
+  for (const row of visits.rows) {
+    const contactName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.phone || row.contact_id;
+    const existing = await db.query(
+      `SELECT job_type, channel, message_body, status
+       FROM appointment_workflow_jobs
+       WHERE tenant_id = $1
+         AND appointment_id = $2
+         AND job_type = 'post_visit'
+         AND status IN ('sent', 'pending')`,
+      [tenantId, row.appointment_id],
+    );
+
+    if (row.unsubscribed) {
+      let cancelled = 0;
+      if (!dryRun) {
+        const result = await db.query(
+          `UPDATE appointment_workflow_jobs
+           SET status = 'cancelled', cancelled_at = NOW()
+           WHERE tenant_id = $1
+             AND appointment_id = $2
+             AND job_type = 'post_visit'
+             AND status = 'pending'`,
+          [tenantId, row.appointment_id],
+        );
+        cancelled = result.rowCount;
+      }
+      outcomes.push({ contactName, skipped: true, reason: 'unsubscribed', cancelled });
+      continue;
+    }
+
+    const visitAt = row.completed_at || row.scheduled_at;
+    const appointment = {
+      scheduled_at: row.scheduled_at,
+      service_name: row.service_name,
+      timezone: row.timezone || tenant.timezone,
+      provider: row.provider,
+      matched_service_id: row.matched_service_id,
+    };
+    const contact = {
+      first_name: row.first_name,
+      last_name: row.last_name,
+      phone: row.phone,
+      email: row.email,
+    };
+    const vars = automationService.buildTemplateVars({ tenant, contact, appointment });
+    const planned = planAutomationSteps(appointment, config, vars, {
+      skipImmediate: true,
+      referenceTime: visitAt,
+      categories: ['post_appointment'],
+      sendOverdueAsDueNow: true,
+    });
+    const toSchedule = planned.filter((job) => {
+      if (postVisitAlreadyHasCurrentMessage(existing.rows, job)) return false;
+      if (job.channel === 'sms') return !!row.phone;
+      if (job.channel === 'email') return !!row.email;
+      return false;
+    });
+
+    if (toSchedule.length === 0) {
+      const reason = planned.length === 0 ? 'no_enabled_steps' : 'already_current';
+      outcomes.push({ contactName, skipped: true, reason });
+      continue;
+    }
+
+    const channels = [...new Set(toSchedule.map((job) => job.channel))];
+    const pendingToCancel = existing.rows.filter((job) => (
+      job.status === 'pending' && channels.includes(job.channel)
+    )).length;
+    let cancelled = dryRun ? pendingToCancel : 0;
+    if (!dryRun) {
+      const result = await db.query(
+        `UPDATE appointment_workflow_jobs
+         SET status = 'cancelled', cancelled_at = NOW()
+         WHERE tenant_id = $1
+           AND appointment_id = $2
+           AND job_type = 'post_visit'
+           AND status = 'pending'
+           AND channel = ANY($3::text[])`,
+        [tenantId, row.appointment_id, channels],
+      );
+      cancelled = result.rowCount;
+      for (const job of toSchedule) {
+        await appointmentService.scheduleWorkflowJob(
+          tenantId,
+          row.appointment_id,
+          row.contact_id,
+          job.jobType,
+          {
+            scheduledAt: job.scheduledAt,
+            channel: job.channel,
+            messageBody: job.messageBody,
+            emailSubject: job.emailSubject,
+          },
+        );
+      }
+    }
+
+    scheduled += toSchedule.length;
+    outcomes.push({
+      contactName,
+      jobsScheduled: toSchedule.length,
+      cancelled,
+      dueNow: toSchedule.some((job) => new Date(job.scheduledAt).getTime() <= Date.now() + 1000),
+    });
+  }
+
+  return {
+    dryRun,
+    testMode: !!tenant.automation_test_mode,
+    tenantName: tenant.name,
+    skipped: null,
+    messagePreview,
+    contacts: visits.rows.length,
+    scheduled,
+    outcomes,
+  };
+}
+
 module.exports = {
   isBayAreaHeartTenant,
   catchUpRecentPostAppointments,
   refreshPendingPostAppointments,
+  resendUpdatedPostAppointments,
+  postVisitAlreadyHasCurrentMessage,
+  savedPostAppointmentIsLegacy,
   SLUICE_CANCELLATION_FOLLOWUP_HOURS,
   CANCELLATION_FOLLOWUP_JOB_TYPE,
   computeCancellationFollowUpAt,

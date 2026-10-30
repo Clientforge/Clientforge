@@ -8,6 +8,8 @@ const automationService = require('../src/services/appointment-automation.servic
 const {
   planAutomationSteps,
   plannedPostVisitJobsMatch,
+  postVisitAlreadyHasCurrentMessage,
+  savedPostAppointmentIsLegacy,
   POST_VISIT_CATEGORIES,
 } = require('../src/services/appointment-workflow.service');
 
@@ -104,6 +106,55 @@ check(
   'catch-up schedules the overdue step now',
   caughtUp[0]?.jobType === 'post_visit'
     && new Date(caughtUp[0].scheduledAt).getTime() <= Date.now(),
+);
+
+const sentOld = [{
+  job_type: 'post_visit',
+  channel: 'sms',
+  status: 'sent',
+  message_body: 'Hi JOEL! Hope your visit to Bay Area Health went well.',
+}];
+check(
+  'resend is needed when the sent text is the old template',
+  !postVisitAlreadyHasCurrentMessage(sentOld, caughtUp[0]),
+);
+check(
+  'resend is skipped when this exact text is already sent',
+  postVisitAlreadyHasCurrentMessage([{
+    ...sentOld[0],
+    message_body: caughtUp[0].messageBody,
+  }], caughtUp[0]),
+);
+check(
+  'resend is skipped when this exact text is already pending',
+  postVisitAlreadyHasCurrentMessage([{
+    job_type: 'post_visit',
+    channel: 'sms',
+    status: 'pending',
+    message_body: `  ${caughtUp[0].messageBody}  `,
+  }], caughtUp[0]),
+);
+check(
+  'old default post-appointment copy is recognized',
+  savedPostAppointmentIsLegacy({
+    post_appointment: {
+      steps: [{
+        enabled: true,
+        message: 'Hi {firstName}! Hope your visit to {businessName} went well. We\'d love to see you again — book anytime: {bookingLink}',
+      }],
+    },
+  }),
+);
+check(
+  'feedback post-appointment copy is not the old template',
+  !savedPostAppointmentIsLegacy({
+    post_appointment: {
+      steps: [{
+        enabled: true,
+        message: 'Hi {firstName}, Thank you for visiting {businessName}! Please share your feedback here: https://app.clientforge-ai.com/bay-area-heart-review',
+      }],
+    },
+  }),
 );
 
 if (failed) {
