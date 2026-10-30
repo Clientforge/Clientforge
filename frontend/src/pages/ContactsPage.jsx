@@ -27,6 +27,12 @@ function formatContactTagLabel(tag) {
   return s;
 }
 
+function contactPractitionerName(contact) {
+  const tag = (contact?.tags || []).find((t) => String(t).startsWith('provider:'));
+  if (!tag) return '';
+  return String(tag).slice('provider:'.length).trim();
+}
+
 export default function ContactsPage() {
   const { tenant } = useAuth();
   const simple = isSimpleMode(tenant);
@@ -329,7 +335,7 @@ export default function ContactsPage() {
                   </th>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>Email</th>
+                  <th>{visitSchedule ? 'Practitioner' : 'Email'}</th>
                   {visitSchedule ? (
                     <>
                       <th>Last visit</th>
@@ -363,7 +369,9 @@ export default function ContactsPage() {
                       {c.unsubscribed && <span className="badge-unsub">Opted out</span>}
                     </td>
                     <td className="mono">{c.phone}</td>
-                    <td>{c.email || '—'}</td>
+                    <td className={visitSchedule ? 'muted' : undefined}>
+                      {visitSchedule ? (contactPractitionerName(c) || '—') : (c.email || '—')}
+                    </td>
                     {visitSchedule ? (
                       <>
                         <td className="muted">{c.lastVisitAt ? formatDate(c.lastVisitAt) : '—'}</td>
