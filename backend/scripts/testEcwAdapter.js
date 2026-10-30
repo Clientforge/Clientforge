@@ -8,6 +8,7 @@ const {
   encounterRelevantSince,
   patientIdFromEncounter,
   practitionerIdFromEncounter,
+  practitionerNameFromMap,
   pickPractitionerName,
 } = require('../src/adapters/ecw.adapter');
 
@@ -83,8 +84,26 @@ check('since accepts all when since invalid', encounterRelevantSince({ id: 'x' }
 const params = new URLSearchParams({ patient: 'Patient/test-id' });
 check('encounter query is patient-only', params.toString(), 'patient=Patient%2Ftest-id');
 
-const bulkParams = new URLSearchParams({ _type: 'Patient,Encounter' });
-check('bulk export type param', bulkParams.get('_type'), 'Patient,Encounter');
+const bulkParams = new URLSearchParams({ _type: 'Patient,Encounter,Practitioner' });
+check('bulk export type param', bulkParams.get('_type'), 'Patient,Encounter,Practitioner');
+
+const practitionersById = new Map([
+  ['pract-1', { resourceType: 'Practitioner', id: 'pract-1', name: [{ text: 'Jane Doe' }] }],
+]);
+check(
+  'practitioner name comes from the export map',
+  practitionerNameFromMap(practitionersById, {
+    participant: [{ individual: { reference: 'Practitioner/pract-1' } }],
+  }),
+  'Jane Doe',
+);
+check(
+  'missing practitioner in the export map',
+  practitionerNameFromMap(practitionersById, {
+    participant: [{ individual: { reference: 'Practitioner/other' } }],
+  }),
+  null,
+);
 
 const {
   isBulkExportInProgressOutcome,

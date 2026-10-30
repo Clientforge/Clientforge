@@ -8,7 +8,9 @@ const {
   normalizeEcwUpcomingEncounter,
   patientIdFromEncounter,
   practitionerIdFromEncounter,
+  practitionerNameFromMap,
   pickPractitionerName,
+  isFinishedEncounter,
 } = require('../adapters/ecw.adapter');
 
 async function findCheckoutByExternalId(tenantId, externalId) {
@@ -26,8 +28,10 @@ async function upsertContactFromEcw(tenantId, contactData) {
 /**
  * Process a finished eCW Encounter (+ Patient) into contact, appointment, checkout, post-visit jobs.
  */
-async function processEcwEncounterCheckout(tenantId, encounter, patient) {
+async function processEcwEncounterCheckout(tenantId, encounter, patient, options = {}) {
   const normalized = normalizeEcwCheckout(encounter, patient);
+  const practitionerFromExport = options.practitionerFromExport === true;
+  let practitionerName = options.practitionerName || null;
 
   if (!normalized.contact.phone) {
     return { skipped: 'no_phone', encounterId: encounter.id };
@@ -84,20 +88,21 @@ async function processEcwEncounterCheckout(tenantId, encounter, patient) {
     );
   }
 
-  let practitionerName = null;
-  const practitionerId = practitionerIdFromEncounter(encounter);
-  if (practitionerId) {
-    try {
-      const connection = await ecwService.getConnection(tenantId);
-      if (connection) {
-        const practitioner = await ecwService.fetchPractitioner(connection, practitionerId);
-        practitionerName = pickPractitionerName(practitioner);
+  if (!practitionerName && !practitionerFromExport) {
+    const practitionerId = practitionerIdFromEncounter(encounter);
+    if (practitionerId) {
+      try {
+        const connection = await ecwService.getConnection(tenantId);
+        if (connection) {
+          const practitioner = await ecwService.fetchPractitioner(connection, practitionerId);
+          practitionerName = pickPractitionerName(practitioner);
+        }
+      } catch (err) {
+        console.warn(
+          `[ECW] Practitioner fetch failed tenant=${tenantId} encounter=${encounter.id}:`,
+          err.message,
+        );
       }
-    } catch (err) {
-      console.warn(
-        `[ECW] Practitioner fetch failed tenant=${tenantId} encounter=${encounter.id}:`,
-        err.message,
-      );
     }
   }
 
@@ -211,8 +216,54 @@ async function cancelEcwEncounterAppointment(tenantId, encounter) {
     : { skipped: 'no_appointment', encounterId: encounter.id };
 }
 
+/**
+ * Set provider tags from Practitioner resources already in a bulk file.
+ * Uses the latest finished visit already saved for each contact.
+ */
+async function applyExportPractitionerTags(tenantId, encounters, practitionersById) {
+  const finished = [];
+  for (const encounter of encounters || []) {
+    if (!isFinishedEncounter(encounter) || !encounter.id) continue;
+    const name = practitionerNameFromMap(practitionersById, encounter);
+    if (!name) continue;
+    const atRaw = encounter.period?.end || encounter.period?.start;
+    const at = atRaw ? new Date(atRaw).getTime() : 0;
+    finished.push({
+      externalId: `ecw:encounter:${encounter.id}`,
+      name,
+      at: Number.isNaN(at) ? 0 : at,
+    });
+  }
+  if (finished.length === 0) return 0;
+
+  const rows = await db.query(
+    `SELECT contact_id, external_id
+     FROM appointments
+     WHERE tenant_id = $1
+       AND contact_id IS NOT NULL
+       AND external_id = ANY($2::text[])`,
+    [tenantId, finished.map((row) => row.externalId)],
+  );
+  const contactByExternalId = new Map(rows.rows.map((row) => [row.external_id, row.contact_id]));
+  const latestByContact = new Map();
+  for (const row of finished) {
+    const contactId = contactByExternalId.get(row.externalId);
+    if (!contactId) continue;
+    const prev = latestByContact.get(contactId);
+    if (!prev || row.at >= prev.at) latestByContact.set(contactId, row);
+  }
+
+  for (const [contactId, row] of latestByContact) {
+    await contactService.applyEcwEncounterTags(tenantId, contactId, {
+      practitionerName: row.name,
+    });
+  }
+  return latestByContact.size;
+}
+
 module.exports = {
   processEcwEncounterCheckout,
   processEcwUpcomingEncounter,
   cancelEcwEncounterAppointment,
+  applyExportPractitionerTags,
 };

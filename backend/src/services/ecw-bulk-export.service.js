@@ -3,6 +3,7 @@ const {
   processEcwEncounterCheckout,
   processEcwUpcomingEncounter,
   cancelEcwEncounterAppointment,
+  applyExportPractitionerTags,
 } = require('./ecw-checkout.service');
 const {
   isFinishedEncounter,
@@ -10,6 +11,7 @@ const {
   isUpcomingEncounter,
   encounterRelevantSince,
   patientIdFromEncounter,
+  practitionerNameFromMap,
 } = require('../adapters/ecw.adapter');
 
 const DEFAULT_BULK_INTERVAL_MS = 30 * 60 * 1000;
@@ -159,7 +161,7 @@ async function kickoffGroupExport(connection) {
   }
 
   // No _since: planned visits booked earlier would be left out of an incremental file.
-  const params = new URLSearchParams({ _type: 'Patient,Encounter' });
+  const params = new URLSearchParams({ _type: 'Patient,Encounter,Practitioner' });
 
   const path = `Group/${encodeURIComponent(gid)}/$export?${params.toString()}`;
   const res = await ecwService.fhirRequest(connection, path, {
@@ -285,12 +287,16 @@ function sinceIsoForBulk(connection) {
 
 async function processBulkResources(tenantId, connection, resources, sinceDate) {
   const patientsById = new Map();
+  const practitionersById = new Map();
   const encounters = [];
 
   for (const r of resources) {
     if (!r?.resourceType) continue;
     if (r.resourceType === 'Patient' && r.id) {
       patientsById.set(r.id, r);
+    }
+    if (r.resourceType === 'Practitioner' && r.id) {
+      practitionersById.set(r.id, r);
     }
     if (r.resourceType === 'Encounter') {
       encounters.push(r);
@@ -349,7 +355,10 @@ async function processBulkResources(tenantId, connection, resources, sinceDate) 
 
     try {
       const patient = await patientForEncounter(encounter);
-      const result = await processEcwEncounterCheckout(tenantId, encounter, patient);
+      const result = await processEcwEncounterCheckout(tenantId, encounter, patient, {
+        practitionerFromExport: true,
+        practitionerName: practitionerNameFromMap(practitionersById, encounter),
+      });
       if (result.duplicate) duplicates += 1;
       else if (result.skipped) skipped += 1;
       else processed += 1;
@@ -359,13 +368,22 @@ async function processBulkResources(tenantId, connection, resources, sinceDate) 
     }
   }
 
+  let practitionersTagged = 0;
+  try {
+    practitionersTagged = await applyExportPractitionerTags(tenantId, encounters, practitionersById);
+  } catch (err) {
+    console.error(`[ECW] Bulk practitioner tags failed tenant=${tenantId}:`, err.message);
+  }
+
   return {
     processed,
     duplicates,
     skipped,
     upcoming,
+    practitionersTagged,
     scanned: encounters.length,
     patients: patientsById.size,
+    practitioners: practitionersById.size,
   };
 }
 

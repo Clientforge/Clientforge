@@ -132,6 +132,13 @@ function practitionerIdFromEncounter(encounter) {
   return null;
 }
 
+function practitionerNameFromMap(practitionersById, encounter) {
+  if (!practitionersById || typeof practitionersById.get !== 'function') return null;
+  const id = practitionerIdFromEncounter(encounter);
+  if (!id) return null;
+  return pickPractitionerName(practitionersById.get(id));
+}
+
 function pickPractitionerName(practitioner) {
   const name = Array.isArray(practitioner?.name) ? practitioner.name[0] : null;
   if (!name) return null;
@@ -230,6 +237,7 @@ module.exports = {
   encounterRelevantSince,
   patientIdFromEncounter,
   practitionerIdFromEncounter,
+  practitionerNameFromMap,
   pickPractitionerName,
   pickPatientPhone,
 };
