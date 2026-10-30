@@ -13,8 +13,10 @@ const VISIT_SCHEDULE_TENANT_IDS = new Set([
 function showsVisitScheduleColumns(tenant) {
   if (!tenant) return false;
   if (VISIT_SCHEDULE_TENANT_IDS.has(tenant.id)) return true;
-  const name = String(tenant.name || '');
-  return /bay area heart/i.test(name) || /farm\s*artist/i.test(name);
+  const name = String(tenant.name || '').replace(/\s+/g, ' ').trim();
+  return /bay area heart/i.test(name)
+    || /bay area.*health/i.test(name)
+    || /farm\s*artist/i.test(name);
 }
 
 /** eCW auto-tags use `service:` / `provider:` prefixes; show the label only in the list. */

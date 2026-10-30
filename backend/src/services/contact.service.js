@@ -300,8 +300,10 @@ function parseVisitDay(value) {
 async function tenantShowsVisitSchedule(tenantId) {
   if (VISIT_SCHEDULE_TENANT_IDS.has(tenantId)) return true;
   const result = await db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]);
-  const name = String(result.rows[0]?.name || '');
-  return /bay area heart/i.test(name) || /farm\s*artist/i.test(name);
+  const name = String(result.rows[0]?.name || '').replace(/\s+/g, ' ').trim();
+  return /bay area heart/i.test(name)
+    || /bay area.*health/i.test(name)
+    || /farm\s*artist/i.test(name);
 }
 
 /** Inclusive clinic-local dates. Ignored unless this tenant uses the visit schedule columns. */
