@@ -53,6 +53,17 @@ function visitCheckedOutAtIso(visitDateYmd) {
   return `${visitDateYmd}T17:00:00.000Z`;
 }
 
+/** Clinic export uses "LAST, FIRST MIDDLE" in one Patient column. */
+function splitPatientName(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return { firstName: null, lastName: null };
+  const comma = value.indexOf(',');
+  if (comma === -1) return { firstName: null, lastName: value };
+  const lastName = value.slice(0, comma).trim() || null;
+  const firstName = value.slice(comma + 1).trim() || null;
+  return { firstName, lastName };
+}
+
 function checkoutExternalId(normalizedPhone, visitDateYmd) {
   const digits = String(normalizedPhone || '').replace(/\D/g, '');
   return `visit_list:${digits}:${visitDateYmd}`;
@@ -80,6 +91,7 @@ function parseVisitListCsv(buffer) {
       'mobile',
       'cell',
       'primary phone',
+      'home phone',
     );
     if (!phoneRaw) continue;
 
@@ -99,13 +111,23 @@ function parseVisitListCsv(buffer) {
       'date of visit',
       'appointment_date',
       'appointment date',
+      'last visit',
+      'last_visit',
     );
     const visitDate = parseVisitDate(visitRaw);
     if (!visitDate) continue;
 
+    let firstName = pickCsvField(row, 'first_name', 'firstname', 'first name', 'first') || null;
+    let lastName = pickCsvField(row, 'last_name', 'lastname', 'last name', 'last') || null;
+    if (!firstName && !lastName) {
+      const split = splitPatientName(pickCsvField(row, 'patient', 'patient name'));
+      firstName = split.firstName;
+      lastName = split.lastName;
+    }
+
     rows.push({
-      firstName: pickCsvField(row, 'first_name', 'firstname', 'first name', 'first') || null,
-      lastName: pickCsvField(row, 'last_name', 'lastname', 'last name', 'last') || null,
+      firstName,
+      lastName,
       phone: normalizedPhone,
       visitDate,
       checkedOutAt: visitCheckedOutAtIso(visitDate),
@@ -120,6 +142,7 @@ module.exports = {
   parseVisitListCsv,
   pickCsvField,
   parseVisitDate,
+  splitPatientName,
   checkoutExternalId,
   appointmentExternalId,
 };
