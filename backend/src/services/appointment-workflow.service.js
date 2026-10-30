@@ -1283,11 +1283,8 @@ const redeployUpcomingBookingWorkflows = async (tenantId, { dryRun = false } = {
   };
 };
 
-const BAY_AREA_HEART_TENANT_ID = '04acaef1-89cd-4b2e-8409-f10da5bdabb0';
-
 function isBayAreaHeartTenant(tenant) {
   if (!tenant) return false;
-  if (tenant.id === BAY_AREA_HEART_TENANT_ID) return true;
   const name = String(tenant.name || '').replace(/\s+/g, ' ').trim();
   return /bay area heart/i.test(name) || /bay area.*health/i.test(name);
 }
@@ -1474,7 +1471,6 @@ async function catchUpRecentPostAppointments(tenantId, { withinDays = 7, dryRun 
 }
 
 module.exports = {
-  BAY_AREA_HEART_TENANT_ID,
   isBayAreaHeartTenant,
   catchUpRecentPostAppointments,
   SLUICE_CANCELLATION_FOLLOWUP_HOURS,

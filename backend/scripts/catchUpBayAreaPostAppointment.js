@@ -12,7 +12,6 @@ require('dotenv').config();
 
 const db = require('../src/db/connection');
 const {
-  BAY_AREA_HEART_TENANT_ID,
   isBayAreaHeartTenant,
   catchUpRecentPostAppointments,
 } = require('../src/services/appointment-workflow.service');
@@ -21,15 +20,28 @@ async function resolveBayAreaHeart() {
   const result = await db.query(
     `SELECT id, name
      FROM tenants
-     WHERE id = $1
-        OR name ILIKE '%Bay Area Heart%'
-        OR (name ILIKE '%Bay Area%' AND name ILIKE '%Health%')`,
-    [BAY_AREA_HEART_TENANT_ID],
+     WHERE name ILIKE '%Bay Area Heart%'
+        OR (name ILIKE '%Bay Area%' AND name ILIKE '%Health%')
+     ORDER BY name ASC`,
   );
   const matches = result.rows.filter((row) => isBayAreaHeartTenant(row));
-  const known = matches.find((row) => row.id === BAY_AREA_HEART_TENANT_ID);
-  if (known) return known;
   if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    console.error('More than one Bay Area Heart tenant:');
+    for (const row of matches) console.error(`  ${row.name} ${row.id}`);
+    return null;
+  }
+  const flagged = await db.query(
+    `SELECT id, name
+     FROM tenants
+     WHERE visit_list_email_automations = true
+     ORDER BY name ASC`,
+  );
+  console.error('No tenant name matched Bay Area Heart.');
+  if (flagged.rows.length) {
+    console.error('Tenants with visit-list email on:');
+    for (const row of flagged.rows) console.error(`  ${row.name} ${row.id}`);
+  }
   return null;
 }
 
