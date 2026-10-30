@@ -1470,9 +1470,206 @@ async function catchUpRecentPostAppointments(tenantId, { withinDays = 7, dryRun 
   };
 }
 
+/**
+ * Rewrite Bay Area Heart's pending post-appointment jobs from the saved step.
+ * Sent jobs stay sent. A new send time that is already past is due now.
+ */
+async function refreshPendingPostAppointments(tenantId, { dryRun = false } = {}) {
+  const tenantRow = await db.query(
+    `SELECT id, name, phone_number, call_phone, timezone, booking_link, email_from_name, email_from_address,
+            appointment_automation_config, automation_test_mode
+     FROM tenants WHERE id = $1`,
+    [tenantId],
+  );
+  const tenant = tenantRow.rows[0];
+  if (!tenant) {
+    throw Object.assign(new Error('Tenant not found'), { statusCode: 404 });
+  }
+  if (!isBayAreaHeartTenant(tenant)) {
+    throw Object.assign(new Error('Post-appointment refresh is limited to Bay Area Heart'), { statusCode: 403 });
+  }
+
+  const config = automationService.normalizeConfig(tenant.appointment_automation_config);
+  if (!config.post_appointment?.enabled) {
+    return {
+      dryRun,
+      testMode: !!tenant.automation_test_mode,
+      tenantName: tenant.name,
+      skipped: 'post_appointment_disabled',
+      pendingAppointments: 0,
+      replaced: 0,
+      cancelled: 0,
+      outcomes: [],
+    };
+  }
+
+  const pending = await db.query(
+    `SELECT DISTINCT ON (a.id)
+            a.id AS appointment_id,
+            a.scheduled_at,
+            a.completed_at,
+            a.service_name,
+            a.timezone,
+            a.provider,
+            a.matched_service_id,
+            c.id AS contact_id,
+            c.first_name,
+            c.last_name,
+            c.phone,
+            c.email,
+            c.unsubscribed,
+            vc.checked_out_at
+     FROM appointment_workflow_jobs j
+     JOIN appointments a ON a.id = j.appointment_id AND a.tenant_id = j.tenant_id
+     JOIN contacts c ON c.id = j.contact_id AND c.tenant_id = j.tenant_id
+     LEFT JOIN visit_checkouts vc ON vc.appointment_id = a.id AND vc.tenant_id = j.tenant_id
+     WHERE j.tenant_id = $1
+       AND j.job_type = 'post_visit'
+       AND j.status = 'pending'
+     ORDER BY a.id, vc.checked_out_at DESC NULLS LAST`,
+    [tenantId],
+  );
+
+  const outcomes = [];
+  let replaced = 0;
+  let cancelled = 0;
+
+  for (const row of pending.rows) {
+    const contactName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.phone || row.contact_id;
+    const pendingJobs = await db.query(
+      `SELECT id, channel, message_body, scheduled_at
+       FROM appointment_workflow_jobs
+       WHERE tenant_id = $1
+         AND appointment_id = $2
+         AND job_type = 'post_visit'
+         AND status = 'pending'`,
+      [tenantId, row.appointment_id],
+    );
+    const sent = await db.query(
+      `SELECT channel
+       FROM appointment_workflow_jobs
+       WHERE tenant_id = $1
+         AND appointment_id = $2
+         AND job_type = 'post_visit'
+         AND status = 'sent'`,
+      [tenantId, row.appointment_id],
+    );
+    const sentChannels = new Set(sent.rows.map((job) => job.channel));
+
+    const cancelPending = async () => {
+      if (dryRun) return pendingJobs.rows.length;
+      const result = await db.query(
+        `UPDATE appointment_workflow_jobs
+         SET status = 'cancelled', cancelled_at = NOW()
+         WHERE tenant_id = $1
+           AND appointment_id = $2
+           AND job_type = 'post_visit'
+           AND status = 'pending'`,
+        [tenantId, row.appointment_id],
+      );
+      return result.rowCount;
+    };
+
+    if (row.unsubscribed) {
+      const n = await cancelPending();
+      cancelled += n;
+      outcomes.push({ contactName, skipped: true, reason: 'unsubscribed', cancelled: n });
+      continue;
+    }
+
+    const visitAt = row.completed_at || row.checked_out_at || row.scheduled_at;
+    const appointment = {
+      scheduled_at: row.scheduled_at,
+      service_name: row.service_name,
+      timezone: row.timezone || tenant.timezone,
+      provider: row.provider,
+      matched_service_id: row.matched_service_id,
+    };
+    const contact = {
+      first_name: row.first_name,
+      last_name: row.last_name,
+      phone: row.phone,
+      email: row.email,
+    };
+    const vars = automationService.buildTemplateVars({ tenant, contact, appointment });
+    const planned = planAutomationSteps(appointment, config, vars, {
+      skipImmediate: true,
+      referenceTime: visitAt,
+      categories: ['post_appointment'],
+      sendOverdueAsDueNow: true,
+    }).filter((job) => {
+      if (sentChannels.has(job.channel)) return false;
+      if (job.channel === 'sms') return !!row.phone;
+      if (job.channel === 'email') return !!row.email;
+      return false;
+    });
+
+    if (planned.length === 0) {
+      const n = await cancelPending();
+      cancelled += n;
+      outcomes.push({
+        contactName,
+        skipped: true,
+        reason: sentChannels.size ? 'already_sent' : 'no_enabled_steps',
+        cancelled: n,
+      });
+      continue;
+    }
+
+    const pendingForMatch = pendingJobs.rows.map((job) => ({
+      job_type: 'post_visit',
+      channel: job.channel,
+      message_body: job.message_body,
+      scheduled_at: job.scheduled_at,
+    }));
+    if (plannedPostVisitJobsMatch(pendingForMatch, planned)) {
+      outcomes.push({ contactName, skipped: true, reason: 'already_current' });
+      continue;
+    }
+
+    const n = await cancelPending();
+    cancelled += n;
+    if (!dryRun) {
+      for (const job of planned) {
+        await appointmentService.scheduleWorkflowJob(
+          tenantId,
+          row.appointment_id,
+          row.contact_id,
+          job.jobType,
+          {
+            scheduledAt: job.scheduledAt,
+            channel: job.channel,
+            messageBody: job.messageBody,
+            emailSubject: job.emailSubject,
+          },
+        );
+      }
+    }
+    replaced += planned.length;
+    outcomes.push({
+      contactName,
+      jobsScheduled: planned.length,
+      cancelled: n,
+      visitAt,
+      dueNow: planned.some((job) => new Date(job.scheduledAt).getTime() <= Date.now() + 1000),
+    });
+  }
+
+  return {
+    dryRun,
+    testMode: !!tenant.automation_test_mode,
+    tenantName: tenant.name,
+    pendingAppointments: pending.rows.length,
+    replaced,
+    cancelled,
+    outcomes,
+  };
+}
+
 module.exports = {
   isBayAreaHeartTenant,
   catchUpRecentPostAppointments,
+  refreshPendingPostAppointments,
   SLUICE_CANCELLATION_FOLLOWUP_HOURS,
   CANCELLATION_FOLLOWUP_JOB_TYPE,
   computeCancellationFollowUpAt,
