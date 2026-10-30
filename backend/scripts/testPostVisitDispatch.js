@@ -85,6 +85,27 @@ check(
   }], planned),
 );
 
+const pastVisit = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+const dropped = planAutomationSteps(appointment, config, vars, {
+  skipImmediate: true,
+  referenceTime: pastVisit,
+  categories: ['post_appointment'],
+});
+check('drops overdue post-appointment by default', dropped.length === 0);
+
+const caughtUp = planAutomationSteps(appointment, config, vars, {
+  skipImmediate: true,
+  referenceTime: pastVisit,
+  categories: ['post_appointment'],
+  sendOverdueAsDueNow: true,
+});
+check('catch-up keeps one overdue post-appointment', caughtUp.length === 1);
+check(
+  'catch-up schedules the overdue step now',
+  caughtUp[0]?.jobType === 'post_visit'
+    && new Date(caughtUp[0].scheduledAt).getTime() <= Date.now(),
+);
+
 if (failed) {
   console.error(`\n${failed} test(s) failed`);
   process.exit(1);
