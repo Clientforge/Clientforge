@@ -335,7 +335,7 @@ export default function ContactsPage() {
                   </th>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>{visitSchedule ? 'Practitioner' : 'Email'}</th>
+                  <th>{visitSchedule ? 'Provider' : 'Email'}</th>
                   {visitSchedule ? (
                     <>
                       <th>Last visit</th>
