@@ -125,6 +125,12 @@ function parseVisitListCsv(buffer) {
       lastName = split.lastName;
     }
 
+    const renderingProvider = pickCsvField(
+      row,
+      'rendering provider',
+      'rendering_provider',
+    ) || null;
+
     rows.push({
       firstName,
       lastName,
@@ -132,6 +138,7 @@ function parseVisitListCsv(buffer) {
       visitDate,
       checkedOutAt: visitCheckedOutAtIso(visitDate),
       externalId: checkoutExternalId(normalizedPhone, visitDate),
+      renderingProvider,
     });
   }
 

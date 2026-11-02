@@ -1,14 +1,21 @@
 const db = require('../db/connection');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
+const contactService = require('./contact.service');
 const { appointmentExternalId } = require('./visitListCsv.parse');
 
 async function findCheckoutByExternalId(tenantId, externalId) {
   const result = await db.query(
-    'SELECT id, appointment_id FROM visit_checkouts WHERE tenant_id = $1 AND external_id = $2',
+    'SELECT id, appointment_id, contact_id FROM visit_checkouts WHERE tenant_id = $1 AND external_id = $2',
     [tenantId, externalId],
   );
   return result.rows[0] || null;
+}
+
+async function applyVisitListPractitioner(tenantId, contactId, renderingProvider) {
+  const name = String(renderingProvider || '').trim();
+  if (!contactId || !name) return;
+  await contactService.applyEcwEncounterTags(tenantId, contactId, { practitionerName: name });
 }
 
 /**
@@ -22,6 +29,7 @@ async function processVisitListRow(tenantId, row, { timezone = 'America/Los_Ange
   const externalId = row.externalId || appointmentExternalId(row.phone, row.visitDate);
   const existing = await findCheckoutByExternalId(tenantId, externalId);
   if (existing) {
+    await applyVisitListPractitioner(tenantId, existing.contact_id, row.renderingProvider);
     return {
       duplicate: true,
       checkoutId: existing.id,
@@ -38,6 +46,7 @@ async function processVisitListRow(tenantId, row, { timezone = 'America/Los_Ange
     },
     'visit_list',
   );
+  await applyVisitListPractitioner(tenantId, contactId, row.renderingProvider);
 
   const checkedOutAt = row.checkedOutAt || `${row.visitDate}T17:00:00.000Z`;
 

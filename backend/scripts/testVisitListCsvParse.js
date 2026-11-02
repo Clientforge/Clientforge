@@ -41,5 +41,9 @@ assert.strictEqual(clinicRows[1].firstName, 'MELWYN D');
 assert.strictEqual(clinicRows[2].lastName, 'Pritchett');
 assert.strictEqual(clinicRows[2].firstName, 'Larry');
 assert.strictEqual(clinicRows[0].externalId, clinicRows[3].externalId);
+assert.strictEqual(clinicRows[0].renderingProvider, 'RKS');
+assert.strictEqual(clinicRows[1].renderingProvider, 'RKS');
+assert.strictEqual(clinicRows[2].renderingProvider, null);
+assert.strictEqual(rows[0].renderingProvider, null);
 
 console.log('[testVisitListCsvParse] OK');
