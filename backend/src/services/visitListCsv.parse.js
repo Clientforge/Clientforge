@@ -53,6 +53,20 @@ function visitCheckedOutAtIso(visitDateYmd) {
   return `${visitDateYmd}T17:00:00.000Z`;
 }
 
+/**
+ * Bay Area Heart checks out when the row is imported. The post-visit step
+ * then runs 30 minutes after that saved offset. Last Visit stays the CSV date.
+ * Other tenants keep the visit-date clock for both.
+ */
+function visitListTimes({ bayAreaHeart, visitDate, importedAt } = {}) {
+  const visitClock = visitCheckedOutAtIso(visitDate);
+  const imported = importedAt || new Date().toISOString();
+  if (bayAreaHeart) {
+    return { checkedOutAt: imported, lastVisitAt: visitClock };
+  }
+  return { checkedOutAt: visitClock, lastVisitAt: visitClock };
+}
+
 /** Clinic export uses "LAST, FIRST MIDDLE" in one Patient column. */
 function splitPatientName(raw) {
   const value = String(raw || '').trim();
@@ -152,4 +166,5 @@ module.exports = {
   splitPatientName,
   checkoutExternalId,
   appointmentExternalId,
+  visitListTimes,
 };

@@ -4,6 +4,7 @@ const {
   parseVisitListCsv,
   parseVisitDate,
   checkoutExternalId,
+  visitListTimes,
 } = require('../src/services/visitListCsv.parse');
 
 const csv = `first_name,last_name,phone,visit_date
@@ -45,5 +46,21 @@ assert.strictEqual(clinicRows[0].renderingProvider, 'RKS');
 assert.strictEqual(clinicRows[1].renderingProvider, 'RKS');
 assert.strictEqual(clinicRows[2].renderingProvider, null);
 assert.strictEqual(rows[0].renderingProvider, null);
+
+const bayAreaTimes = visitListTimes({
+  bayAreaHeart: true,
+  visitDate: '2026-10-30',
+  importedAt: '2026-11-02T15:15:00.000Z',
+});
+assert.strictEqual(bayAreaTimes.checkedOutAt, '2026-11-02T15:15:00.000Z');
+assert.strictEqual(bayAreaTimes.lastVisitAt, '2026-10-30T17:00:00.000Z');
+
+const otherTimes = visitListTimes({
+  bayAreaHeart: false,
+  visitDate: '2026-10-30',
+  importedAt: '2026-11-02T15:15:00.000Z',
+});
+assert.strictEqual(otherTimes.checkedOutAt, '2026-10-30T17:00:00.000Z');
+assert.strictEqual(otherTimes.lastVisitAt, '2026-10-30T17:00:00.000Z');
 
 console.log('[testVisitListCsvParse] OK');

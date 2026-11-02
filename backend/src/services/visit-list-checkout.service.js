@@ -2,7 +2,7 @@ const db = require('../db/connection');
 const appointmentService = require('./appointment.service');
 const appointmentWorkflowService = require('./appointment-workflow.service');
 const contactService = require('./contact.service');
-const { appointmentExternalId } = require('./visitListCsv.parse');
+const { appointmentExternalId, visitListTimes } = require('./visitListCsv.parse');
 
 async function findCheckoutByExternalId(tenantId, externalId) {
   const result = await db.query(
@@ -48,7 +48,15 @@ async function processVisitListRow(tenantId, row, { timezone = 'America/Los_Ange
   );
   await applyVisitListPractitioner(tenantId, contactId, row.renderingProvider);
 
-  const checkedOutAt = row.checkedOutAt || `${row.visitDate}T17:00:00.000Z`;
+  const tenantResult = await db.query('SELECT name FROM tenants WHERE id = $1', [tenantId]);
+  const bayAreaHeart = appointmentWorkflowService.isBayAreaHeartTenant({
+    name: tenantResult.rows[0]?.name,
+  });
+  const { checkedOutAt, lastVisitAt } = visitListTimes({
+    bayAreaHeart,
+    visitDate: row.visitDate,
+    importedAt: new Date().toISOString(),
+  });
 
   const upserted = await appointmentService.upsertAppointment(
     tenantId,
@@ -88,13 +96,13 @@ async function processVisitListRow(tenantId, row, { timezone = 'America/Los_Ange
     ],
   );
 
-  const when = new Date(checkedOutAt);
-  if (!Number.isNaN(when.getTime())) {
+  const lastVisit = new Date(lastVisitAt);
+  if (!Number.isNaN(lastVisit.getTime())) {
     await db.query(
       `UPDATE contacts
        SET last_visit_at = GREATEST(COALESCE(last_visit_at, $3), $3), updated_at = NOW()
        WHERE id = $1 AND tenant_id = $2`,
-      [contactId, tenantId, when],
+      [contactId, tenantId, lastVisit],
     );
   }
 
