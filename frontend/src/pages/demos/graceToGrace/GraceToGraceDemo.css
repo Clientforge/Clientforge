@@ -33,6 +33,19 @@
   line-height: 1.5;
 }
 
+.g2g-demo-root.g2g-embed-mode {
+  min-height: auto;
+  background: transparent;
+}
+
+.g2g-demo-root.g2g-embed-mode .g2g-shell {
+  max-width: none;
+}
+
+.g2g-demo-root.g2g-embed-mode .g2g-main {
+  padding-top: 0;
+}
+
 .g2g-demo-root *,
 .g2g-demo-root *::before,
 .g2g-demo-root *::after {

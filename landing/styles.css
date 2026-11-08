@@ -676,6 +676,7 @@ img {
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin-bottom: 16px;
+  text-wrap: balance;
 }
 
 .section-header p {

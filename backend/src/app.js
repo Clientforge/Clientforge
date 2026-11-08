@@ -10,6 +10,7 @@ const tenantScope = require('./middleware/tenantScope');
 const requireSuperAdmin = require('./middleware/superadmin');
 const config = require('./config');
 const { isG2gPublicHost, g2gCanonicalOrigin } = require('./config/g2gPublicHost');
+const { g2gFrameAncestorsDirective } = require('./config/g2gFrameAncestors');
 const { buildSitemapXml } = require('./services/g2gSeoLocations.service');
 const { buildG2gSpaIndexForPath } = require('./services/g2gSeoHtml.service');
 const trackedLinkService = require('./services/trackedLink.service');
@@ -47,6 +48,24 @@ function staticNewsletterAssets(rootDir) {
 // --------------- GLOBAL MIDDLEWARE ---------------
 
 app.use(helmet({ contentSecurityPolicy: false }));
+
+/** Allow Cash4JunkCar to be embedded on owner sites (CSP frame-ancestors); overrides Helmet X-Frame-Options on send. */
+app.use((req, res, next) => {
+  if (!isG2gPublicHost(req.hostname)) return next();
+  const ancestors = g2gFrameAncestorsDirective();
+  const csp = `frame-ancestors ${ancestors}`;
+  const originalEnd = res.end;
+  res.end = function g2gEmbedEnd(...args) {
+    try {
+      res.removeHeader('X-Frame-Options');
+      res.setHeader('Content-Security-Policy', csp);
+    } catch {
+      // response may already be committed
+    }
+    return originalEnd.apply(this, args);
+  };
+  next();
+});
 
 app.use(cors({
   origin: config.corsOrigin,

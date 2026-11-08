@@ -2,13 +2,15 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import './GraceToGraceDemo.css';
 import { BRAND } from './constants';
-import { g2gPath } from './g2gBase';
+import { g2gLinkPath } from './g2gEmbedLink';
+import { useG2gEmbed } from './useG2gEmbed';
 
 function navClass({ isActive }) {
   return isActive ? 'g2g-nav--active' : '';
 }
 
 export default function G2GLayout() {
+  const { embedded, embedSearch } = useG2gEmbed();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -28,98 +30,100 @@ export default function G2GLayout() {
   }, [menuOpen]);
 
   return (
-    <div className="g2g-demo-root">
+    <div className={`g2g-demo-root${embedded ? ' g2g-embed-mode' : ''}`}>
       <div className="g2g-shell">
-        <header className="g2g-header">
-          <div className="g2g-header-inner">
-            <Link to={g2gPath()} className="g2g-logo" onClick={closeMenu}>
-              Cash<span>4</span>JunkCar
-            </Link>
-            <button
-              type="button"
-              className="g2g-nav-toggle"
-              aria-expanded={menuOpen}
-              aria-controls={menuId}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              onClick={() => setMenuOpen((o) => !o)}
-            >
-              {menuOpen ? (
-                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    d="M6 18L18 6M6 6l12 12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    d="M4 7h16M4 12h16M4 17h16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              )}
-            </button>
-            <nav className="g2g-nav g2g-nav--desktop" aria-label={BRAND}>
-              <NavLink to={g2gPath()} end className={navClass}>
-                Home
-              </NavLink>
-              <Link to={`${g2gPath()}#how-it-works`} className="g2g-nav-hash">
-                How it works
+        {!embedded ? (
+          <header className="g2g-header">
+            <div className="g2g-header-inner">
+              <Link to={g2gLinkPath(null, embedSearch)} className="g2g-logo" onClick={closeMenu}>
+                Cash<span>4</span>JunkCar
               </Link>
-              <Link to={`${g2gPath()}#reviews`} className="g2g-nav-hash">
-                Reviews
-              </Link>
-              <Link to={`${g2gPath()}#faq`} className="g2g-nav-hash">
-                FAQ
-              </Link>
-              <NavLink to={g2gPath('cash-for-junk-cars')} className={navClass}>
-                Service areas
-              </NavLink>
-              <NavLink to={g2gPath('contact')} className={navClass}>
-                Contact
-              </NavLink>
-              <NavLink to={g2gPath('offer')} className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
-                Get offer
-              </NavLink>
-            </nav>
-            {menuOpen ? (
               <button
                 type="button"
-                className="g2g-nav-backdrop"
-                tabIndex={-1}
-                aria-hidden
-                onClick={closeMenu}
-              />
-            ) : null}
-            <div
-              id={menuId}
-              className={`g2g-nav-mobile${menuOpen ? ' g2g-nav-mobile--open' : ''}`}
-              aria-hidden={!menuOpen}
-            >
-              <NavLink to={g2gPath()} end className={navClass} onClick={closeMenu}>
-                Home
-              </NavLink>
-              <Link to={`${g2gPath()}#how-it-works`} className="g2g-nav-hash" onClick={closeMenu}>
-                How it works
-              </Link>
-              <Link to={`${g2gPath()}#faq`} className="g2g-nav-hash" onClick={closeMenu}>
-                FAQ
-              </Link>
-              <NavLink to={g2gPath('cash-for-junk-cars')} className={navClass} onClick={closeMenu}>
-                Service areas
-              </NavLink>
-              <NavLink to={g2gPath('contact')} className={navClass} onClick={closeMenu}>
-                Contact now
-              </NavLink>
+                className="g2g-nav-toggle"
+                aria-expanded={menuOpen}
+                aria-controls={menuId}
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                onClick={() => setMenuOpen((o) => !o)}
+              >
+                {menuOpen ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+                    <path
+                      d="M6 18L18 6M6 6l12 12"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+                    <path
+                      d="M4 7h16M4 12h16M4 17h16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </button>
+              <nav className="g2g-nav g2g-nav--desktop" aria-label={BRAND}>
+                <NavLink to={g2gLinkPath(null, embedSearch)} end className={navClass}>
+                  Home
+                </NavLink>
+                <Link to={`${g2gLinkPath(null, embedSearch)}#how-it-works`} className="g2g-nav-hash">
+                  How it works
+                </Link>
+                <Link to={`${g2gLinkPath(null, embedSearch)}#reviews`} className="g2g-nav-hash">
+                  Reviews
+                </Link>
+                <Link to={`${g2gLinkPath(null, embedSearch)}#faq`} className="g2g-nav-hash">
+                  FAQ
+                </Link>
+                <NavLink to={g2gLinkPath('cash-for-junk-cars', embedSearch)} className={navClass}>
+                  Service areas
+                </NavLink>
+                <NavLink to={g2gLinkPath('contact', embedSearch)} className={navClass}>
+                  Contact
+                </NavLink>
+                <NavLink to={g2gLinkPath('offer', embedSearch)} className={(p) => `g2g-nav-cta ${navClass(p)}`.trim()}>
+                  Get offer
+                </NavLink>
+              </nav>
+              {menuOpen ? (
+                <button
+                  type="button"
+                  className="g2g-nav-backdrop"
+                  tabIndex={-1}
+                  aria-hidden
+                  onClick={closeMenu}
+                />
+              ) : null}
+              <div
+                id={menuId}
+                className={`g2g-nav-mobile${menuOpen ? ' g2g-nav-mobile--open' : ''}`}
+                aria-hidden={!menuOpen}
+              >
+                <NavLink to={g2gLinkPath(null, embedSearch)} end className={navClass} onClick={closeMenu}>
+                  Home
+                </NavLink>
+                <Link to={`${g2gLinkPath(null, embedSearch)}#how-it-works`} className="g2g-nav-hash" onClick={closeMenu}>
+                  How it works
+                </Link>
+                <Link to={`${g2gLinkPath(null, embedSearch)}#faq`} className="g2g-nav-hash" onClick={closeMenu}>
+                  FAQ
+                </Link>
+                <NavLink to={g2gLinkPath('cash-for-junk-cars', embedSearch)} className={navClass} onClick={closeMenu}>
+                  Service areas
+                </NavLink>
+                <NavLink to={g2gLinkPath('contact', embedSearch)} className={navClass} onClick={closeMenu}>
+                  Contact now
+                </NavLink>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        ) : null}
         <main className="g2g-main">
           <Outlet />
         </main>
