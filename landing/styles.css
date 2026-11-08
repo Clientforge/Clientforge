@@ -54,6 +54,10 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body.nav-menu-open {
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font);
   font-size: 16px;
@@ -1446,13 +1450,27 @@ img {
     display: none;
   }
 
+  .navbar.nav-open {
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .navbar.nav-open .nav-container {
     flex-wrap: wrap;
     align-items: center;
+    align-content: flex-start;
     row-gap: 0;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--color-border-light);
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    min-height: 100%;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    box-shadow: none;
+    border-bottom: none;
   }
 
   .navbar.nav-open .logo {
@@ -1474,7 +1492,7 @@ img {
     gap: 0;
     margin: 0;
     padding: 0;
-    background: transparent;
+    background: var(--color-surface);
     border: none;
     box-shadow: none;
     animation: nav-panel-in 0.2s ease;
@@ -1533,6 +1551,23 @@ img {
     z-index: 1;
   }
 
+  .mobile-toggle span {
+    transition: transform var(--transition), opacity var(--transition);
+    transform-origin: center;
+  }
+
+  .navbar.nav-open .mobile-toggle span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .navbar.nav-open .mobile-toggle span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .navbar.nav-open .mobile-toggle span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
   .hero { padding: 120px 0 60px; }
 
   .hero-tagline {
@@ -1570,9 +1605,25 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .how-section,
+  .features-section,
+  .who-section,
+  .pricing-section,
+  .services-section,
+  .testimonials-section,
+  .contact-section {
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+
   .steps-grid {
     flex-direction: column;
     align-items: center;
+  }
+
+  .step-card {
+    padding: 20px 16px;
+    max-width: 100%;
   }
 
   .step-connector {
