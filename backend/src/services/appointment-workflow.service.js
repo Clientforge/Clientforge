@@ -29,6 +29,16 @@ const SHOPMONKEY_CONTACT_POST_VISIT_COOLDOWN_HOURS = 24;
 
 const isShopmonkeyAutoShopMode = (appointment) => appointment?.provider === 'shopmonkey';
 
+/** Spatium Urgent Care QR check-in — post-visit from check-in time (Spatium tenant only). */
+const isSpatiumCheckInMode = (appointment) => appointment?.provider === 'spatium_checkin';
+
+const supportsPostServiceCompletionProvider = (appointment) => (
+  isShopmonkeyAutoShopMode(appointment)
+  || appointment?.provider === 'ecw'
+  || appointment?.provider === 'visit_list'
+  || isSpatiumCheckInMode(appointment)
+);
+
 const isOptimantraCheckoutMode = (tenant, appointment) => (
   !!tenant?.optimantra_checkout_automations
   && appointment?.provider === 'optimantra'
@@ -171,12 +181,7 @@ const dispatchPostVisitWorkflows = async (tenantId, {
   const isEcwCheckoutMode = appointment?.provider === 'ecw';
   const isVisitListMode = appointment?.provider === 'visit_list';
 
-  if (
-    !requireOptimantraCheckout
-    && !isShopmonkeyAutoShopMode(appointment)
-    && !isEcwCheckoutMode
-    && !isVisitListMode
-  ) {
+  if (!requireOptimantraCheckout && !supportsPostServiceCompletionProvider(appointment)) {
     return { jobsScheduled: 0, skipped: 'unsupported_post_visit_provider' };
   }
 
@@ -1912,6 +1917,8 @@ module.exports = {
   redeployUpcomingBookingWorkflows,
   isOptimantraCheckoutMode,
   isShopmonkeyAutoShopMode,
+  isSpatiumCheckInMode,
+  supportsPostServiceCompletionProvider,
   PRE_VISIT_CATEGORIES,
   POST_VISIT_CATEGORIES,
   planAutomationSteps,

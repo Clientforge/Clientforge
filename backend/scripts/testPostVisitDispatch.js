@@ -11,6 +11,8 @@ const {
   postVisitAlreadyHasCurrentMessage,
   savedPostAppointmentIsLegacy,
   POST_VISIT_CATEGORIES,
+  supportsPostServiceCompletionProvider,
+  isSpatiumCheckInMode,
 } = require('../src/services/appointment-workflow.service');
 
 let failed = 0;
@@ -155,6 +157,16 @@ check(
       }],
     },
   }),
+);
+
+check('Spatium check-in uses spatium_checkin provider flag', isSpatiumCheckInMode({ provider: 'spatium_checkin' }));
+check(
+  'Spatium check-in allows post-service completion dispatch',
+  supportsPostServiceCompletionProvider({ provider: 'spatium_checkin' }),
+);
+check(
+  'unrelated providers still blocked from post-service completion',
+  !supportsPostServiceCompletionProvider({ provider: 'calendly' }),
 );
 
 if (failed) {

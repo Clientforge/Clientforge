@@ -194,12 +194,25 @@ async function submitCheckIn(body) {
     },
   );
 
-  const workflow = await appointmentWorkflowService.dispatchCheckInWorkflows(tenant.id, {
+  const postVisitWorkflow = await appointmentWorkflowService.dispatchPostServiceCompletionWorkflows(
+    tenant.id,
+    {
+      contactId,
+      appointmentId,
+      checkedOutAt: checkInAt,
+      primaryServiceName: input.serviceType,
+    },
+  );
+
+  const rebookingWorkflow = await appointmentWorkflowService.dispatchCheckInWorkflows(tenant.id, {
     contactId,
     appointmentId,
     checkedInAt: checkInAt,
     serviceName: input.serviceType,
   });
+
+  const jobsScheduled = (postVisitWorkflow.jobsScheduled || 0)
+    + (rebookingWorkflow.jobsScheduled || 0);
 
   return {
     contactId,
@@ -209,7 +222,13 @@ async function submitCheckIn(body) {
     serviceType: input.serviceType,
     matchedServiceId: matchedService?.id || null,
     matchedServiceName: matchedService?.name || null,
-    ...workflow,
+    jobsScheduled,
+    postVisitJobs: postVisitWorkflow.postVisitJobs || 0,
+    postVisitSkipped: postVisitWorkflow.skipped || null,
+    rebookingJobs: rebookingWorkflow.rebookingJobs ?? rebookingWorkflow.jobsScheduled ?? 0,
+    rebookingSkipped: rebookingWorkflow.rebookingSkipped,
+    rebookingSkipReason: rebookingWorkflow.rebookingSkipReason || null,
+    rebookingOffsetDays: rebookingWorkflow.rebookingOffsetDays || null,
   };
 }
 
