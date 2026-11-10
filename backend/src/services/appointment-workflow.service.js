@@ -28,12 +28,16 @@ const POST_VISIT_JOB_TYPES = ['post_visit', 'review_request'];
 const SHOPMONKEY_CONTACT_POST_VISIT_COOLDOWN_HOURS = 24;
 
 const isShopmonkeyAutoShopMode = (appointment) => appointment?.provider === 'shopmonkey';
+const isAlldataAutoShopMode = (appointment) => appointment?.provider === 'alldata';
+const isAutoShopIntegrationMode = (appointment) => (
+  isShopmonkeyAutoShopMode(appointment) || isAlldataAutoShopMode(appointment)
+);
 
 /** Spatium Urgent Care QR check-in — post-visit from check-in time (Spatium tenant only). */
 const isSpatiumCheckInMode = (appointment) => appointment?.provider === 'spatium_checkin';
 
 const supportsPostServiceCompletionProvider = (appointment) => (
-  isShopmonkeyAutoShopMode(appointment)
+  isAutoShopIntegrationMode(appointment)
   || appointment?.provider === 'ecw'
   || appointment?.provider === 'visit_list'
   || isSpatiumCheckInMode(appointment)
@@ -45,7 +49,7 @@ const isOptimantraCheckoutMode = (tenant, appointment) => (
 );
 
 const categoriesForBookingDispatch = (tenant, appointment) => {
-  if (isShopmonkeyAutoShopMode(appointment)) {
+  if (isAutoShopIntegrationMode(appointment)) {
     return [];
   }
   if (isOptimantraCheckoutMode(tenant, appointment)) {
@@ -56,7 +60,7 @@ const categoriesForBookingDispatch = (tenant, appointment) => {
 
 const shouldScheduleRebookingOnBooking = (tenant, appointment) => (
   !isOptimantraCheckoutMode(tenant, appointment)
-  && !isShopmonkeyAutoShopMode(appointment)
+  && !isAutoShopIntegrationMode(appointment)
 );
 
 /**
@@ -210,7 +214,7 @@ const dispatchPostVisitWorkflows = async (tenantId, {
     contact,
     appointment: appointmentForTemplates,
   });
-  if (isShopmonkeyAutoShopMode(appointmentForTemplates)) {
+  if (isAutoShopIntegrationMode(appointmentForTemplates)) {
     Object.assign(vars, buildAutoShopBookingTemplateExtras(tenant));
   }
 

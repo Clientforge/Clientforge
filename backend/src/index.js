@@ -12,6 +12,7 @@ const birthdayWorker = require('./workers/birthday.worker');
 const noShowWorker = require('./workers/no-show.worker');
 const ecwEncounterWorker = require('./workers/ecwEncounter.worker');
 const ecwBulkExportWorker = require('./workers/ecwBulkExport.worker');
+const alldataWorker = require('./workers/alldata.worker');
 const { ensureG2gUploadDir } = require('./services/graceG2gPhoto.service');
 
 const startServer = async () => {
@@ -51,6 +52,7 @@ const startServer = async () => {
     noShowWorker.startWorker();
     ecwEncounterWorker.startWorker();
     ecwBulkExportWorker.startWorker();
+    alldataWorker.startWorker();
   });
 };
 

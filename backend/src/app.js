@@ -213,6 +213,7 @@ app.use('/api/v1/settings',  authenticate, tenantScope, require('./routes/settin
 app.use('/api/v1/integrations/google-calendar', authenticate, tenantScope, require('./routes/googleCalendar.routes'));
 app.use('/api/v1/integrations/square', authenticate, tenantScope, require('./routes/square.routes'));
 app.use('/api/v1/integrations/shopmonkey', authenticate, tenantScope, require('./routes/shopmonkey.routes'));
+app.use('/api/v1/integrations/alldata', authenticate, tenantScope, require('./routes/alldata.routes'));
 app.use('/api/v1/integrations/ecw', authenticate, tenantScope, require('./routes/ecw.routes'));
 app.use('/api/v1/integrations/instagram', authenticate, tenantScope, require('./routes/instagram.routes'));
 app.use('/api/v1/contacts',      authenticate, tenantScope, require('./routes/contacts.routes'));

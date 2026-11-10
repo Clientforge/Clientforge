@@ -1,6 +1,7 @@
 const db = require('../db/connection');
 const { normalizeBusinessName } = require('./bookingEmailParse.service');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
+const { isAlldataTenant } = require('../config/alldataTenant');
 const {
   MASTER_CATEGORIES,
   DEFAULT_CATEGORY_SLUG,
@@ -88,7 +89,8 @@ async function getTenantName(tenantId) {
 }
 
 async function isClassificationEnabled(tenantId, tenantName) {
-  return isShopmonkeyTenant(tenantId, tenantName || await getTenantName(tenantId));
+  const name = tenantName || await getTenantName(tenantId);
+  return isShopmonkeyTenant(tenantId, name) || isAlldataTenant(tenantId, name);
 }
 
 async function ensureMasterCategories(tenantId) {

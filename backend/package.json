@@ -17,7 +17,7 @@
     "migrate:rollback": "knex migrate:rollback",
     "migrate:status": "knex migrate:status",
     "seed:g2g-owner": "node scripts/seedG2gOwner.js",
-    "test": "node scripts/testG2gEstimateSmsFormat.js && node scripts/testBookingEmailParse.js && node scripts/testBookingEventClassification.js && node scripts/testGoogleCalendarAdapter.js && node scripts/testGoogleCalendarOptimantraBridge.js && node scripts/testCherishedOnboarding.js && node scripts/testCampaignSchedule.js && node scripts/testEcwAdapter.js",
+    "test": "node scripts/testG2gEstimateSmsFormat.js && node scripts/testBookingEmailParse.js && node scripts/testBookingEventClassification.js && node scripts/testGoogleCalendarAdapter.js && node scripts/testGoogleCalendarOptimantraBridge.js && node scripts/testCherishedOnboarding.js && node scripts/testCampaignSchedule.js && node scripts/testEcwAdapter.js && node scripts/testAlldataAdapter.js",
     "seed:cherished-aesthetics": "node scripts/seedCherishedAestheticsServices.js",
     "normalize:tenant-phones": "node scripts/normalizeTenantPhones.js"
   },
@@ -47,6 +47,7 @@
     "openai": "^6.25.0",
     "pg": "^8.19.0",
     "resend": "^6.9.3",
+    "ssh2-sftp-client": "^12.1.1",
     "twilio": "^5.13.1",
     "uuid": "^13.0.0"
   },

@@ -1019,6 +1019,10 @@ function IntegrationTab({ settings, onSave, onReload, saving }) {
 
       <ShopmonkeySection settings={settings} onReload={onReload} copyToClipboard={copyToClipboard} copying={copying} />
 
+      <hr className="settings-divider" />
+
+      <AlldataSection settings={settings} onReload={onReload} />
+
       <SquareSection settings={settings} onReload={onReload} copyToClipboard={copyToClipboard} copying={copying} />
 
       <hr className="settings-divider" />
@@ -1373,6 +1377,219 @@ function ShopmonkeySection({ settings, onReload, copyToClipboard, copying }) {
           </div>
           <button type="submit" className="btn-primary" disabled={busy === 'connect'}>
             {busy === 'connect' ? 'Connecting…' : 'Connect Shopmonkey'}
+          </button>
+        </form>
+      )}
+
+      {msg && <p className="field-hint" style={{ marginTop: 12 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function AlldataSection({ settings, onReload }) {
+  const ad = settings.integration?.alldata || {};
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const [sftpHost, setSftpHost] = useState(ad.sftpHost || '');
+  const [sftpPort, setSftpPort] = useState(ad.sftpPort || 22);
+  const [sftpUsername, setSftpUsername] = useState(ad.sftpUsername || '');
+  const [sftpPassword, setSftpPassword] = useState('');
+  const [remotePath, setRemotePath] = useState(ad.remotePath || '/');
+  const [shopLabel, setShopLabel] = useState(ad.shopLabel || '');
+  const [syncEnabled, setSyncEnabled] = useState(ad.syncEnabled !== false);
+  const [deferredFollowupEnabled, setDeferredFollowupEnabled] = useState(ad.deferredFollowupEnabled !== false);
+
+  useEffect(() => {
+    setSftpHost(ad.sftpHost || '');
+    setSftpPort(ad.sftpPort || 22);
+    setSftpUsername(ad.sftpUsername || '');
+    setRemotePath(ad.remotePath || '/');
+    setShopLabel(ad.shopLabel || '');
+    setSyncEnabled(ad.syncEnabled !== false);
+    setDeferredFollowupEnabled(ad.deferredFollowupEnabled !== false);
+  }, [ad.sftpHost, ad.sftpPort, ad.sftpUsername, ad.remotePath, ad.shopLabel, ad.syncEnabled, ad.deferredFollowupEnabled]);
+
+  if (!ad.available) return null;
+
+  const connect = async (e) => {
+    e.preventDefault();
+    setBusy('connect');
+    setMsg('');
+    try {
+      await api.post('/integrations/alldata/connect', {
+        sftpHost: sftpHost.trim(),
+        sftpPort: Number(sftpPort) || 22,
+        sftpUsername: sftpUsername.trim(),
+        sftpPassword: sftpPassword.trim() || undefined,
+        remotePath: remotePath.trim() || '/',
+        shopLabel: shopLabel.trim() || null,
+      });
+      setSftpPassword('');
+      await onReload();
+      setMsg('ALLDATA sFTP connected');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect ALLDATA? Daily import will stop for this account.')) return;
+    setBusy('disconnect');
+    try {
+      await api.post('/integrations/alldata/disconnect');
+      await onReload();
+      setMsg('ALLDATA disconnected');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const testSftp = async () => {
+    setBusy('test');
+    setMsg('');
+    try {
+      const result = await api.post('/integrations/alldata/test');
+      setMsg(`SFTP OK — ${result.fileCount ?? 0} file(s) in folder`);
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const syncNow = async () => {
+    setBusy('sync');
+    setMsg('');
+    try {
+      const result = await api.post('/integrations/alldata/sync');
+      if (result.skipped) {
+        setMsg(`Sync skipped: ${result.reason || 'unknown'}`);
+      } else if ((result.filesProcessed || 0) === 0) {
+        setMsg('No new export files to import');
+      } else {
+        const stats = result.stats || {};
+        setMsg(`Imported ${result.filesProcessed} file(s): ${stats.customers ?? 0} customers, ${stats.ordersCompleted ?? 0} completed orders, ${stats.deferredRows ?? 0} deferred rows`);
+      }
+      await onReload();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const saveSettings = async (e) => {
+    e.preventDefault();
+    setBusy('save');
+    setMsg('');
+    try {
+      await api.put('/integrations/alldata', {
+        syncEnabled,
+        deferredFollowupEnabled,
+        shopLabel: shopLabel.trim() || null,
+      });
+      await onReload();
+      setMsg('ALLDATA settings saved');
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <div className="integration-block">
+      <h3>ALLDATA Manage Online</h3>
+      <p className="settings-desc">
+        Connect the daily Generic Export (Customers, Vehicle, Repair Order, Deferred Work) from ALLDATA Manage Online via sFTP.
+        This integration is enabled only for Powder Springs Brake, Lube &amp; Tune Up.
+        Automations run after <strong>Go Live</strong>; historical rows import as records only.
+      </p>
+
+      {ad.connected ? (
+        <>
+          <div className="field" style={{ marginTop: 16 }}>
+            <label>Status</label>
+            <p className="settings-desc" style={{ margin: 0 }}>
+              Connected{ad.shopLabel ? ` — ${ad.shopLabel}` : ''}.
+              {ad.lastSyncAt ? ` Last sync: ${new Date(ad.lastSyncAt).toLocaleString()}.` : ' No sync yet.'}
+              {ad.lastSyncError ? ` Last error: ${ad.lastSyncError}` : ''}
+            </p>
+          </div>
+          <form onSubmit={saveSettings}>
+            <div className="field">
+              <label>Shop label (optional)</label>
+              <input value={shopLabel} onChange={(e) => setShopLabel(e.target.value)} placeholder="Powder Springs Brake, Lube & Tune Up" />
+            </div>
+            <div className="field field-checkbox">
+              <label className="checkbox-label">
+                <input type="checkbox" checked={syncEnabled} onChange={(e) => setSyncEnabled(e.target.checked)} />
+                Enable automatic daily sFTP sync
+              </label>
+            </div>
+            <div className="field field-checkbox">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={deferredFollowupEnabled}
+                  onChange={(e) => setDeferredFollowupEnabled(e.target.checked)}
+                />
+                Deferred / declined work SMS follow-up (7 / 14 / 30 / 60 days)
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <button type="submit" className="btn-primary" disabled={busy === 'save'}>
+                {busy === 'save' ? 'Saving…' : 'Save'}
+              </button>
+              <button type="button" className="btn-sm" onClick={testSftp} disabled={!!busy}>
+                {busy === 'test' ? 'Testing…' : 'Test sFTP'}
+              </button>
+              <button type="button" className="btn-sm" onClick={syncNow} disabled={!!busy}>
+                {busy === 'sync' ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button type="button" className="btn-sm btn-danger-sm" onClick={disconnect} disabled={!!busy}>
+                Disconnect
+              </button>
+            </div>
+          </form>
+          <p className="field-hint" style={{ marginTop: 8 }}>
+            SFTP: {ad.sftpHost}:{ad.sftpPort}{ad.remotePath}
+          </p>
+        </>
+      ) : (
+        <form onSubmit={connect} style={{ marginTop: 16 }}>
+          <div className="field">
+            <label>SFTP host</label>
+            <input value={sftpHost} onChange={(e) => setSftpHost(e.target.value)} placeholder="sftp.your-domain.com" required />
+          </div>
+          <div className="field">
+            <label>SFTP port</label>
+            <input type="number" value={sftpPort} onChange={(e) => setSftpPort(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Username</label>
+            <input value={sftpUsername} onChange={(e) => setSftpUsername(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label>Password</label>
+            <input
+              type="password"
+              value={sftpPassword}
+              onChange={(e) => setSftpPassword(e.target.value)}
+              placeholder="Or use private key via API later"
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Remote folder path</label>
+            <input value={remotePath} onChange={(e) => setRemotePath(e.target.value)} placeholder="/incoming/powder-springs" />
+          </div>
+          <button type="submit" className="btn-primary" disabled={busy === 'connect'}>
+            {busy === 'connect' ? 'Connecting…' : 'Connect ALLDATA sFTP'}
           </button>
         </form>
       )}

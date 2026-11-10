@@ -6,8 +6,10 @@ const smsProviderService = require('./sms-provider.service');
 const googleCalendarService = require('./googleCalendar.service');
 const squareService = require('./square.service');
 const shopmonkeyService = require('./shopmonkey.service');
+const alldataService = require('./alldata.service');
 const ecwService = require('./ecw.service');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
+const { isAlldataTenant } = require('../config/alldataTenant');
 const instagramService = require('./instagram.service');
 const { normalizePhone } = require('./lead.service');
 
@@ -96,6 +98,17 @@ const getSettings = async (tenantId) => {
     // ignore
   }
 
+  let alldata = { connected: false, configured: true, available: isAlldataTenant(tenantId, t.name) };
+  try {
+    const alldataStatus = await alldataService.getStatus(tenantId);
+    alldata = {
+      ...alldataStatus,
+      available: isAlldataTenant(tenantId, t.name) || !!alldataStatus.connected,
+    };
+  } catch {
+    // ignore
+  }
+
   return {
     business: {
       name: t.name,
@@ -136,6 +149,7 @@ const getSettings = async (tenantId) => {
       googleCalendar,
       square,
       shopmonkey,
+      alldata,
       instagram,
       metaWebhookUrl: instagramService.webhookUrl(),
     },

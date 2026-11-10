@@ -1,5 +1,6 @@
 const db = require('../db/connection');
 const { isShopmonkeyTenant } = require('../config/shopmonkeyTenant');
+const { isAlldataTenant } = require('../config/alldataTenant');
 const appointmentService = require('./appointment.service');
 const rebookingCampaign = require('./rebooking-campaign.service');
 const {
@@ -153,8 +154,8 @@ async function scheduleMaintenanceReminders({
   referenceAt,
   forceReschedule = false,
 }) {
-  if (!isShopmonkeyTenant(tenantId, tenantName)) {
-    return { scheduled: false, reason: 'not_shopmonkey_tenant' };
+  if (!isShopmonkeyTenant(tenantId, tenantName) && !isAlldataTenant(tenantId, tenantName)) {
+    return { scheduled: false, reason: 'not_auto_shop_tenant' };
   }
 
   const settings = await getMaintenanceSettings(tenantId);
