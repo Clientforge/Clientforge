@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BRAND } from './constants';
 import { fetchG2gLocations } from './g2gSeoApi';
-import { g2gPath } from './g2gBase';
+import { g2gLinkPath, g2gLinkPathSegments } from './g2gEmbedLink';
 import { useG2gPageMeta } from './useG2gPageMeta';
+import { useG2gEmbed } from './useG2gEmbed';
 
 export default function G2GLocationHub() {
+  const { embedSearch } = useG2gEmbed();
   const [locations, setLocations] = useState([]);
   const [error, setError] = useState('');
 
@@ -38,7 +40,7 @@ export default function G2GLocationHub() {
         <p className="g2g-hero-lead">
           Choose your city for local details, FAQs, and a fast online estimate — same simple process everywhere we serve.
         </p>
-        <Link to={g2gPath('offer')} className="g2g-btn g2g-btn--primary">
+        <Link to={g2gLinkPath('offer', embedSearch)} className="g2g-btn g2g-btn--primary">
           Get my cash offer
         </Link>
       </section>
@@ -49,7 +51,7 @@ export default function G2GLocationHub() {
         <ul className="g2g-location-hub-list" role="list">
           {locations.map((loc) => (
             <li key={loc.slug}>
-              <Link to={g2gPath('cash-for-junk-cars', loc.slug)} className="g2g-location-hub-link">
+              <Link to={g2gLinkPathSegments(embedSearch, 'cash-for-junk-cars', loc.slug)} className="g2g-location-hub-link">
                 <strong>Cash for junk cars in {loc.displayName}</strong>
                 <span className="g2g-location-hub-chevron" aria-hidden>
                   →

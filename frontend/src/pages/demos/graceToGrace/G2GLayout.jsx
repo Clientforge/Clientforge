@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import './GraceToGraceDemo.css';
 import { BRAND } from './constants';
 import { g2gLinkPath } from './g2gEmbedLink';
@@ -11,9 +11,26 @@ function navClass({ isActive }) {
 
 export default function G2GLayout() {
   const { embedded, embedSearch } = useG2gEmbed();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!embedded) return;
+    const hasEmbed =
+      searchParams.get('embed') === '1' || searchParams.get('embed') === 'true';
+    if (hasEmbed) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('embed', '1');
+    const search = next.toString();
+    navigate(
+      { pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash },
+      { replace: true },
+    );
+  }, [embedded, location.pathname, location.hash, navigate, searchParams]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;

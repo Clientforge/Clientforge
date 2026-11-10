@@ -10,7 +10,8 @@ import {
   TRUST_BAND,
   TRUST_CHIPS,
 } from './homeContent';
-import { g2gPath } from './g2gBase';
+import { g2gLinkPath } from './g2gEmbedLink';
+import { useG2gEmbed } from './useG2gEmbed';
 
 function StepIcon({ name }) {
   const common = { width: 40, height: 40, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -95,6 +96,7 @@ function StarRow({ n }) {
 
 export default function G2GHome() {
   const { pathname, hash } = useLocation();
+  const { embedSearch } = useG2gEmbed();
 
   useEffect(() => {
     document.title = `${BRAND} — Vehicle cash offers`;
@@ -115,10 +117,10 @@ export default function G2GHome() {
         <h1 id="g2g-demo-hero-heading">{HERO.headline}</h1>
         <p className="g2g-hero-lead">{HERO.subhead}</p>
         <div className="g2g-hero-actions">
-          <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary">
+          <Link to={g2gLinkPath('offer', embedSearch)} className="g2g-btn g2g-btn--primary">
             {HERO.primaryCta}
           </Link>
-          <Link to={`${g2gPath('offer')}?start=vin`} className="g2g-btn g2g-btn--ghost">
+          <Link to={g2gLinkPath('offer', embedSearch, { start: 'vin' })} className="g2g-btn g2g-btn--ghost">
             {HERO.secondaryCta}
           </Link>
         </div>
@@ -135,7 +137,7 @@ export default function G2GHome() {
         </h2>
         <p className="g2g-cta-band__title">{CTA_REPEAT.title}</p>
         <p className="g2g-cta-band__body">{CTA_REPEAT.body}</p>
-        <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary">
+        <Link to={g2gLinkPath('offer', embedSearch)} className="g2g-btn g2g-btn--primary">
           {CTA_REPEAT.button}
         </Link>
       </section>
@@ -179,7 +181,7 @@ export default function G2GHome() {
           Get offer
         </h2>
         <p className="g2g-cta-band__title">Ready to see numbers?</p>
-        <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary">
+        <Link to={g2gLinkPath('offer', embedSearch)} className="g2g-btn g2g-btn--primary">
           {HERO.primaryCta}
         </Link>
       </section>
@@ -219,7 +221,7 @@ export default function G2GHome() {
       </p>
 
       <aside className="g2g-sticky-cta" aria-label="Get offer">
-        <Link to={`${g2gPath('offer')}`} className="g2g-btn g2g-btn--primary g2g-sticky-cta__btn">
+        <Link to={g2gLinkPath('offer', embedSearch)} className="g2g-btn g2g-btn--primary g2g-sticky-cta__btn">
           {HERO.primaryCta}
         </Link>
       </aside>

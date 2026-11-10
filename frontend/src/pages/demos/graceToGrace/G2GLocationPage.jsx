@@ -7,12 +7,14 @@ import {
 } from './constants';
 import { HOW_IT_WORKS_STEPS, TRUST_CHIPS } from './homeContent';
 import { fetchG2gLocation } from './g2gSeoApi';
-import { g2gPath } from './g2gBase';
+import { g2gLinkPath, g2gLinkPathSegments } from './g2gEmbedLink';
 import { saveG2gSeoLocationSlug } from './g2gSeoStorage';
 import { useG2gPageMeta } from './useG2gPageMeta';
+import { useG2gEmbed } from './useG2gEmbed';
 
 export default function G2GLocationPage() {
   const { slug } = useParams();
+  const { embedSearch } = useG2gEmbed();
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -44,11 +46,12 @@ export default function G2GLocationPage() {
     };
   }, [slug]);
 
-  const offerQuery = location?.primaryZip
-    ? `?location=${encodeURIComponent(location.slug)}&zip=${encodeURIComponent(location.primaryZip)}`
-    : location?.slug
-      ? `?location=${encodeURIComponent(location.slug)}`
-      : '';
+  const offerQuery =
+    location?.primaryZip && location?.slug
+      ? { location: location.slug, zip: location.primaryZip }
+      : location?.slug
+        ? { location: location.slug }
+        : undefined;
 
   useG2gPageMeta({
     title: location?.metaTitle || `${BRAND} — ${location?.displayName || ''}`,
@@ -60,7 +63,7 @@ export default function G2GLocationPage() {
   });
 
   if (!loading && notFound) {
-    return <Navigate to={g2gPath('cash-for-junk-cars')} replace />;
+    return <Navigate to={g2gLinkPath('cash-for-junk-cars', embedSearch)} replace />;
   }
 
   if (loading || !location) {
@@ -76,9 +79,9 @@ export default function G2GLocationPage() {
   return (
     <div className="g2g-home">
       <nav className="g2g-breadcrumb" aria-label="Breadcrumb">
-        <Link to={g2gPath()}>Home</Link>
+        <Link to={g2gLinkPath(null, embedSearch)}>Home</Link>
         <span aria-hidden> / </span>
-        <Link to={g2gPath('cash-for-junk-cars')}>Cash for junk cars</Link>
+        <Link to={g2gLinkPath('cash-for-junk-cars', embedSearch)}>Cash for junk cars</Link>
         <span aria-hidden> / </span>
         <span>{location.displayName}</span>
       </nav>
@@ -88,7 +91,7 @@ export default function G2GLocationPage() {
         <h1 id="g2g-loc-hero">{location.heroHeadline}</h1>
         <p className="g2g-hero-lead">{location.heroSubhead}</p>
         <div className="g2g-hero-actions">
-          <Link to={`${g2gPath('offer')}${offerQuery}`} className="g2g-btn g2g-btn--primary">
+          <Link to={g2gLinkPath('offer', embedSearch, offerQuery)} className="g2g-btn g2g-btn--primary">
             Get my cash offer
           </Link>
           <a href={`tel:${CONTACT_PHONE_E164}`} className="g2g-btn g2g-btn--ghost">
@@ -150,7 +153,7 @@ export default function G2GLocationPage() {
           <ul className="g2g-location-hub-list" role="list">
             {location.nearby.map((n) => (
               <li key={n.slug}>
-                <Link to={g2gPath('cash-for-junk-cars', n.slug)} className="g2g-location-hub-link">
+                <Link to={g2gLinkPathSegments(embedSearch, 'cash-for-junk-cars', n.slug)} className="g2g-location-hub-link">
                   Cash for junk cars in {n.displayName}
                 </Link>
               </li>
@@ -161,7 +164,7 @@ export default function G2GLocationPage() {
 
       <section className="g2g-section g2g-cta-band">
         <p className="g2g-cta-band__title">Ready to sell in {location.city}?</p>
-        <Link to={`${g2gPath('offer')}${offerQuery}`} className="g2g-btn g2g-btn--primary">
+        <Link to={g2gLinkPath('offer', embedSearch, offerQuery)} className="g2g-btn g2g-btn--primary">
           Get my cash offer
         </Link>
       </section>

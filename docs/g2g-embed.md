@@ -43,7 +43,14 @@ G2G_FRAME_ANCESTORS=https://gracetogracecash4cars.com,https://www.gracetograceca
 | Full home + funnel | `https://www.cash4junkcar.net/?embed=1` |
 | Quote form only | `https://www.cash4junkcar.net/offer?embed=1` |
 
-With `embed=1`, or when loaded inside an iframe, site header/nav is hidden.
+With `embed=1`, or when loaded inside an iframe, site header/nav is hidden. Internal links keep `embed=1` so users stay in the iframe while browsing home → offer → service areas → contact.
+
+## Grace to Grace parent site
+
+- Use **one iframe** on the sell-car page (or the same `src` on every page that should show the funnel).
+- Do **not** add WordPress menu items that link directly to `https://www.cash4junkcar.net/...` — that leaves the parent site.
+- **Quote only:** `src="https://www.cash4junkcar.net/offer?embed=1"` (current snippet).
+- **Full site in frame:** `src="https://www.cash4junkcar.net/?embed=1"`.
 
 ## Deploy
 
