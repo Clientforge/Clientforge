@@ -40,10 +40,12 @@
 
 .g2g-demo-root.g2g-embed-mode .g2g-shell {
   max-width: none;
+  min-height: 0;
 }
 
 .g2g-demo-root.g2g-embed-mode .g2g-main {
   padding-top: 0;
+  min-height: 0;
 }
 
 .g2g-demo-root *,

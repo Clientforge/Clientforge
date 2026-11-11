@@ -7,10 +7,12 @@ Leads still submit to `https://www.cash4junkcar.net/api/v1/public/...` from insi
 Set parent website origin(s) (required for cross-domain embed):
 
 ```bash
-G2G_FRAME_ANCESTORS=https://gracetogracecash4cars.com,https://www.gracetogracecash4cars.com
+G2G_FRAME_ANCESTORS=https://gracetogracecash4cars.com,https://www.gracetogracecash4cars.com,https://*.gracetograce-cash4cars.pages.dev
 ```
 
-`cash4junkcar.net` is always allowed via `'self'`.
+`cash4junkcar.net` is always allowed via `'self'`. On G2G hosts, `X-Frame-Options` is not sent; CSP `frame-ancestors` controls who may embed.
+
+Embed mode avoids `min-height: 100vh` on the page shell and reports **content** height to the parent (`g2g-embed-resize`) so the iframe does not grow in a feedback loop.
 
 ## Recommended iframe (quote funnel)
 

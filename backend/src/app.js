@@ -47,9 +47,16 @@ function staticNewsletterAssets(rootDir) {
 
 // --------------- GLOBAL MIDDLEWARE ---------------
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use((req, res, next) => {
+  const g2gHost = isG2gPublicHost(req.hostname);
+  const helmetMw = helmet({
+    contentSecurityPolicy: false,
+    frameguard: g2gHost ? false : undefined,
+  });
+  return helmetMw(req, res, next);
+});
 
-/** Allow Cash4JunkCar to be embedded on owner sites (CSP frame-ancestors); overrides Helmet X-Frame-Options on send. */
+/** Cash4JunkCar on G2G hosts: CSP frame-ancestors for parent embed sites. */
 app.use((req, res, next) => {
   if (!isG2gPublicHost(req.hostname)) return next();
   const ancestors = g2gFrameAncestorsDirective();
