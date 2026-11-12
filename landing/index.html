@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/png" href="/brand/mark.png">
 </head>
-<body>
+<body class="page-home">
 
   <!-- NAVBAR -->
   <nav class="navbar">
@@ -46,7 +46,7 @@
   </nav>
 
   <!-- HERO -->
-  <section class="hero">
+  <section class="hero hero--dark">
     <div class="hero-glow"></div>
     <div class="container hero-container">
       <p class="hero-tagline">Client Growth &amp; Revenue Recovery System</p>
@@ -85,7 +85,7 @@
             <div class="stat-card">
               <div class="stat-top">
                 <span class="stat-label">REMINDERS SENT</span>
-                <span class="stat-icon stat-icon-leads">
+                <span class="stat-icon stat-icon-reminders">
                   <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2"/></svg>
                 </span>
               </div>
@@ -115,7 +115,7 @@
             <div class="stat-card">
               <div class="stat-top">
                 <span class="stat-label">AUTOMATIONS</span>
-                <span class="stat-icon stat-icon-followup">
+                <span class="stat-icon stat-icon-automations">
                   <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </span>
               </div>
@@ -222,17 +222,46 @@
   <!-- INTEGRATIONS -->
   <section id="integrations" class="integrations-section">
     <div class="container">
-      <p class="integrations-eyebrow">Works with your stack</p>
-      <div class="integrations-badges">
-        <span class="integration-badge">eClinicalWorks</span>
-        <span class="integration-badge">Calendly</span>
-        <span class="integration-badge">Google Calendar</span>
-        <span class="integration-badge">Shopmonkey</span>
-        <span class="integration-badge">ALLDATA Manage Online</span>
-        <span class="integration-badge">Square</span>
-        <span class="integration-badge">Telnyx / Twilio SMS</span>
-        <span class="integration-badge">OptiMantra</span>
+      <div class="section-header">
+        <span class="section-badge">Integrations</span>
+        <h2>Connect the tools <span class="gradient-text">you already use</span></h2>
+        <p>EHR, shop systems, calendars, and SMS—wired into one client growth workflow.</p>
       </div>
+      <div class="integrations-grid" aria-label="Supported integrations">
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">eC</span>
+          <span class="integration-tile-name">eClinicalWorks</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">Ca</span>
+          <span class="integration-tile-name">Calendly</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">GC</span>
+          <span class="integration-tile-name">Google Calendar</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">SM</span>
+          <span class="integration-tile-name">Shopmonkey</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">AD</span>
+          <span class="integration-tile-name">ALLDATA Manage Online</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">Sq</span>
+          <span class="integration-tile-name">Square</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">Tx</span>
+          <span class="integration-tile-name">Telnyx / Twilio SMS</span>
+        </div>
+        <div class="integration-tile">
+          <span class="integration-tile-mark" aria-hidden="true">Op</span>
+          <span class="integration-tile-name">OptiMantra</span>
+        </div>
+      </div>
+      <p class="integrations-footnote">More booking, EHR, and messaging tools available—ask on your demo.</p>
     </div>
   </section>
 
