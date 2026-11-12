@@ -18,9 +18,9 @@
   --gray-500: #64748b;
   --gray-700: #334155;
   --gray-900: #0f172a;
-  --blue: #2563eb;
-  --blue-hover: #1d4ed8;
-  --blue-light: #dbeafe;
+  --blue: #ea580c;
+  --blue-hover: #c2410c;
+  --blue-light: rgba(234, 88, 12, 0.12);
   --green: #16a34a;
   --radius: 10px;
   --radius-lg: 16px;
@@ -1067,7 +1067,49 @@ a {
   font-weight: 500;
 }
 
+.assess-mini-diff {
+  background: var(--navy-mid);
+}
+
+.assess-diff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.assess-diff-card {
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.assess-diff-card strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.assess-diff-card p {
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: var(--gray-400);
+}
+
+.assess-diff-card .highlight {
+  color: #fdba74;
+  font-weight: 600;
+}
+
+.assess-diff-card .muted {
+  color: var(--gray-500);
+}
+
 @media (max-width: 768px) {
+  .assess-diff-grid {
+    grid-template-columns: 1fr;
+  }
+
   .book-calendar-cta {
     padding: 36px 24px;
   }
