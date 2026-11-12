@@ -62,6 +62,14 @@
   margin: 0 auto;
 }
 
+.industry-mini-diff .difference-head {
+  display: none;
+}
+
+.industry-mini-diff .difference-row:first-child {
+  border-top: none;
+}
+
 .industry-cta {
   padding: 80px 0 100px;
   text-align: center;
@@ -83,7 +91,7 @@
 }
 
 .hub-card:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-border);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
