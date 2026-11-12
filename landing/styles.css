@@ -291,10 +291,20 @@ img {
 }
 
 .hero--dark .dashboard-preview {
+  color: var(--color-text);
   box-shadow:
     0 4px 6px rgba(0, 0, 0, 0.25),
     0 24px 64px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.hero--dark .dashboard-preview .preview-title,
+.hero--dark .dashboard-preview .stat-value,
+.hero--dark .dashboard-preview .preview-leads h4,
+.hero--dark .dashboard-preview .preview-funnel h4,
+.hero--dark .dashboard-preview .lead-row > span:nth-child(2),
+.hero--dark .dashboard-preview .funnel-item > span:first-child {
+  color: var(--color-text);
 }
 
 .page-marketing .navbar {
