@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/png" href="/brand/mark.png">
 </head>
-<body>
+<body class="page-marketing">
 
-  <!-- NAVBAR -->
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
@@ -21,27 +21,33 @@
       </a>
       <ul class="nav-links">
         <li><a href="/">Home</a></li>
-        <li><a href="/#services">Services</a></li>
+        <li class="nav-item-has-sub">
+          <a href="/industries/">Industries</a>
+          <ul class="nav-sub" aria-label="Industries">
+            <li><a href="/industries/med-spa.html">Med spa &amp; aesthetics</a></li>
+            <li><a href="/industries/medical-clinic.html">Medical &amp; specialty clinic</a></li>
+            <li><a href="/industries/auto-shop.html">Auto shop</a></li>
+            <li><a href="/industries/">View all →</a></li>
+          </ul>
+        </li>
         <li><a href="/pricing.html">Pricing</a></li>
         <li><a href="/#contact">Contact</a></li>
       </ul>
       <div class="nav-actions">
         <a href="/login" class="btn btn-ghost">Login</a>
-        <a href="#get-in-touch" class="btn btn-primary book-meeting-btn">Book a Meeting</a>
+        <a href="https://calendar.app.google/FgBvDwb219BZ7ZHg9" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Book Free Demo</a>
       </div>
-      <button class="mobile-toggle" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
+      <button class="mobile-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero service-hero">
+  <section class="hero hero--dark hero--compact service-hero">
+    <div class="hero-glow" aria-hidden="true"></div>
     <div class="container hero-container">
-      <a href="/#services" class="back-link">← All Services</a>
+      <a href="/#services" class="back-link">← More services</a>
       <h1 class="hero-title">Advertising Management <span class="gradient-text">That Drives Results</span></h1>
       <p class="hero-subtitle">We help businesses set up, manage, and optimize advertising campaigns across Google, Facebook, TikTok, and other digital channels to drive more customers and increase revenue.</p>
-      <a href="#get-in-touch" class="btn btn-primary btn-lg book-meeting-btn">Book a Meeting</a>
+      <a href="https://calendar.app.google/FgBvDwb219BZ7ZHg9" class="btn btn-primary btn-lg" target="_blank" rel="noopener noreferrer">Book a Free Demo</a>
     </div>
   </section>
 
@@ -62,7 +68,7 @@
         <p>We set up your campaigns, create and test ad creatives, manage budgets, refine targeting, and continuously optimize for better results. Our goal is simple: more customers and higher revenue for your business.</p>
 
         <p>Ready to grow your business with data-driven advertising?</p>
-        <a href="#get-in-touch" class="btn btn-primary book-meeting-btn">Book a Meeting</a>
+        <a href="https://calendar.app.google/FgBvDwb219BZ7ZHg9" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Book a Free Demo</a>
       </div>
     </div>
   </section>
@@ -113,14 +119,7 @@
   <footer class="footer">
     <div class="container">
       <div class="footer-bottom" style="border-top: none; padding-top: 0;">
-        <p>&copy; 2025 ClientForge.ai. All rights reserved.</p>
-        <div style="display: flex; gap: 1.5rem;">
-          <a href="/">Home</a>
-          <a href="/#services">Services</a>
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms and Conditions</a>
-          <a href="#get-in-touch">Get in Touch</a>
-        </div>
+        <p>&copy; 2026 ClientForge.ai · <a href="/">Home</a> · <a href="/#services">More services</a> · <a href="/privacy">Privacy</a></p>
       </div>
     </div>
   </footer>
