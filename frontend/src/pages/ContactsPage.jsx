@@ -19,6 +19,13 @@ function showsVisitScheduleColumns(tenant) {
     || /farm\s*artist/i.test(name);
 }
 
+function isBayAreaHeartTenantOnly(tenant) {
+  if (!tenant) return false;
+  if (VISIT_SCHEDULE_TENANT_IDS.has(tenant.id)) return true;
+  const name = String(tenant.name || '').replace(/\s+/g, ' ').trim();
+  return /bay area heart/i.test(name) || /bay area.*health/i.test(name);
+}
+
 /** eCW auto-tags use `service:` / `provider:` prefixes; show the label only in the list. */
 function formatContactTagLabel(tag) {
   const s = String(tag || '');
@@ -442,6 +449,8 @@ export default function ContactsPage() {
 }
 
 function ImportModal({ onClose, onSuccess }) {
+  const { tenant } = useAuth();
+  const bayAreaHeartImport = isBayAreaHeartTenantOnly(tenant);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
@@ -479,6 +488,7 @@ function ImportModal({ onClose, onSuccess }) {
                 <span className="csv-col required">phone</span>
                 <span className="csv-col">first_name</span>
                 <span className="csv-col">last_name</span>
+                {bayAreaHeartImport ? <span className="csv-col">patient</span> : null}
                 <span className="csv-col">email</span>
                 <span className="csv-col">date_of_birth</span>
                 <span className="csv-col">last_visit</span>
@@ -488,6 +498,12 @@ function ImportModal({ onClose, onSuccess }) {
               <p className="hint">
                 Only <strong>phone</strong> is required. Duplicates are auto-merged.
                 Name columns accept <strong>first name</strong>, <strong>first_name</strong>, or <strong>First Name</strong> (same for last name).
+                {bayAreaHeartImport ? (
+                  <>
+                    {' '}You may also use a single <strong>Patient</strong> column as <strong>Last, First</strong> (clinic export).
+                    Rows with <strong>Last Visit</strong> also schedule post-visit SMS when visit-list automations are enabled.
+                  </>
+                ) : null}
                 DOB accepts <strong>date_of_birth</strong>, <strong>dob</strong>, or <strong>birthday</strong> (YYYY-MM-DD or MM/DD/YYYY).
                 Last visit accepts <strong>last_visit</strong> or <strong>appointment_date</strong> (YYYY-MM-DD or MM/DD/YYYY).
               </p>
@@ -531,6 +547,20 @@ function ImportModal({ onClose, onSuccess }) {
                 <div><strong>{result.skipped}</strong> skipped</div>
                 <div><strong>{result.total}</strong> total rows</div>
               </div>
+              {result.visitList && !result.visitList.skipped && (
+                <div className="result-stats visit-list-import-stats">
+                  <p className="hint">Post-visit follow-up</p>
+                  <div><strong>{result.visitList.processed}</strong> checkouts</div>
+                  <div><strong>{result.visitList.jobsScheduled}</strong> SMS jobs scheduled</div>
+                  <div><strong>{result.visitList.duplicates}</strong> already processed</div>
+                </div>
+              )}
+              {result.visitList?.skipped && result.visitList.reason === 'visit_list_automations_off' && (
+                <p className="hint">Visit-list automations are off — contacts imported without post-visit SMS.</p>
+              )}
+              {result.visitList?.skipped && result.visitList.reason === 'no_visit_list_rows' && (
+                <p className="hint">{result.visitList.message}</p>
+              )}
               {result.errors?.length > 0 && (
                 <div className="result-errors">
                   <p>Some rows had errors:</p>

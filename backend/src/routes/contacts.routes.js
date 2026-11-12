@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const contactService = require('../services/contact.service');
+const { processBayAreaVisitListFromContactImport } = require('../services/visitListCsvImport.service');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
@@ -55,7 +56,8 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     }
 
     const source = req.body.source || 'import';
-    const result = isShopmonkeyCustomerCsv(req.file.buffer)
+    const shopmonkey = isShopmonkeyCustomerCsv(req.file.buffer);
+    const result = shopmonkey
       ? await contactService.importShopmonkeyFromCSV(
         req.tenantId,
         req.file.buffer,
@@ -63,6 +65,12 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         { skipDuplicates: true },
       )
       : await contactService.importFromCSV(req.tenantId, req.file.buffer, source);
+
+    if (!shopmonkey) {
+      const visitList = await processBayAreaVisitListFromContactImport(req.tenantId, req.file.buffer);
+      if (visitList) result.visitList = visitList;
+    }
+
     res.json(result);
   } catch (err) { next(err); }
 });

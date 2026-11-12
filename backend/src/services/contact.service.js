@@ -3,6 +3,18 @@ const { normalizePhone } = require('./lead.service');
 const { parse } = require('csv-parse/sync');
 const { appendLastVisitCondition } = require('../utils/lastVisitFilter');
 const { mergeEcwEncounterTags, mergeEcwServiceTag } = require('../utils/ecwServiceTags');
+const { splitPatientName } = require('./visitListCsv.parse');
+const { isBayAreaHeartTenant } = require('./appointment-workflow.service');
+
+const BAY_AREA_HEART_TENANT_ID = '04acaef1-89cd-4b2e-8409-f10da5bdabb0';
+
+function allowPatientColumnImportForTenant(tenant) {
+  if (!tenant) return false;
+  if (tenant.id === BAY_AREA_HEART_TENANT_ID) return true;
+  const envId = (process.env.BAY_AREA_HEART_TENANT_ID || '').trim();
+  if (envId && tenant.id === envId) return true;
+  return isBayAreaHeartTenant(tenant);
+}
 
 /** Normalize CSV header for flexible matching (case, spaces, underscores, Shopmonkey suffixes). */
 function normalizeCsvKey(key) {
@@ -80,6 +92,18 @@ const toLastVisitTimestamp = (dateStr) => {
   return `${dateStr}T12:00:00.000Z`;
 };
 
+/** Clinic exports use a single Patient column: "LAST, FIRST MIDDLE" (Bay Area Heart only). */
+function resolveContactNameFieldsFromRow(row, { allowPatientColumn = false } = {}) {
+  let firstName = pickCsvField(row, 'first_name', 'firstname', 'first name', 'first');
+  let lastName = pickCsvField(row, 'last_name', 'lastname', 'last name', 'last');
+  if (allowPatientColumn && !firstName && !lastName) {
+    const split = splitPatientName(pickCsvField(row, 'patient', 'patient name'));
+    firstName = split.firstName || '';
+    lastName = split.lastName || '';
+  }
+  return { firstName, lastName };
+}
+
 const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   const content = csvBuffer.toString('utf-8');
   const records = parse(content, {
@@ -92,6 +116,9 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
   let imported = 0;
   let skipped = 0;
   let errors = [];
+
+  const tenantResult = await db.query('SELECT id, name FROM tenants WHERE id = $1', [tenantId]);
+  const allowPatientColumn = allowPatientColumnImportForTenant(tenantResult.rows[0]);
 
   for (const row of records) {
     const phone = pickCsvField(
@@ -107,8 +134,7 @@ const importFromCSV = async (tenantId, csvBuffer, source = 'import') => {
 
     try {
       const normalizedPhone = normalizePhone(phone);
-      const firstName = pickCsvField(row, 'first_name', 'firstname', 'first name', 'first');
-      const lastName = pickCsvField(row, 'last_name', 'lastname', 'last name', 'last');
+      const { firstName, lastName } = resolveContactNameFieldsFromRow(row, { allowPatientColumn });
       const email = pickCsvField(row, 'email', 'e-mail');
       const dobRaw = pickCsvField(row, 'date_of_birth', 'dateofbirth', 'dob', 'birthday', 'birth date', 'birthdate');
       const dateOfBirth = parseDateOfBirth(dobRaw);
@@ -629,6 +655,8 @@ module.exports = {
   pickCsvField,
   parseDateOfBirth,
   parseContactDate,
+  resolveContactNameFieldsFromRow,
+  allowPatientColumnImportForTenant,
   importFromCSV,
   importShopmonkeyFromCSV,
   listContacts,

@@ -1,7 +1,7 @@
 const db = require('../db/connection');
 const { inboxEmail } = require('./bookingEmailIngest.service');
 const { parseVisitListCsv } = require('./visitListCsv.parse');
-const { processVisitListRow } = require('./visit-list-checkout.service');
+const { processVisitListCsvRows } = require('./visitListCsvImport.service');
 const {
   isVisitListEmailEnabled,
   isSenderAllowed,
@@ -207,28 +207,7 @@ async function processVisitListEmail(email) {
   }
 
   const timezone = route.timezone || 'America/Los_Angeles';
-  const stats = {
-    rowCount: rows.length,
-    processed: 0,
-    duplicates: 0,
-    skipped: 0,
-    jobsScheduled: 0,
-    errors: [],
-  };
-
-  for (const row of rows) {
-    try {
-      const result = await processVisitListRow(route.tenantId, row, { timezone });
-      if (result.duplicate) stats.duplicates += 1;
-      else if (result.skipped) stats.skipped += 1;
-      else {
-        stats.processed += 1;
-        stats.jobsScheduled += result.jobsScheduled || 0;
-      }
-    } catch (err) {
-      stats.errors.push({ phone: row.phone, visitDate: row.visitDate, message: err.message });
-    }
-  }
+  const stats = await processVisitListCsvRows(route.tenantId, rows, { timezone });
 
   await insertVisitListMessage({
     messageId,
