@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/industries/industries.css">
   <link rel="icon" type="image/png" href="/brand/mark.png">
 </head>
-<body>
+<body class="page-marketing">
   <nav class="navbar">
     <div class="container nav-container">
       <a href="/" class="logo">
@@ -21,11 +21,20 @@
       </a>
       <ul class="nav-links">
         <li><a href="/">Home</a></li>
-        <li><a href="/industries/" aria-current="page">Industries</a></li>
+        <li class="nav-item-has-sub">
+          <a href="/industries/" id="nav-industries" aria-current="page">Industries</a>
+          <ul class="nav-sub" aria-label="Industries">
+            <li><a href="/industries/med-spa.html">Med spa &amp; aesthetics</a></li>
+            <li><a href="/industries/medical-clinic.html">Medical &amp; specialty clinic</a></li>
+            <li><a href="/industries/auto-shop.html">Auto shop</a></li>
+            <li><a href="/industries/">View all →</a></li>
+          </ul>
+        </li>
         <li><a href="/pricing.html">Pricing</a></li>
         <li><a href="/#contact">Contact</a></li>
       </ul>
       <div class="nav-actions">
+        <a href="/#demo" class="btn btn-ghost hide-mobile-nav">See how it works</a>
         <a href="/login" class="btn btn-ghost">Login</a>
         <a href="https://calendar.app.google/FgBvDwb219BZ7ZHg9" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Book Free Demo</a>
       </div>
@@ -33,9 +42,9 @@
     </div>
   </nav>
 
-  <section class="industry-hero">
+  <section class="hero hero--dark hero--compact industry-hero">
+    <div class="hero-glow" aria-hidden="true"></div>
     <div class="container hero-container">
-      <a href="/" class="back-link">← Home</a>
       <p class="hero-tagline">Industries</p>
       <h1 class="hero-title">Automations built for <span class="gradient-text">how you work</span></h1>
       <p class="hero-subtitle">Pick your vertical to see the workflows, integrations, and outcomes ClientForge is designed for.</p>

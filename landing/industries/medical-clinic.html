@@ -12,17 +12,29 @@
   <link rel="stylesheet" href="/industries/industries.css">
   <link rel="icon" type="image/png" href="/brand/mark.png">
 </head>
-<body>
+<body class="page-marketing">
   <nav class="navbar">
     <div class="container nav-container">
-      <a href="/" class="logo"><img src="/brand/mark.png" alt="" class="logo-mark" width="32" height="32" decoding="async">ClientForge<span class="logo-ai"> AI</span></a>
+      <a href="/" class="logo">
+        <img src="/brand/mark.png" alt="" class="logo-mark" width="32" height="32" decoding="async">
+        ClientForge<span class="logo-ai"> AI</span>
+      </a>
       <ul class="nav-links">
         <li><a href="/">Home</a></li>
-        <li><a href="/industries/">Industries</a></li>
+        <li class="nav-item-has-sub">
+          <a href="/industries/">Industries</a>
+          <ul class="nav-sub" aria-label="Industries">
+            <li><a href="/industries/med-spa.html">Med spa &amp; aesthetics</a></li>
+            <li><a href="/industries/medical-clinic.html" aria-current="page">Medical &amp; specialty clinic</a></li>
+            <li><a href="/industries/auto-shop.html">Auto shop</a></li>
+            <li><a href="/industries/">View all →</a></li>
+          </ul>
+        </li>
         <li><a href="/pricing.html">Pricing</a></li>
         <li><a href="/#contact">Contact</a></li>
       </ul>
       <div class="nav-actions">
+        <a href="/#demo" class="btn btn-ghost hide-mobile-nav">See how it works</a>
         <a href="/login" class="btn btn-ghost">Login</a>
         <a href="https://calendar.app.google/FgBvDwb219BZ7ZHg9" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Book Free Demo</a>
       </div>
@@ -30,8 +42,9 @@
     </div>
   </nav>
 
-  <section class="industry-hero">
-    <div class="container">
+  <section class="hero hero--dark hero--compact industry-hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="container hero-container">
       <a href="/industries/" class="back-link">← All industries</a>
       <p class="hero-tagline">Medical &amp; specialty clinic</p>
       <h1 class="hero-title">Post-visit follow-up and recall <span class="gradient-text">on autopilot</span></h1>

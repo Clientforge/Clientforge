@@ -297,46 +297,84 @@ img {
     0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.page-home .navbar {
+.page-marketing .navbar {
   background: rgba(11, 15, 23, 0.72);
   border-bottom-color: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
-.page-home .navbar .logo,
-.page-home .navbar .nav-links a {
+.page-marketing .navbar .logo,
+.page-marketing .navbar .nav-links a {
   color: rgba(248, 250, 252, 0.92);
 }
 
-.page-home .navbar .nav-links a:hover {
+.page-marketing .navbar .nav-links a:hover {
   color: #fff;
 }
 
-.page-home .navbar .btn-ghost {
+.page-marketing .navbar .btn-ghost {
   color: rgba(248, 250, 252, 0.75);
 }
 
-.page-home .navbar .btn-ghost:hover {
+.page-marketing .navbar .btn-ghost:hover {
   color: #fff;
 }
 
-.page-home .navbar .mobile-toggle span {
+.page-marketing .navbar .mobile-toggle span {
   background: #f8fafc;
 }
 
-.page-home .navbar.nav-open {
+.page-marketing .navbar.nav-open {
   background: var(--color-surface);
 }
 
-.page-home .navbar.nav-open .logo,
-.page-home .navbar.nav-open .nav-links a,
-.page-home .navbar.nav-open .btn-ghost {
+.page-marketing .navbar.nav-open .logo,
+.page-marketing .navbar.nav-open .nav-links a,
+.page-marketing .navbar.nav-open .btn-ghost {
   color: var(--color-text);
 }
 
-.page-home .navbar.nav-open .mobile-toggle span {
+.page-marketing .navbar.nav-open .mobile-toggle span {
   background: var(--color-text);
+}
+
+.hero--compact {
+  padding: 112px 0 56px;
+  text-align: center;
+}
+
+.hero--compact .hero-title {
+  font-size: clamp(28px, 3.8vw, 44px);
+  margin-bottom: 16px;
+}
+
+.hero--compact .hero-subtitle {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.hero--compact .section-badge {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 250, 252, 0.65);
+}
+
+.hero--dark .back-link {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.65);
+  margin-bottom: 20px;
+  transition: color var(--transition);
+}
+
+.hero--dark .back-link:hover {
+  color: #fff;
+}
+
+.page-marketing .pricing-section {
+  padding-top: 64px;
 }
 
 .hero-glow {

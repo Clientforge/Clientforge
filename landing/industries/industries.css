@@ -1,20 +1,18 @@
 /* ClientForge industry vertical pages — extends styles.css */
 
-.industry-hero {
-  padding: 120px 0 64px;
-  background: var(--color-bg);
-}
-
-.industry-hero .back-link {
-  display: inline-block;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-primary);
-  margin-bottom: 20px;
+.industry-hero.hero-container,
+.industry-hero .hero-container {
+  text-align: center;
 }
 
 .industry-hero .hero-subtitle {
   max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.industry-hero .btn-lg {
+  margin-top: 24px;
 }
 
 .industry-outcomes {
