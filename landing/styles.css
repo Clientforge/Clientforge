@@ -315,12 +315,21 @@ img {
 }
 
 .page-marketing .navbar .logo,
-.page-marketing .navbar .nav-links a {
+.page-marketing .navbar .nav-links > li > a {
   color: rgba(248, 250, 252, 0.92);
 }
 
-.page-marketing .navbar .nav-links a:hover {
+.page-marketing .navbar .nav-links > li > a:hover {
   color: #fff;
+}
+
+.page-marketing .navbar .nav-sub a {
+  color: var(--color-text-secondary);
+}
+
+.page-marketing .navbar .nav-sub a:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
 }
 
 .page-marketing .navbar .btn-ghost {
