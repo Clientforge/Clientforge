@@ -2411,6 +2411,10 @@ img {
     display: none;
   }
 
+  .dashboard-preview .stat-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .stat-cards {
     grid-template-columns: 1fr;
   }
