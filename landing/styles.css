@@ -1754,11 +1754,13 @@ img {
 }
 
 .testimonial-embed {
-  background: var(--color-bg);
+  background: #0a0a0a;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  min-height: 120px;
+  max-height: 420px;
+  overflow: hidden;
+  position: relative;
 }
 
 .testimonial-embed .instagram-media {
@@ -1768,6 +1770,13 @@ img {
   width: 100% !important;
   border: 0 !important;
   box-shadow: none !important;
+  /* Crop IG chrome: header above + engagement below the reel */
+  transform: translateY(-68px);
+  margin-bottom: -148px !important;
+}
+
+.testimonial-embed iframe {
+  max-width: 100%;
 }
 
 .testimonial-caption {
@@ -2383,6 +2392,15 @@ img {
   .pricing-grid,
   .testimonials-grid {
     grid-template-columns: 1fr;
+  }
+
+  .testimonial-embed {
+    max-height: 380px;
+  }
+
+  .testimonial-embed .instagram-media {
+    transform: translateY(-60px);
+    margin-bottom: -160px !important;
   }
 
   .setup-includes-list {
