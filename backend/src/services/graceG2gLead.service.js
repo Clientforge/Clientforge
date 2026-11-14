@@ -83,6 +83,15 @@ function resolveEstimateNotifyPhones() {
   return single ? [single] : [];
 }
 
+/** Staff numbers for vehicle photo review SMS (photo env first, then estimate fallbacks). */
+function resolveG2gPhotoNotifyPhones() {
+  const fromPhotoList = parseNotifyPhoneList(process.env.G2G_PHOTO_NOTIFY_PHONES);
+  if (fromPhotoList.length > 0) return fromPhotoList;
+  const photoSingle = resolveNotifyPhone('G2G_PHOTO_NOTIFY_PHONE', null);
+  if (photoSingle) return [photoSingle];
+  return resolveEstimateNotifyPhones();
+}
+
 async function sendInternalSms({ tenantId, leadId, to, body, messageType }) {
   const from = await resolveFromNumber(tenantId);
   await sendSms({
@@ -457,6 +466,7 @@ module.exports = {
   notifyG2gEstimateLead,
   updateLeadAfterEstimate,
   mergeMetadata,
+  resolveG2gPhotoNotifyPhones,
   G2gLeadError,
   tenantIdForG2g,
 };

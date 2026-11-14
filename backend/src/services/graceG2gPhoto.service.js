@@ -9,6 +9,7 @@ const tenantPhoneService = require('./tenant-phone.service');
 const {
   updateLeadAfterEstimate,
   tenantIdForG2g,
+  resolveG2gPhotoNotifyPhones,
   G2gLeadError,
 } = require('./graceG2gLead.service');
 
@@ -136,18 +137,6 @@ async function resolveFromNumber(tenantId) {
   return tenantPhoneService.resolveEffectiveSmsFrom(row?.phone_number, row?.sms_provider).from;
 }
 
-function resolveNotifyPhone() {
-  const keys = ['G2G_PHOTO_NOTIFY_PHONE', 'G2G_ESTIMATE_NOTIFY_PHONE', 'G2G_SELL_NOTIFY_PHONE'];
-  for (const k of keys) {
-    const raw = process.env[k];
-    if (raw && String(raw).trim()) {
-      const { normalizePhone } = require('./lead.service');
-      return normalizePhone(String(raw).trim());
-    }
-  }
-  return null;
-}
-
 /**
  * @param {object} params
  * @param {string} [params.leadId]
@@ -267,8 +256,8 @@ async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, esti
 
   const reviewUrl = `${publicAppBaseUrl()}/g2g-review/${reviewToken}`;
   try {
-    const notifyPhone = resolveNotifyPhone();
-    if (notifyPhone && notifyPhone.replace(/\D/g, '').length >= 10) {
+    const notifyPhones = resolveG2gPhotoNotifyPhones();
+    if (notifyPhones.length > 0) {
       const from = await resolveFromNumber(tenantId);
       const smsBody = buildNotifySms({
         contact,
@@ -277,15 +266,17 @@ async function createPhotoSubmission({ leadId, sessionId, contact, vehicle, esti
         reviewUrl,
         photoCount: savedFiles.length,
       });
-      await sendSms({
-        tenantId,
-        leadId: resolvedLeadId,
-        contactId: null,
-        to: notifyPhone,
-        from,
-        body: smsBody,
-        messageType: 'g2g_photo_submission',
-      });
+      for (const to of notifyPhones) {
+        await sendSms({
+          tenantId,
+          leadId: resolvedLeadId,
+          contactId: null,
+          to,
+          from,
+          body: smsBody,
+          messageType: 'g2g_photo_submission',
+        });
+      }
     }
 
     const emailTo =

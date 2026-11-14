@@ -47,10 +47,15 @@ async function main() {
     console.log(`  SMS provider: ${row.sms_provider || '(auto)'}`);
   }
 
+  const { resolveG2gPhotoNotifyPhones } = require('../src/services/graceG2gLead.service');
   console.log('\nG2G notify env (estimate SMS recipients):');
   console.log(`  G2G_ESTIMATE_NOTIFY_PHONES: ${process.env.G2G_ESTIMATE_NOTIFY_PHONES || '(unset)'}`);
   console.log(`  G2G_ESTIMATE_NOTIFY_PHONE:  ${process.env.G2G_ESTIMATE_NOTIFY_PHONE || '(unset)'}`);
   console.log(`  G2G_SELL_NOTIFY_PHONE:      ${process.env.G2G_SELL_NOTIFY_PHONE || '(unset)'}`);
+  console.log('\nG2G notify env (photo SMS — resolved list):');
+  console.log(`  G2G_PHOTO_NOTIFY_PHONES: ${process.env.G2G_PHOTO_NOTIFY_PHONES || '(unset)'}`);
+  console.log(`  G2G_PHOTO_NOTIFY_PHONE:  ${process.env.G2G_PHOTO_NOTIFY_PHONE || '(unset)'}`);
+  console.log(`  → photo recipients:      ${resolveG2gPhotoNotifyPhones().join(', ') || '(none)'}`);
   console.log('\nPlatform Telnyx default:');
   console.log(
     `  TELNYX_PHONE_NUMBER: ${process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_DEFAULT_FROM || '(unset)'}`,
