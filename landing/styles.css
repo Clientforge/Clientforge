@@ -1755,28 +1755,30 @@ img {
 
 .testimonial-embed {
   background: #0a0a0a;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  max-height: 420px;
-  overflow: hidden;
   position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 9;
 }
 
 .testimonial-embed .instagram-media {
-  margin: 0 auto !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
+  position: absolute;
+  left: 50%;
+  top: 0;
+  margin: 0 !important;
   width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
   border: 0 !important;
   box-shadow: none !important;
-  /* Crop IG chrome: header above + engagement below the reel */
-  transform: translateY(-68px);
-  margin-bottom: -148px !important;
+  /* Zoom into reel video; crop IG header/footer outside 16:9 frame */
+  transform: translateX(-50%) translateY(-78px) scale(1.34);
+  transform-origin: center top;
 }
 
 .testimonial-embed iframe {
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
 }
 
 .testimonial-caption {
@@ -2394,13 +2396,8 @@ img {
     grid-template-columns: 1fr;
   }
 
-  .testimonial-embed {
-    max-height: 380px;
-  }
-
   .testimonial-embed .instagram-media {
-    transform: translateY(-60px);
-    margin-bottom: -160px !important;
+    transform: translateX(-50%) translateY(-70px) scale(1.28);
   }
 
   .setup-includes-list {
