@@ -1733,6 +1733,61 @@ img {
   color: var(--color-text-tertiary);
 }
 
+.testimonials-intro {
+  max-width: 560px;
+  margin: -8px auto 40px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.testimonial-card--video {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.testimonial-card--video:hover {
+  transform: translateY(-4px);
+}
+
+.testimonial-embed {
+  background: var(--color-bg);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 120px;
+}
+
+.testimonial-embed .instagram-media {
+  margin: 0 auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.testimonial-caption {
+  padding: 20px 24px 24px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.testimonial-caption strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.testimonial-caption span {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
 /* --- CONTACT --- */
 .contact-section {
   padding: 100px 0;
