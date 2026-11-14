@@ -2,7 +2,10 @@
  * Load Instagram embed.js when testimonials scroll into view (avoids blocking initial paint).
  */
 (function () {
-  var section = document.querySelector('.testimonials-section');
+  var section =
+    document.querySelector('.testimonials-section') ||
+    document.querySelector('.page-ads #success') ||
+    document.querySelector('.page-ads .testimonial-embed');
   if (!section) return;
 
   var loaded = false;

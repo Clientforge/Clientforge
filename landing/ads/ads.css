@@ -369,6 +369,16 @@
   font-weight: 600;
 }
 
+/* Instagram client story (reuses homepage testimonial crop) */
+.ads-video-wrap {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.ads-video-wrap .testimonial-card--video {
+  max-width: 100%;
+}
+
 @media (max-width: 900px) {
   .ads-steps {
     grid-template-columns: repeat(2, 1fr);
