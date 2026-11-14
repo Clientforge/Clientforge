@@ -390,6 +390,17 @@ app.get('/assessment/thanks', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'assessment-thanks.html'));
 });
 
+/** Google Ads landing pages */
+app.get('/auto-repair-revenue-recovery', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'ads/auto-repair-revenue-recovery.html'));
+});
+app.get('/medspa-client-reactivation', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'ads/medspa-client-reactivation.html'));
+});
+app.get('/medspa-lead-conversion', (req, res) => {
+  res.sendFile(path.join(LANDING_DIR, 'ads/medspa-lead-conversion.html'));
+});
+
 /** Grace to Grace — internal team vehicle photo review (secret link per submission). */
 app.get('/g2g-review/:token', (req, res) => {
   res.sendFile(path.join(LANDING_DIR, 'g2g-vehicle-review.html'));
@@ -555,6 +566,13 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
     return next();
   }
   if (req.path === '/assessment' || req.path.startsWith('/assessment/')) {
+    return next();
+  }
+  if (
+    req.path === '/auto-repair-revenue-recovery' ||
+    req.path === '/medspa-client-reactivation' ||
+    req.path === '/medspa-lead-conversion'
+  ) {
     return next();
   }
   if (req.path === '/g2g-review' || req.path.startsWith('/g2g-review/')) {
