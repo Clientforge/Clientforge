@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import {
   APPT_STATUS_STYLES, JOB_STATUS_STYLES, formatDateTime,
 } from './shared';
+import CompactPagination from '../../components/CompactPagination';
 
 export default function AppointmentsPanel() {
   const [appointments, setAppointments] = useState([]);
@@ -112,20 +113,13 @@ export default function AppointmentsPanel() {
               ))}
             </div>
 
-            {pagination.totalPages > 1 && (
-              <div className="pagination">
-                {Array.from({ length: pagination.totalPages }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`}
-                    onClick={() => load(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
+            <CompactPagination
+              page={pagination.page || 1}
+              totalPages={pagination.totalPages || 1}
+              total={pagination.total ?? 0}
+              limit={pagination.limit || 25}
+              onPageChange={load}
+            />
           </>
         )}
       </div>

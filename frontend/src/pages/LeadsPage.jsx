@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+import CompactPagination from '../components/CompactPagination';
 
 const STATUS_COLORS = {
   NEW: { bg: '#f3f4f6', color: '#6b7280' },
@@ -88,15 +89,13 @@ export default function LeadsPage() {
             </tbody>
           </table>
 
-          {pagination.totalPages > 1 && (
-            <div className="pagination">
-              {Array.from({ length: pagination.totalPages }, (_, i) => (
-                <button key={i} className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`} onClick={() => loadLeads(i + 1)}>
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          )}
+          <CompactPagination
+            page={pagination.page || 1}
+            totalPages={pagination.totalPages || 1}
+            total={pagination.total ?? 0}
+            limit={pagination.limit || 20}
+            onPageChange={loadLeads}
+          />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+import CompactPagination from './CompactPagination';
 
 const BUCKET_ORDER = ['not30d', 'not90d', 'not120d', 'not365d', 'not730d', 'not1095d', 'not1460d'];
 
@@ -274,29 +275,13 @@ export default function WinBackRetentionPanel({
               </table>
             </div>
 
-            {pagination.totalPages > 1 && (
-              <div className="pagination" style={{ marginTop: '1rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  disabled={pagination.page <= 1}
-                  onClick={() => loadContacts(pagination.page - 1)}
-                >
-                  Previous
-                </button>
-                <span className="muted">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  disabled={pagination.page >= pagination.totalPages}
-                  onClick={() => loadContacts(pagination.page + 1)}
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <CompactPagination
+              page={pagination.page || 1}
+              totalPages={pagination.totalPages || 1}
+              total={pagination.total ?? 0}
+              limit={pagination.limit || 25}
+              onPageChange={loadContacts}
+            />
           </>
         )}
       </div>

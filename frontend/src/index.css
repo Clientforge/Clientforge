@@ -455,8 +455,17 @@ a:hover { text-decoration: underline; }
 .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
 .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; flex-wrap: nowrap; }
+.pagination-summary { margin: 0; font-size: 13px; color: var(--text-3); flex-shrink: 0; }
+.pagination-controls { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 6px; background: var(--surface); flex-shrink: 0; margin-left: auto; }
+.pagination-bar--compact .pagination-summary { font-size: 12px; }
+.pagination-bar--compact .pagination-controls { padding: 2px 4px; gap: 1px; }
+.pagination-bar--compact .page-btn { width: 28px; height: 28px; font-size: 12px; }
+.page-ellipsis { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 32px; font-size: 13px; color: var(--text-3); user-select: none; }
 .pagination { display: flex; gap: 4px; justify-content: center; margin-top: 16px; }
-.page-btn { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-family: var(--font); font-size: 13px; cursor: pointer; }
+.page-btn { width: 32px; height: 32px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; font-family: var(--font); font-size: 13px; cursor: pointer; color: var(--text); transition: background var(--transition), border-color var(--transition); }
+.pagination-controls .page-btn:not(.page-btn-nav) { border-color: transparent; }
+.pagination-controls .page-btn:hover:not(:disabled):not(.active) { background: var(--border-light); }
 .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
 /* --- LEAD DETAIL --- */
@@ -517,8 +526,10 @@ a:hover { text-decoration: underline; }
 .inbox-list { flex: 1; overflow-y: auto; min-height: 0; }
 .inbox-channel-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
 .inbox-channel-badge.instagram { background: #fce7f3; color: #be185d; }
-.inbox-pagination-meta { margin: 0 0 8px; font-size: 12px; color: var(--text-muted); text-align: center; }
-.inbox-pagination-controls { margin-top: 0; flex-wrap: wrap; }
+.inbox-pagination { flex-shrink: 0; padding: 10px 12px; border-top: 1px solid var(--border-light); }
+.inbox-pagination .pagination-bar { margin-top: 0; gap: 8px; }
+.inbox-pagination .pagination-summary { font-size: 11px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inbox-pagination .pagination-controls { padding: 2px 4px; }
 .page-btn-nav { font-size: 18px; line-height: 1; }
 .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .inbox-item { width: 100%; display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border: none; border-bottom: 1px solid var(--border-light); background: none; font-family: var(--font); text-align: left; cursor: pointer; transition: background var(--transition); }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import CompactPagination from '../components/CompactPagination';
 
 function formatDateTime(iso, timeZone) {
   if (!iso) return '—';
@@ -115,19 +116,14 @@ export default function PatientFeedbackPage() {
           </div>
         )}
 
-        {pagination && pagination.totalPages > 1 && (
-          <div className="pagination" style={{ marginTop: 16 }}>
-            {Array.from({ length: pagination.totalPages }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`}
-                onClick={() => setPage(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+        {pagination && (
+          <CompactPagination
+            page={pagination.page || page}
+            totalPages={pagination.totalPages || 1}
+            total={pagination.total ?? 0}
+            limit={pagination.limit || 50}
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

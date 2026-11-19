@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS } from '../utils/lastVisitFilter';
 import ShopmonkeyDeferredPanel from '../components/ShopmonkeyDeferredPanel';
+import CompactPagination from '../components/CompactPagination';
 
 /** Bay Area Heart eCW tenant. Farmartist is matched by name until an id is confirmed. */
 const VISIT_SCHEDULE_TENANT_IDS = new Set([
@@ -413,15 +414,13 @@ export default function ContactsPage() {
               </tbody>
             </table>
 
-            {pagination.totalPages > 1 && (
-              <div className="pagination">
-                {Array.from({ length: pagination.totalPages }, (_, i) => (
-                  <button key={i} className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`} onClick={() => loadContacts(i + 1)}>
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
+            <CompactPagination
+              page={pagination.page || 1}
+              totalPages={pagination.totalPages || 1}
+              total={pagination.total ?? 0}
+              limit={pagination.limit || 25}
+              onPageChange={loadContacts}
+            />
           </>
         )}
       </div>

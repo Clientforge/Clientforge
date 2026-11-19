@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
 import { LAST_VISIT_OPTIONS, formatLastVisitLabel, getCampaignLastVisitOptions } from '../utils/lastVisitFilter';
 import { isSluiceTenant } from '../config/sluiceTenant';
+import CompactPagination from '../components/CompactPagination';
 import {
   DEFAULT_VISIT_WINDOW,
   formatVisitWindowLabel,
@@ -235,13 +236,13 @@ export default function CampaignsPage() {
           </table>
         )}
 
-        {pagination.totalPages > 1 && (
-          <div className="pagination">
-            {Array.from({ length: pagination.totalPages }, (_, i) => (
-              <button key={i} className={`page-btn ${pagination.page === i + 1 ? 'active' : ''}`} onClick={() => loadCampaigns(i + 1, showArchived)}>{i + 1}</button>
-            ))}
-          </div>
-        )}
+        <CompactPagination
+          page={pagination.page || 1}
+          totalPages={pagination.totalPages || 1}
+          total={pagination.total ?? 0}
+          limit={pagination.limit || 25}
+          onPageChange={(p) => loadCampaigns(p, showArchived)}
+        />
       </div>
 
       {showCreate && (

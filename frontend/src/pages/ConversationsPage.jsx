@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { isSimpleMode } from '../utils/uiMode';
+import CompactPagination from '../components/CompactPagination';
 
 /** How often to pull new messages while a thread is open (inbound SMS is server-driven; no websocket yet). */
 const THREAD_POLL_MS = 4000;
@@ -237,8 +238,6 @@ export default function ConversationsPage() {
   const page = pagination.page || 1;
   const limit = pagination.limit || 25;
   const total = pagination.total ?? 0;
-  const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
-  const rangeEnd = Math.min(page * limit, total);
 
   return (
     <div className="conversations-page">
@@ -382,43 +381,16 @@ export default function ConversationsPage() {
               })
             )}
           </div>
-          {!loading && total > 0 && (
+          {!loading && (
             <div className="inbox-pagination">
-              <p className="inbox-pagination-meta">
-                {rangeStart}–{rangeEnd} of {total}
-              </p>
-              {pagination.totalPages > 1 && (
-                <div className="pagination inbox-pagination-controls">
-                  <button
-                    type="button"
-                    className="page-btn page-btn-nav"
-                    disabled={page <= 1}
-                    onClick={() => loadConversations(page - 1)}
-                    aria-label="Previous page"
-                  >
-                    ‹
-                  </button>
-                  {Array.from({ length: pagination.totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className={`page-btn ${page === i + 1 ? 'active' : ''}`}
-                      onClick={() => loadConversations(i + 1)}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="page-btn page-btn-nav"
-                    disabled={page >= pagination.totalPages}
-                    onClick={() => loadConversations(page + 1)}
-                    aria-label="Next page"
-                  >
-                    ›
-                  </button>
-                </div>
-              )}
+              <CompactPagination
+                compact
+                page={page}
+                totalPages={pagination.totalPages || 1}
+                total={total}
+                limit={limit}
+                onPageChange={loadConversations}
+              />
             </div>
           )}
         </div>
