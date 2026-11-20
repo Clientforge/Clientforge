@@ -346,17 +346,29 @@ async function visitDateRangeForTenant(tenantId, visitFrom, visitTo) {
   return { from, to };
 }
 
-const listContacts = async (tenantId, {
-  page = 1,
-  limit = 25,
+const CONTACT_EXPORT_MAX_ROWS = 50_000;
+
+function escapeCsvCell(value) {
+  const s = value == null ? '' : String(value);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function formatDateForCsv(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const s = String(value);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+async function buildContactListFilters(tenantId, {
   search,
   tag,
   lastVisit,
   sortBy,
   visitFrom,
   visitTo,
-}) => {
-  const offset = (page - 1) * limit;
+}) {
   const params = [tenantId];
   const conditions = ['tenant_id = $1'];
   let idx = 2;
@@ -364,13 +376,13 @@ const listContacts = async (tenantId, {
   if (search) {
     conditions.push(`(first_name ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx} OR email ILIKE $${idx})`);
     params.push(`%${search}%`);
-    idx++;
+    idx += 1;
   }
 
   if (tag) {
     conditions.push(`tags @> $${idx}::jsonb`);
     params.push(JSON.stringify([tag]));
-    idx++;
+    idx += 1;
   }
 
   appendLastVisitCondition(conditions, lastVisit);
@@ -412,6 +424,29 @@ const listContacts = async (tenantId, {
     ? 'last_visit_at DESC NULLS LAST, created_at DESC'
     : 'created_at DESC';
 
+  return { where, params, orderBy, nextParamIndex: idx };
+}
+
+const listContacts = async (tenantId, {
+  page = 1,
+  limit = 25,
+  search,
+  tag,
+  lastVisit,
+  sortBy,
+  visitFrom,
+  visitTo,
+}) => {
+  const offset = (page - 1) * limit;
+  const { where, params, orderBy, nextParamIndex: idx } = await buildContactListFilters(tenantId, {
+    search,
+    tag,
+    lastVisit,
+    sortBy,
+    visitFrom,
+    visitTo,
+  });
+
   const [countRes, dataRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int FROM contacts WHERE ${where}`, params),
     db.query(
@@ -439,6 +474,54 @@ const listContacts = async (tenantId, {
       totalPages: Math.ceil(countRes.rows[0].count / limit),
     },
   };
+};
+
+const exportContactsCsv = async (tenantId, filters = {}) => {
+  const { where, params, orderBy } = await buildContactListFilters(tenantId, filters);
+
+  const countRes = await db.query(`SELECT COUNT(*)::int AS n FROM contacts WHERE ${where}`, params);
+  const total = countRes.rows[0]?.n ?? 0;
+  if (total > CONTACT_EXPORT_MAX_ROWS) {
+    throw Object.assign(
+      new Error(`Too many contacts to export (${total.toLocaleString()}). Narrow your filters or contact support.`),
+      { statusCode: 400, isOperational: true },
+    );
+  }
+
+  const dataRes = await db.query(
+    `SELECT contacts.*, (
+       SELECT MIN(a.scheduled_at)
+       FROM appointments a
+       WHERE a.tenant_id = contacts.tenant_id
+         AND a.contact_id = contacts.id
+         AND a.scheduled_at > NOW()
+         AND a.status IN ('scheduled', 'confirmed', 'rescheduled')
+     ) AS next_visit_at
+     FROM contacts
+     WHERE ${where}
+     ORDER BY ${orderBy}`,
+    params,
+  );
+
+  const header = ['phone', 'first_name', 'last_name', 'email', 'date_of_birth', 'last_visit', 'tags', 'notes', 'source'];
+  const lines = [header.join(',')];
+
+  for (const row of dataRes.rows) {
+    const tags = Array.isArray(row.tags) ? row.tags : [];
+    lines.push([
+      escapeCsvCell(row.phone),
+      escapeCsvCell(row.first_name),
+      escapeCsvCell(row.last_name),
+      escapeCsvCell(row.email),
+      escapeCsvCell(formatDateForCsv(row.date_of_birth)),
+      escapeCsvCell(formatDateForCsv(row.last_visit_at)),
+      escapeCsvCell(tags.join(', ')),
+      escapeCsvCell(row.notes),
+      escapeCsvCell(row.source),
+    ].join(','));
+  }
+
+  return { csv: lines.join('\n'), total };
 };
 
 const createContact = async (tenantId, data) => {
@@ -660,6 +743,7 @@ module.exports = {
   importFromCSV,
   importShopmonkeyFromCSV,
   listContacts,
+  exportContactsCsv,
   createContact,
   getContact,
   updateContact,

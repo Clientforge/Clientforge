@@ -60,23 +60,36 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const loadContacts = async (page = 1, overrides = {}) => {
+  const buildContactListParams = (page = 1, overrides = {}) => {
     const from = overrides.visitFrom !== undefined ? overrides.visitFrom : visitFromDate;
     const to = overrides.visitTo !== undefined ? overrides.visitTo : visitToDate;
+    const params = new URLSearchParams({ page, limit: 25 });
+    if (search) params.set('search', search);
+    if (tagFilter) params.set('tag', tagFilter);
+    if (lastVisitFilter) params.set('lastVisit', lastVisitFilter);
+    if (lastVisitFilter && lastVisitFilter !== 'none') {
+      params.set('sortBy', 'last_visit_at');
+    }
+    if (visitSchedule) {
+      if (from) params.set('visitFrom', from);
+      if (to) params.set('visitTo', to);
+    }
+    return params;
+  };
+
+  const buildContactExportQuery = () => {
+    const params = buildContactListParams(1);
+    params.delete('page');
+    params.delete('limit');
+    return params.toString();
+  };
+
+  const loadContacts = async (page = 1, overrides = {}) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 25 });
-      if (search) params.set('search', search);
-      if (tagFilter) params.set('tag', tagFilter);
-      if (lastVisitFilter) params.set('lastVisit', lastVisitFilter);
-      if (lastVisitFilter && lastVisitFilter !== 'none') {
-        params.set('sortBy', 'last_visit_at');
-      }
-      if (visitSchedule) {
-        if (from) params.set('visitFrom', from);
-        if (to) params.set('visitTo', to);
-      }
+      const params = buildContactListParams(page, overrides);
       const [data, statsData] = await Promise.all([
         api.get(`/contacts?${params}`),
         api.get('/contacts/stats'),
@@ -167,6 +180,18 @@ export default function ContactsPage() {
       }
       return next;
     });
+  };
+
+  const handleExportFiltered = async () => {
+    setExporting(true);
+    try {
+      const query = buildContactExportQuery();
+      await api.download(`/contacts/export?${query}`);
+    } catch (err) {
+      alert(err.message || 'Could not export contacts.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -285,9 +310,19 @@ export default function ContactsPage() {
           )}
           <button type="submit" className="btn btn-secondary btn-sm">Apply</button>
           {hasActiveFilters && (
-            <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilters}>
-              Clear
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                onClick={handleExportFiltered}
+                disabled={exporting}
+              >
+                {exporting ? 'Exporting…' : 'Export contacts'}
+              </button>
+              <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilters}>
+                Clear
+              </button>
+            </>
           )}
         </form>
 

@@ -42,6 +42,25 @@ router.get('/stats', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/export', async (req, res, next) => {
+  try {
+    const { search, tag, lastVisit, sortBy, visitFrom, visitTo } = req.query;
+    const { csv, total } = await contactService.exportContactsCsv(req.tenantId, {
+      search,
+      tag,
+      lastVisit,
+      sortBy,
+      visitFrom,
+      visitTo,
+    });
+    const date = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="contacts-filtered-${date}.csv"`);
+    res.setHeader('X-Export-Row-Count', String(total));
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
 router.post('/', async (req, res, next) => {
   try {
     const contact = await contactService.createContact(req.tenantId, req.body);
